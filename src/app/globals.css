@@ -1,78 +1,74 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
-    --primary: 130 58% 55%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 130 58% 55%;
-    --accent-foreground: 0 0% 9%;
-    --border: 0 0% 89%;
-    --input: 0 0% 89%;
-    --ring: 130 58% 55%;
-    --radius: 8px;
-  }
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 9%;
+  --primary: 130 58% 55%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 130 58% 55%;
+  --accent-foreground: 0 0% 9%;
+  --border: 0 0% 89%;
+  --input: 0 0% 89%;
+  --ring: 130 58% 55%;
+  --radius: 8px;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    font-feature-settings: 'cv11';
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+* {
+  border-color: hsl(var(--border));
 }
 
-@layer components {
-  /* Robinhood-style button */
-  .rh-btn-primary {
-    @apply bg-primary text-white font-semibold px-6 py-3 rounded-full hover:bg-primary/90 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
-  }
-  
-  .rh-btn-secondary {
-    @apply bg-white border border-border text-foreground font-semibold px-6 py-3 rounded-full hover:bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
-  }
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-feature-settings: 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-  /* Robinhood-style cards */
-  .rh-card {
-    @apply bg-white border border-border rounded-2xl p-6 hover:shadow-md transition-shadow duration-200;
-  }
+/* Robinhood-style button */
+.rh-btn-primary {
+  @apply bg-primary text-white font-semibold px-6 py-3 rounded-full hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+}
 
-  /* Clean typography */
-  .rh-heading {
-    @apply font-semibold text-foreground leading-tight;
-  }
-  
-  .rh-subheading {
-    @apply text-muted-foreground font-medium;
-  }
+.rh-btn-secondary {
+  @apply bg-white border text-foreground font-semibold px-6 py-3 rounded-full hover:bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  border-color: hsl(var(--border));
+}
 
-  /* Status indicators */
-  .status-dot {
-    @apply w-3 h-3 rounded-full;
-  }
-  
-  .status-active {
-    @apply bg-primary;
-  }
-  
-  .status-pending {
-    @apply bg-yellow-500;
-  }
+/* Robinhood-style cards */
+.rh-card {
+  @apply bg-white rounded-2xl p-6 hover:shadow-md transition-shadow duration-200;
+  border: 1px solid hsl(var(--border));
+}
+
+/* Clean typography */
+.rh-heading {
+  @apply font-semibold leading-tight;
+  color: hsl(var(--foreground));
+}
+
+.rh-subheading {
+  @apply font-medium;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Status indicators */
+.status-dot {
+  @apply w-3 h-3 rounded-full;
+}
+
+.status-active {
+  background-color: hsl(var(--primary));
+}
+
+.status-pending {
+  @apply bg-yellow-500;
 }
