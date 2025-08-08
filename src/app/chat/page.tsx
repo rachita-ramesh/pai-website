@@ -1,41 +1,37 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Brain, Send, Bot, User, RefreshCw, ThumbsUp, ThumbsDown } from "lucide-react"
 import Link from "next/link"
 
 interface Message {
   id: string
   type: 'user' | 'ai'
   content: string
-  founder?: string
-  timestamp: Date
+  person?: string
+  timestamp?: Date
   rating?: 'good' | 'bad' | null
 }
 
 export default function Chat() {
-  const [selectedFounder, setSelectedFounder] = useState<string>('rachita')
+  const [selectedPerson, setSelectedPerson] = useState<string>('rachita')
   const [query, setQuery] = useState('')
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       type: 'ai',
-      content: "Hi! I'm Rachita's digital twin. Ask me anything and I'll respond as she would. Try asking about work, decisions, or personal preferences.",
-      founder: 'rachita',
-      timestamp: new Date()
+      content: "Hi! I'm Rachita's digital twin. Ask me anything and I'll respond as she would.",
+      person: 'rachita'
     }
   ])
   const [isLoading, setIsLoading] = useState(false)
 
-  const founders = [
-    { id: 'rachita', name: 'Rachita', color: 'gradient-purple', initial: 'R', role: 'CEO' },
-    { id: 'everhett', name: 'Everhett', color: 'gradient-blue', initial: 'E', role: 'CTO' },
-    { id: 'gigi', name: 'Gigi', color: 'gradient-pink', initial: 'G', role: 'COO' },
+  const people = [
+    { id: 'rachita', name: 'Rachita', initial: 'R' },
+    { id: 'everhett', name: 'Everhett', initial: 'E' },
+    { id: 'gigi', name: 'Gigi', initial: 'G' },
   ]
 
-  const selectedFounderData = founders.find(f => f.id === selectedFounder)
+  const selectedPersonData = people.find(f => f.id === selectedPerson)
 
   const handleSendMessage = async () => {
     if (!query.trim()) return
@@ -51,13 +47,13 @@ export default function Chat() {
     setQuery('')
     setIsLoading(true)
 
-    // Simulate AI response - in real app, this would call your AI API
+    // Simulate AI response
     setTimeout(() => {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: generateMockResponse(query, selectedFounder),
-        founder: selectedFounder,
+        content: generateMockResponse(query, selectedPerson),
+        person: selectedPerson,
         timestamp: new Date(),
         rating: null
       }
@@ -66,23 +62,33 @@ export default function Chat() {
     }, 2000)
   }
 
-  const generateMockResponse = (question: string, founder: string): string => {
-    // Mock responses based on founder and question type
+  const generateMockResponse = (question: string, person: string): string => {
     const responses = {
       rachita: {
         default: "As someone who's detail-oriented and analytical, I'd approach this by first gathering all the relevant data and considering multiple perspectives before making a decision.",
         work: "I prefer collaborative work environments where I can bounce ideas off others, but I also value focused solo time for deep thinking.",
         decision: "I make decisions by combining data analysis with intuition. I like to sleep on big decisions and often seek input from trusted advisors."
+      },
+      everhett: {
+        default: "I believe in taking a pragmatic approach to everything. Let me think through this systematically.",
+        work: "I'm very methodical in my work approach and prefer clear processes.",
+        decision: "I make decisions based on careful analysis and past experience."
+      },
+      gigi: {
+        default: "That's an interesting question! I like to approach things creatively and consider all angles.",
+        work: "I enjoy collaborative environments and bringing fresh perspectives to projects.",
+        decision: "I make decisions by considering the human impact and long-term consequences."
       }
     }
 
-    // Simple keyword matching for demo
+    const personResponses = responses[person as keyof typeof responses] || responses.rachita
+    
     if (question.toLowerCase().includes('work')) {
-      return responses.rachita.work
+      return personResponses.work
     } else if (question.toLowerCase().includes('decision') || question.toLowerCase().includes('decide')) {
-      return responses.rachita.decision
+      return personResponses.decision
     } else {
-      return responses.rachita.default + " What specific aspect would you like me to elaborate on?"
+      return personResponses.default + " What specific aspect would you like me to elaborate on?"
     }
   }
 
@@ -98,218 +104,301 @@ export default function Chat() {
     setMessages([{
       id: '1',
       type: 'ai',
-      content: `Hi! I'm ${selectedFounderData?.name}'s digital twin. Ask me anything and I'll respond as they would.`,
-      founder: selectedFounder,
+      content: `Hi! I'm ${selectedPersonData?.name}'s digital twin. Ask me anything and I'll respond as they would.`,
+      person: selectedPerson,
       timestamp: new Date()
     }])
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-black to-blue-900/20">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
-      </div>
+    <div>
+      {/* Header */}
+      <header className="header">
+        <div className="container">
+          <nav className="nav">
+            <Link href="/" className="logo">
+              <div className="logo-icon">
+                <div style={{ width: '16px', height: '16px', backgroundColor: 'white', borderRadius: '2px' }}></div>
+              </div>
+              <div className="logo-text">
+                <h1>PAI</h1>
+                <p>Digital Chat</p>
+              </div>
+            </Link>
+            <div className="badge">Chat Interface</div>
+          </nav>
+        </div>
+      </header>
 
-      <div className="relative z-10">
-        {/* Navigation */}
-        <nav className="flex justify-between items-center p-6 max-w-7xl mx-auto glass rounded-2xl mx-6 mt-6">
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="p-2 gradient-purple rounded-xl glow">
-              <Brain className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-white">Digital Twin Lab</span>
-          </Link>
-          <div className="text-sm text-gray-400">
-            Chat Interface
-          </div>
-        </nav>
-
-        <div className="max-w-6xl mx-auto p-6 py-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-black text-white mb-4">
-              Chat with
-              <span className="block bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Digital Twins
-              </span>
+      {/* Main */}
+      <main className="main">
+        <div className="container">
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <h1 style={{ fontSize: '48px', fontWeight: '600', lineHeight: '1.1', marginBottom: '24px' }}>
+              Chat with <span className="highlight">Digital Twins</span>
             </h1>
+            <p style={{ fontSize: '18px', color: '#737373', maxWidth: '600px', margin: '0 auto' }}>
+              Select a person and start a conversation with their AI-powered digital twin.
+            </p>
           </div>
 
-          <div className="grid lg:grid-cols-4 gap-6">
-            {/* Founder Selection Sidebar */}
-            <div className="lg:col-span-1">
-              <Card className="glass border-gray-700 mb-6">
-                <CardHeader>
-                  <CardTitle className="text-white text-lg">Select Founder</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {founders.map(founder => (
+          <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '32px', marginBottom: '48px' }}>
+            {/* Person Selection */}
+            <div>
+              <div className="card" style={{ marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Select Person</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {people.map(person => (
                     <button
-                      key={founder.id}
+                      key={person.id}
                       onClick={() => {
-                        setSelectedFounder(founder.id)
+                        setSelectedPerson(person.id)
                         clearChat()
                       }}
-                      className={`w-full p-3 rounded-lg border transition-all ${
-                        selectedFounder === founder.id 
-                          ? 'border-purple-500 bg-purple-500/10 glow' 
-                          : 'border-gray-600 hover:border-gray-500'
-                      }`}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: selectedPerson === person.id ? '2px solid #00d924' : '1px solid #e5e5e5',
+                        borderRadius: '12px',
+                        backgroundColor: selectedPerson === person.id ? '#f0fdf0' : 'white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
+                      }}
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-10 h-10 bg-gradient-to-br ${founder.color} rounded-full flex items-center justify-center`}>
-                          <span className="font-bold text-white text-sm">{founder.initial}</span>
-                        </div>
-                        <span className="text-white font-medium">{founder.name}</span>
+                      <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '14px' }}>
+                        {person.initial}
                       </div>
+                      <span style={{ fontWeight: '500' }}>{person.name}</span>
                     </button>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card className="glass border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white text-lg">Test Ideas</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
+              <div className="card">
+                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Quick Questions</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <button 
                     onClick={() => setQuery("How do you make difficult decisions?")}
-                    className="text-sm text-gray-300 hover:text-white p-2 bg-gray-800/50 rounded w-full text-left"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      backgroundColor: '#f5f5f5',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
                   >
-                    Decision making process
+                    Decision making
                   </button>
                   <button 
                     onClick={() => setQuery("What's your work style like?")}
-                    className="text-sm text-gray-300 hover:text-white p-2 bg-gray-800/50 rounded w-full text-left"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      backgroundColor: '#f5f5f5',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
                   >
-                    Work preferences
+                    Work style
                   </button>
                   <button 
                     onClick={() => setQuery("How do you handle stress?")}
-                    className="text-sm text-gray-300 hover:text-white p-2 bg-gray-800/50 rounded w-full text-left"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      backgroundColor: '#f5f5f5',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
                   >
                     Stress management
                   </button>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* Chat Interface */}
-            <div className="lg:col-span-3">
-              <Card className="glass border-gray-700 h-[600px] flex flex-col">
-                <CardHeader className="border-b border-gray-600">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 bg-gradient-to-br ${selectedFounderData?.color} rounded-full flex items-center justify-center`}>
-                        <span className="font-bold text-white text-sm">{selectedFounderData?.initial}</span>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '600px' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                paddingBottom: '16px', 
+                borderBottom: '1px solid #e5e5e5',
+                marginBottom: '16px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '16px' }}>
+                    {selectedPersonData?.initial}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0' }}>
+                      {selectedPersonData?.name}'s Digital Twin
+                    </h3>
+                    <p style={{ fontSize: '14px', color: '#737373', margin: '0' }}>
+                      AI-powered personality replica
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={clearChat}
+                  className="btn-secondary"
+                  style={{ fontSize: '14px', padding: '8px 16px' }}
+                >
+                  🔄 Clear
+                </button>
+              </div>
+              
+              {/* Messages */}
+              <div style={{ flex: '1', overflowY: 'auto', marginBottom: '16px', paddingRight: '8px' }}>
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: message.type === 'user' ? 'flex-end' : 'flex-start',
+                      marginBottom: '16px'
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      gap: '12px',
+                      maxWidth: '80%',
+                      flexDirection: message.type === 'user' ? 'row-reverse' : 'row'
+                    }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: message.type === 'user' ? '#00d924' : '#00d924',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        flexShrink: 0
+                      }}>
+                        {message.type === 'user' ? 'U' : selectedPersonData?.initial}
                       </div>
                       <div>
-                        <CardTitle className="text-white">{selectedFounderData?.name}'s Digital Twin</CardTitle>
-                        <CardDescription className="text-gray-400">AI-powered personality replica</CardDescription>
+                        <div style={{
+                          padding: '12px 16px',
+                          borderRadius: '16px',
+                          backgroundColor: message.type === 'user' ? '#00d924' : '#f5f5f5',
+                          color: message.type === 'user' ? 'white' : '#171717'
+                        }}>
+                          <p style={{ margin: '0', fontSize: '14px', lineHeight: '1.4' }}>
+                            {message.content}
+                          </p>
+                        </div>
+                        
+                        {message.type === 'ai' && (
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                            <button
+                              onClick={() => rateResponse(message.id, 'good')}
+                              style={{
+                                border: 'none',
+                                background: 'none',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                opacity: message.rating === 'good' ? '1' : '0.5'
+                              }}
+                            >
+                              👍
+                            </button>
+                            <button
+                              onClick={() => rateResponse(message.id, 'bad')}
+                              style={{
+                                border: 'none',
+                                background: 'none',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                opacity: message.rating === 'bad' ? '1' : '0.5'
+                              }}
+                            >
+                              👎
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <Button 
-                      onClick={clearChat}
-                      variant="outline" 
-                      size="sm"
-                      className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Clear
-                    </Button>
                   </div>
-                </CardHeader>
+                ))}
                 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`flex space-x-3 max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                          message.type === 'user' ? 'bg-blue-600' : `bg-gradient-to-br ${selectedFounderData?.color}`
-                        }`}>
-                          {message.type === 'user' ? (
-                            <User className="w-4 h-4 text-white" />
-                          ) : (
-                            <span className="text-xs font-bold text-white">{selectedFounderData?.initial}</span>
-                          )}
-                        </div>
-                        <div className="flex flex-col">
-                          <div className={`px-4 py-2 rounded-lg ${
-                            message.type === 'user' 
-                              ? 'bg-blue-600 text-white' 
-                              : 'glass text-white'
-                          }`}>
-                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                          </div>
-                          
-                          {message.type === 'ai' && (
-                            <div className="flex space-x-2 mt-2">
-                              <button
-                                onClick={() => rateResponse(message.id, 'good')}
-                                className={`p-1 rounded ${message.rating === 'good' ? 'text-green-400' : 'text-gray-500 hover:text-green-400'}`}
-                              >
-                                <ThumbsUp className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => rateResponse(message.id, 'bad')}
-                                className={`p-1 rounded ${message.rating === 'bad' ? 'text-red-400' : 'text-gray-500 hover:text-red-400'}`}
-                              >
-                                <ThumbsDown className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
+                {isLoading && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', gap: '12px', maxWidth: '80%' }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: '#00d924',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}>
+                        {selectedPersonData?.initial}
+                      </div>
+                      <div style={{ padding: '12px 16px', borderRadius: '16px', backgroundColor: '#f5f5f5' }}>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <div style={{ width: '8px', height: '8px', backgroundColor: '#737373', borderRadius: '50%', animation: 'bounce 1s infinite' }}></div>
+                          <div style={{ width: '8px', height: '8px', backgroundColor: '#737373', borderRadius: '50%', animation: 'bounce 1s infinite 0.1s' }}></div>
+                          <div style={{ width: '8px', height: '8px', backgroundColor: '#737373', borderRadius: '50%', animation: 'bounce 1s infinite 0.2s' }}></div>
                         </div>
                       </div>
                     </div>
-                  ))}
-                  
-                  {isLoading && (
-                    <div className="flex justify-start">
-                      <div className="flex space-x-3 max-w-[80%]">
-                        <div className={`flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br ${selectedFounderData?.color} flex items-center justify-center`}>
-                          <span className="text-xs font-bold text-white">{selectedFounderData?.initial}</span>
-                        </div>
-                        <div className="glass px-4 py-2 rounded-lg">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Input */}
-                <div className="border-t border-gray-600 p-4">
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      placeholder={`Ask ${selectedFounderData?.name} anything...`}
-                      className="flex-1 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                      disabled={isLoading}
-                    />
-                    <Button 
-                      onClick={handleSendMessage} 
-                      disabled={!query.trim() || isLoading}
-                      className="gradient-purple text-white"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
                   </div>
+                )}
+              </div>
+
+              {/* Input */}
+              <div style={{ borderTop: '1px solid #e5e5e5', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <input
+                    type="text"
+                    placeholder={`Ask ${selectedPersonData?.name} anything...`}
+                    style={{
+                      flex: '1',
+                      padding: '12px 16px',
+                      border: '1px solid #e5e5e5',
+                      borderRadius: '24px',
+                      fontSize: '16px',
+                      outline: 'none'
+                    }}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                    disabled={isLoading}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!query.trim() || isLoading}
+                    className="btn-primary"
+                    style={{ borderRadius: '24px', fontSize: '14px' }}
+                  >
+                    Send ➤
+                  </button>
                 </div>
-              </Card>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
