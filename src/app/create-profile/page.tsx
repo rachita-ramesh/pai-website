@@ -30,24 +30,31 @@ export default function CreateProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-black to-blue-900/20">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Enhanced Background */}
+      <div className="absolute inset-0">
+        <div className="gradient-mesh absolute inset-0" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(120,119,198,0.1)_0%,transparent_50%)]" />
       </div>
       
-      <div className="absolute top-20 left-20 w-72 h-72 gradient-purple rounded-full mix-blend-multiply filter blur-xl opacity-20 floating"></div>
+      {/* Floating Elements */}
+      <div className="absolute top-32 left-16 w-96 h-96 gradient-purple rounded-full mix-blend-screen filter blur-3xl opacity-20 floating" />
+      <div className="absolute bottom-32 right-16 w-80 h-80 gradient-blue rounded-full mix-blend-screen filter blur-3xl opacity-25 floating-delayed" />
 
       <div className="relative z-10">
         {/* Navigation */}
-        <nav className="flex justify-between items-center p-6 max-w-5xl mx-auto glass rounded-2xl mx-6 mt-6">
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="p-2 gradient-purple rounded-xl glow">
+        <nav className="flex justify-between items-center p-6 max-w-6xl mx-auto">
+          <Link href="/" className="glass-card rounded-2xl p-4 flex items-center space-x-4">
+            <div className="p-2 gradient-purple rounded-xl glow-subtle">
               <Brain className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">Digital Twin Lab</span>
+            <div>
+              <span className="text-xl font-bold text-white">Digital Twin Lab</span>
+              <p className="text-xs text-gray-400 font-medium">Profile Creation</p>
+            </div>
           </Link>
-          <div className="text-sm text-gray-400">
-            Create Profile
+          <div className="glass-card rounded-full px-6 py-3">
+            <span className="text-sm font-medium text-gray-300">Step 1 of 2</span>
           </div>
         </nav>
 

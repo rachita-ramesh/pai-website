@@ -30,9 +30,9 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(false)
 
   const founders = [
-    { id: 'rachita', name: 'Rachita', color: 'from-purple-500 to-pink-500', initial: 'R' },
-    { id: 'founder2', name: 'Founder 2', color: 'from-cyan-500 to-blue-500', initial: 'F2' },
-    { id: 'founder3', name: 'Founder 3', color: 'from-green-500 to-emerald-500', initial: 'F3' },
+    { id: 'rachita', name: 'Rachita', color: 'gradient-purple', initial: 'R', role: 'CEO' },
+    { id: 'everhett', name: 'Everhett', color: 'gradient-blue', initial: 'E', role: 'CTO' },
+    { id: 'gigi', name: 'Gigi', color: 'gradient-pink', initial: 'G', role: 'COO' },
   ]
 
   const selectedFounderData = founders.find(f => f.id === selectedFounder)
