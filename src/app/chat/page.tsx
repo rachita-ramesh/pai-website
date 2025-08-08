@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
 
 interface Message {
@@ -10,6 +10,7 @@ interface Message {
   person?: string
   timestamp?: Date
   rating?: 'good' | 'bad' | null
+  isPlaying?: boolean
 }
 
 export default function Chat() {
@@ -24,11 +25,14 @@ export default function Chat() {
     }
   ])
   const [isLoading, setIsLoading] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [speechEnabled, setSpeechEnabled] = useState(true)
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const people = [
-    { id: 'rachita', name: 'Rachita', initial: 'R' },
-    { id: 'everhett', name: 'Everhett', initial: 'E' },
-    { id: 'gigi', name: 'Gigi', initial: 'G' },
+    { id: 'rachita', name: 'Rachita', initial: 'R', voice: 'female' },
+    { id: 'everhett', name: 'Everhett', initial: 'E', voice: 'male' },
+    { id: 'gigi', name: 'Gigi', initial: 'G', voice: 'female' },
   ]
 
   const selectedPersonData = people.find(f => f.id === selectedPerson)
@@ -59,6 +63,13 @@ export default function Chat() {
       }
       setMessages(prev => [...prev, aiMessage])
       setIsLoading(false)
+      
+      // Auto-speak AI response if speech is enabled
+      if (speechEnabled) {
+        setTimeout(() => {
+          speakMessage(aiMessage.content, selectedPerson)
+        }, 500)
+      }
     }, 2000)
   }
 
@@ -100,15 +111,85 @@ export default function Chat() {
     )
   }
 
+  const speakMessage = (text: string, person: string) => {
+    if (!speechEnabled || !('speechSynthesis' in window)) return
+    
+    // Stop any current speech
+    window.speechSynthesis.cancel()
+    
+    const utterance = new SpeechSynthesisUtterance(text)
+    
+    // Configure voice based on person
+    const voices = window.speechSynthesis.getVoices()
+    const personData = people.find(p => p.id === person)
+    
+    if (personData?.voice === 'female') {
+      const femaleVoice = voices.find(voice => 
+        voice.name.toLowerCase().includes('female') || 
+        voice.name.toLowerCase().includes('woman') ||
+        voice.name.toLowerCase().includes('samantha') ||
+        voice.name.toLowerCase().includes('victoria') ||
+        voice.gender === 'female'
+      )
+      if (femaleVoice) utterance.voice = femaleVoice
+    } else {
+      const maleVoice = voices.find(voice => 
+        voice.name.toLowerCase().includes('male') || 
+        voice.name.toLowerCase().includes('man') ||
+        voice.name.toLowerCase().includes('daniel') ||
+        voice.name.toLowerCase().includes('alex') ||
+        voice.gender === 'male'
+      )
+      if (maleVoice) utterance.voice = maleVoice
+    }
+    
+    // Configure speech parameters
+    utterance.rate = 0.9
+    utterance.pitch = 1.0
+    utterance.volume = 0.8
+    
+    utterance.onstart = () => setIsSpeaking(true)
+    utterance.onend = () => setIsSpeaking(false)
+    utterance.onerror = () => setIsSpeaking(false)
+    
+    speechRef.current = utterance
+    window.speechSynthesis.speak(utterance)
+  }
+  
+  const stopSpeaking = () => {
+    window.speechSynthesis.cancel()
+    setIsSpeaking(false)
+  }
+  
   const clearChat = () => {
-    setMessages([{
+    stopSpeaking()
+    const welcomeMessage = {
       id: '1',
-      type: 'ai',
+      type: 'ai' as const,
       content: `Hi! I'm ${selectedPersonData?.name}'s digital twin. Ask me anything and I'll respond as they would.`,
       person: selectedPerson,
       timestamp: new Date()
-    }])
+    }
+    setMessages([welcomeMessage])
+    
+    // Speak welcome message if speech is enabled
+    if (speechEnabled) {
+      setTimeout(() => {
+        speakMessage(welcomeMessage.content, selectedPerson)
+      }, 500)
+    }
   }
+  
+  // Load voices when component mounts
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      const loadVoices = () => {
+        window.speechSynthesis.getVoices()
+      }
+      loadVoices()
+      window.speechSynthesis.onvoiceschanged = loadVoices
+    }
+  }, [])
 
   return (
     <div>
@@ -251,13 +332,33 @@ export default function Chat() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={clearChat}
-                  className="btn-secondary"
-                  style={{ fontSize: '14px', padding: '8px 16px' }}
-                >
-                  🔄 Clear
-                </button>
+<div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setSpeechEnabled(!speechEnabled)}
+                    className={speechEnabled ? "btn-primary" : "btn-secondary"}
+                    style={{ fontSize: '14px', padding: '8px 12px' }}
+                    title={speechEnabled ? "Voice enabled" : "Voice disabled"}
+                  >
+                    {speechEnabled ? '🔊' : '🔇'}
+                  </button>
+                  {isSpeaking && (
+                    <button
+                      onClick={stopSpeaking}
+                      className="btn-secondary"
+                      style={{ fontSize: '14px', padding: '8px 12px' }}
+                      title="Stop speaking"
+                    >
+                      ⏹️
+                    </button>
+                  )}
+                  <button
+                    onClick={clearChat}
+                    className="btn-secondary"
+                    style={{ fontSize: '14px', padding: '8px 16px' }}
+                  >
+                    🔄 Clear
+                  </button>
+                </div>
               </div>
               
               {/* Messages */}
@@ -306,6 +407,20 @@ export default function Chat() {
                         
                         {message.type === 'ai' && (
                           <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                            <button
+                              onClick={() => speakMessage(message.content, message.person || selectedPerson)}
+                              style={{
+                                border: 'none',
+                                background: 'none',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                opacity: isSpeaking ? '0.5' : '1'
+                              }}
+                              disabled={isSpeaking}
+                              title="Play voice"
+                            >
+                              🔊
+                            </button>
                             <button
                               onClick={() => rateResponse(message.id, 'good')}
                               style={{
