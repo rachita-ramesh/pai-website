@@ -129,7 +129,8 @@ export default function Chat() {
         voice.name.toLowerCase().includes('woman') ||
         voice.name.toLowerCase().includes('samantha') ||
         voice.name.toLowerCase().includes('victoria') ||
-        voice.gender === 'female'
+        voice.name.toLowerCase().includes('zira') ||
+        voice.name.toLowerCase().includes('eva')
       )
       if (femaleVoice) utterance.voice = femaleVoice
     } else {
@@ -138,7 +139,8 @@ export default function Chat() {
         voice.name.toLowerCase().includes('man') ||
         voice.name.toLowerCase().includes('daniel') ||
         voice.name.toLowerCase().includes('alex') ||
-        voice.gender === 'male'
+        voice.name.toLowerCase().includes('david') ||
+        voice.name.toLowerCase().includes('mark')
       )
       if (maleVoice) utterance.voice = maleVoice
     }
