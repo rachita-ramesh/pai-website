@@ -44,6 +44,7 @@ interface Message {
 
 interface InterviewData {
   name: string
+  sessionId: string
   messages: Message[]
   startTime: Date
   currentTopic: string
@@ -60,6 +61,7 @@ export default function CreateProfile() {
   const [isListening, setIsListening] = useState(false)
   const [interviewData, setInterviewData] = useState<InterviewData>({
     name: '',
+    sessionId: '',
     messages: [],
     startTime: new Date(),
     currentTopic: 'category_relationship',
@@ -133,52 +135,62 @@ export default function CreateProfile() {
     }
   }
   
-  const startInterview = () => {
+  const startInterview = async () => {
     if (!userName.trim()) return
     
-    const welcomeMessage: Message = {
-      id: '1',
-      type: 'ai',
-      content: `Hi ${userName}! I'd love to understand your relationship with skincare. Tell me, is skincare something you think about a lot, or is it more just routine for you?`,
-      timestamp: new Date()
+    setIsLoading(true)
+    
+    try {
+      // Call backend to start interview session
+      const response = await fetch('http://localhost:8000/interview/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          participant_name: userName
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to start interview: ${response.status}`)
+      }
+      
+      const sessionData = await response.json()
+      
+      // Convert backend messages to our format
+      const messages = sessionData.messages.map((msg: {
+        id: string
+        type: string
+        content: string
+        timestamp: string
+      }) => ({
+        id: msg.id,
+        type: msg.type as 'user' | 'ai',
+        content: msg.content,
+        timestamp: new Date(msg.timestamp)
+      }))
+      
+      setInterviewData({
+        name: sessionData.participant_name,
+        sessionId: sessionData.session_id,
+        messages: messages,
+        startTime: new Date(sessionData.start_time),
+        currentTopic: 'category_relationship',
+        exchangeCount: sessionData.exchange_count,
+        isComplete: sessionData.is_complete
+      })
+      
+      setInterviewPhase('interview')
+      
+    } catch (error) {
+      console.error('Error starting interview:', error)
+      alert('Failed to start interview. Please make sure the backend server is running on port 8000.')
+    } finally {
+      setIsLoading(false)
     }
-    
-    setInterviewData({
-      name: userName,
-      messages: [welcomeMessage],
-      startTime: new Date(),
-      currentTopic: 'category_relationship',
-      exchangeCount: 0,
-      isComplete: false
-    })
-    
-    setInterviewPhase('interview')
   }
   
-  const generateAIResponse = async (userResponse: string, currentData: InterviewData): Promise<string> => {
-    // This will eventually call Claude API - for now using mock responses
-    const mockResponses = [
-      "That's really interesting! Can you tell me more about how that fits into your daily routine?",
-      "I hear what you're saying. How has your approach to skincare changed over time?",
-      "Help me understand what you mean by that - can you give me a specific example?",
-      "That's fascinating. What goes through your mind when you're choosing a new product?",
-      "How does that make you feel when that happens?",
-      "You mentioned something interesting there - how does that influence your decisions?"
-    ]
-    
-    // Simple logic for now - will be replaced with actual AI
-    const responseIndex = currentData.exchangeCount % mockResponses.length
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    // Check if interview should end (20+ exchanges)
-    if (currentData.exchangeCount >= 19) {
-      return "This has been really insightful, ${userName}. Is there anything else about your relationship with skincare that feels important for me to understand?"
-    }
-    
-    return mockResponses[responseIndex]
-  }
   
   const handleSendMessage = async () => {
     if (!currentMessage.trim() || isLoading) return
@@ -201,37 +213,96 @@ export default function CreateProfile() {
     setIsLoading(true)
     
     try {
-      const aiResponse = await generateAIResponse(currentMessage, updatedData)
+      // Call the Python backend API
+      const response = await fetch('http://localhost:8000/interview/message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: updatedData.sessionId,
+          message: currentMessage
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      
+      const data = await response.json()
       
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: aiResponse,
+        content: data.ai_response,
         timestamp: new Date()
       }
       
       const finalData = {
         ...updatedData,
         messages: [...updatedData.messages, aiMessage],
-        isComplete: updatedData.exchangeCount >= 20
+        exchangeCount: data.exchange_count,
+        isComplete: data.is_complete
       }
       
       setInterviewData(finalData)
       
       if (finalData.isComplete) {
         setInterviewPhase('complete')
+        // Automatically complete the interview on the backend
+        try {
+          await fetch(`http://localhost:8000/interview/${finalData.sessionId}/complete`, {
+            method: 'POST'
+          })
+          console.log('Interview completed on backend')
+        } catch (completeError) {
+          console.error('Error completing interview on backend:', completeError)
+        }
       }
     } catch (error) {
       console.error('Error generating AI response:', error)
+      // Fallback for offline mode
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: "I'm having trouble connecting to the AI service right now. Could you please try that again?",
+        timestamp: new Date()
+      }
+      
+      const finalData = {
+        ...updatedData,
+        messages: [...updatedData.messages, aiMessage]
+      }
+      
+      setInterviewData(finalData)
     } finally {
       setIsLoading(false)
     }
   }
   
-  const handleCompleteInterview = () => {
-    // This will eventually extract profile and save data
-    console.log('Interview complete:', interviewData)
-    alert(`Interview completed! ${interviewData.exchangeCount} exchanges recorded. Profile extraction coming next.`)
+  const handleCompleteInterview = async () => {
+    try {
+      // Call backend to extract profile
+      const response = await fetch(`http://localhost:8000/interview/${interviewData.sessionId}/complete`, {
+        method: 'POST'
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Profile extraction started:', result)
+        alert(`Interview completed! ${interviewData.exchangeCount} exchanges recorded. Profile extraction has started in the background. Check the backend logs for progress.`)
+      } else {
+        throw new Error('Failed to complete interview')
+      }
+      
+      // Optionally redirect to a results page or show profile extraction status
+      // For now, just log the completion
+      console.log('Interview complete:', interviewData)
+      
+    } catch (error) {
+      console.error('Error completing interview:', error)
+      alert('Interview data saved locally, but profile extraction failed. Please check if the backend server is running.')
+    }
   }
 
   return (
@@ -493,10 +564,10 @@ export default function CreateProfile() {
             {interviewPhase === 'setup' && (
               <button 
                 onClick={startInterview} 
-                disabled={!userName.trim()}
+                disabled={!userName.trim() || isLoading}
                 className="btn-primary"
               >
-                🎤 Start Interview
+                {isLoading ? '🔄 Connecting...' : '🎤 Start Interview'}
               </button>
             )}
             {interviewPhase === 'complete' && (
