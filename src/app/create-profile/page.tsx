@@ -1,28 +1,147 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
 
+interface Message {
+  id: string
+  type: 'user' | 'ai'
+  content: string
+  timestamp: Date
+}
+
+interface InterviewData {
+  name: string
+  messages: Message[]
+  startTime: Date
+  currentTopic: string
+  exchangeCount: number
+  isComplete: boolean
+}
+
 export default function CreateProfile() {
-  const [formData, setFormData] = useState({
+  const [interviewPhase, setInterviewPhase] = useState<'setup' | 'interview' | 'complete'>('setup')
+  const [userName, setUserName] = useState('')
+  const [currentMessage, setCurrentMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [interviewData, setInterviewData] = useState<InterviewData>({
     name: '',
-    age: '',
-    personality: '',
-    workStyle: '',
-    decisionMaking: '',
-    communication: '',
-    values: '',
-    hobbies: '',
-    background: ''
+    messages: [],
+    startTime: new Date(),
+    currentTopic: 'category_relationship',
+    exchangeCount: 0,
+    isComplete: false
   })
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
-
-  const handleSave = () => {
-    console.log('Saving profile data:', formData)
-    alert('Profile saved! Your digital twin training has begun.')
+  
+  useEffect(() => {
+    scrollToBottom()
+  }, [interviewData.messages])
+  
+  const startInterview = () => {
+    if (!userName.trim()) return
+    
+    const welcomeMessage: Message = {
+      id: '1',
+      type: 'ai',
+      content: `Hi ${userName}! I'd love to understand your relationship with skincare. Tell me, is skincare something you think about a lot, or is it more just routine for you?`,
+      timestamp: new Date()
+    }
+    
+    setInterviewData({
+      name: userName,
+      messages: [welcomeMessage],
+      startTime: new Date(),
+      currentTopic: 'category_relationship',
+      exchangeCount: 0,
+      isComplete: false
+    })
+    
+    setInterviewPhase('interview')
+  }
+  
+  const generateAIResponse = async (userResponse: string, currentData: InterviewData): Promise<string> => {
+    // This will eventually call Claude API - for now using mock responses
+    const mockResponses = [
+      "That's really interesting! Can you tell me more about how that fits into your daily routine?",
+      "I hear what you're saying. How has your approach to skincare changed over time?",
+      "Help me understand what you mean by that - can you give me a specific example?",
+      "That's fascinating. What goes through your mind when you're choosing a new product?",
+      "How does that make you feel when that happens?",
+      "You mentioned something interesting there - how does that influence your decisions?"
+    ]
+    
+    // Simple logic for now - will be replaced with actual AI
+    const responseIndex = currentData.exchangeCount % mockResponses.length
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    // Check if interview should end (20+ exchanges)
+    if (currentData.exchangeCount >= 19) {
+      return "This has been really insightful, ${userName}. Is there anything else about your relationship with skincare that feels important for me to understand?"
+    }
+    
+    return mockResponses[responseIndex]
+  }
+  
+  const handleSendMessage = async () => {
+    if (!currentMessage.trim() || isLoading) return
+    
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: currentMessage.trim(),
+      timestamp: new Date()
+    }
+    
+    const updatedData = {
+      ...interviewData,
+      messages: [...interviewData.messages, userMessage],
+      exchangeCount: interviewData.exchangeCount + 1
+    }
+    
+    setInterviewData(updatedData)
+    setCurrentMessage('')
+    setIsLoading(true)
+    
+    try {
+      const aiResponse = await generateAIResponse(currentMessage, updatedData)
+      
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: aiResponse,
+        timestamp: new Date()
+      }
+      
+      const finalData = {
+        ...updatedData,
+        messages: [...updatedData.messages, aiMessage],
+        isComplete: updatedData.exchangeCount >= 20
+      }
+      
+      setInterviewData(finalData)
+      
+      if (finalData.isComplete) {
+        setInterviewPhase('complete')
+      }
+    } catch (error) {
+      console.error('Error generating AI response:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  
+  const handleCompleteInterview = () => {
+    // This will eventually extract profile and save data
+    console.log('Interview complete:', interviewData)
+    alert(`Interview completed! ${interviewData.exchangeCount} exchanges recorded. Profile extraction coming next.`)
   }
 
   return (
@@ -53,20 +172,23 @@ export default function CreateProfile() {
               Build Your <span className="highlight">Digital Twin</span>
             </h1>
             <p style={{ fontSize: '18px', color: '#737373', maxWidth: '600px', margin: '0 auto' }}>
-              Answer these questions to help the AI understand your personality, thinking patterns, and decision-making style.
+              {interviewPhase === 'setup' && 'Our AI will conduct a natural 15-20 minute conversation to understand your skincare attitudes and behaviors.'}
+              {interviewPhase === 'interview' && `AI Interview in Progress - ${interviewData.exchangeCount} exchanges so far`}
+              {interviewPhase === 'complete' && 'Interview Complete! Your responses will be analyzed to create your digital twin.'}
             </p>
           </div>
 
-          <div className="card" style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>Personal Profile</h2>
-            <p style={{ fontSize: '16px', color: '#737373', marginBottom: '32px' }}>
-              Tell us about yourself so we can create an accurate digital representation
-            </p>
-
-            <div style={{ display: 'grid', gap: '24px' }}>
+          {interviewPhase === 'setup' && (
+            <div className="card" style={{ marginBottom: '32px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>AI Skincare Interview</h2>
+              <p style={{ fontSize: '16px', color: '#737373', marginBottom: '32px' }}>
+                Our AI researcher will conduct a natural conversation to understand your attitudes and behaviors around skincare. 
+                This typically takes 15-20 minutes and helps us create a detailed psychological profile.
+              </p>
+              
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Full Name
+                  What should we call you?
                 </label>
                 <input
                   type="text"
@@ -76,190 +198,191 @@ export default function CreateProfile() {
                     border: '1px solid #e5e5e5', 
                     borderRadius: '8px',
                     fontSize: '16px',
-                    outline: 'none'
-                  }}
-                  placeholder="Your full name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Age
-                </label>
-                <input
-                  type="number"
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none'
-                  }}
-                  placeholder="Your age"
-                  value={formData.age}
-                  onChange={(e) => handleInputChange('age', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Personality Description
-                </label>
-                <textarea
-                  rows={4}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
                     outline: 'none',
-                    fontFamily: 'inherit'
+                    marginBottom: '24px'
                   }}
-                  placeholder="Describe your personality in detail. Are you introverted/extroverted? Analytical/creative? Risk-taker/cautious? etc."
-                  value={formData.personality}
-                  onChange={(e) => handleInputChange('personality', e.target.value)}
+                  placeholder="Your first name"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && startInterview()}
                 />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Work Style & Approach
-                </label>
-                <textarea
-                  rows={3}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                  placeholder="How do you approach work? Do you prefer collaboration or solo work? Structured or flexible? Detail-oriented or big picture?"
-                  value={formData.workStyle}
-                  onChange={(e) => handleInputChange('workStyle', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Decision Making Process
-                </label>
-                <textarea
-                  rows={3}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                  placeholder="How do you make decisions? Do you rely on data, intuition, or both? Fast or deliberate? Do you seek input from others?"
-                  value={formData.decisionMaking}
-                  onChange={(e) => handleInputChange('decisionMaking', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Communication Style
-                </label>
-                <textarea
-                  rows={3}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                  placeholder="How do you communicate? Direct or diplomatic? Formal or casual? Do you use humor? How do you handle conflict?"
-                  value={formData.communication}
-                  onChange={(e) => handleInputChange('communication', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Core Values & Beliefs
-                </label>
-                <textarea
-                  rows={3}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                  placeholder="What are your core values? What drives and motivates you? What principles do you live by?"
-                  value={formData.values}
-                  onChange={(e) => handleInputChange('values', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Interests & Hobbies
-                </label>
-                <textarea
-                  rows={2}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                  placeholder="What do you enjoy doing in your free time? Any specific interests, hobbies, or passions?"
-                  value={formData.hobbies}
-                  onChange={(e) => handleInputChange('hobbies', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Background & Experience
-                </label>
-                <textarea
-                  rows={3}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                  placeholder="Tell us about your professional/educational background, key experiences that shaped you, or anything else relevant"
-                  value={formData.background}
-                  onChange={(e) => handleInputChange('background', e.target.value)}
-                />
+                
+                <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px', marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>What to expect:</h3>
+                  <ul style={{ fontSize: '14px', color: '#737373', paddingLeft: '20px', margin: '0' }}>
+                    <li>Natural conversation about your skincare habits and attitudes</li>
+                    <li>Questions about your relationship with skincare and beauty</li>
+                    <li>Discussion of your decision-making patterns and preferences</li>
+                    <li>Exploration of your values and priorities around self-care</li>
+                    <li>Approximately 20-25 back-and-forth exchanges</li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+          
+          {interviewPhase === 'interview' && (
+            <div className="card" style={{ marginBottom: '32px', height: '600px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                paddingBottom: '16px', 
+                borderBottom: '1px solid #e5e5e5',
+                marginBottom: '16px'
+              }}>
+                <div>
+                  <h2 style={{ fontSize: '20px', fontWeight: '600', margin: '0' }}>Interview with {interviewData.name}</h2>
+                  <p style={{ fontSize: '14px', color: '#737373', margin: '0' }}>Exchange {interviewData.exchangeCount} of ~20</p>
+                </div>
+                <div style={{ fontSize: '14px', color: '#737373' }}>
+                  Started {interviewData.startTime.toLocaleTimeString()}
+                </div>
+              </div>
+              
+              <div style={{ flex: '1', overflowY: 'auto', marginBottom: '16px', paddingRight: '8px' }}>
+                {interviewData.messages.map((message) => (
+                  <div
+                    key={message.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: message.type === 'user' ? 'flex-end' : 'flex-start',
+                      marginBottom: '16px'
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      gap: '12px',
+                      maxWidth: '80%',
+                      flexDirection: message.type === 'user' ? 'row-reverse' : 'row'
+                    }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: message.type === 'user' ? '#00d924' : '#f5f5f5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: message.type === 'user' ? 'white' : '#171717',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        flexShrink: 0
+                      }}>
+                        {message.type === 'user' ? userName.charAt(0).toUpperCase() : 'AI'}
+                      </div>
+                      <div style={{
+                        padding: '12px 16px',
+                        borderRadius: '16px',
+                        backgroundColor: message.type === 'user' ? '#00d924' : '#f5f5f5',
+                        color: message.type === 'user' ? 'white' : '#171717'
+                      }}>
+                        <p style={{ margin: '0', fontSize: '14px', lineHeight: '1.4' }}>
+                          {message.content}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {isLoading && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', gap: '12px', maxWidth: '80%' }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: '#f5f5f5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#171717',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}>
+                        AI
+                      </div>
+                      <div style={{ padding: '12px 16px', borderRadius: '16px', backgroundColor: '#f5f5f5' }}>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <div style={{ width: '8px', height: '8px', backgroundColor: '#737373', borderRadius: '50%', animation: 'bounce 1s infinite' }}></div>
+                          <div style={{ width: '8px', height: '8px', backgroundColor: '#737373', borderRadius: '50%', animation: 'bounce 1s infinite 0.1s' }}></div>
+                          <div style={{ width: '8px', height: '8px', backgroundColor: '#737373', borderRadius: '50%', animation: 'bounce 1s infinite 0.2s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+              
+              <div style={{ borderTop: '1px solid #e5e5e5', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <input
+                    type="text"
+                    placeholder="Share your thoughts..."
+                    style={{
+                      flex: '1',
+                      padding: '12px 16px',
+                      border: '1px solid #e5e5e5',
+                      borderRadius: '24px',
+                      fontSize: '16px',
+                      outline: 'none'
+                    }}
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                    disabled={isLoading}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!currentMessage.trim() || isLoading}
+                    className="btn-primary"
+                    style={{ borderRadius: '24px', fontSize: '14px' }}
+                  >
+                    Send ➤
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {interviewPhase === 'complete' && (
+            <div className="card" style={{ marginBottom: '32px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '16px' }}>Interview Complete! 🎉</h2>
+              <div style={{ padding: '16px', backgroundColor: '#f0fdf0', borderRadius: '8px', marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#00d924' }}>Interview Summary</h3>
+                <ul style={{ fontSize: '14px', color: '#737373', paddingLeft: '20px', margin: '0' }}>
+                  <li>Participant: {interviewData.name}</li>
+                  <li>Total exchanges: {interviewData.exchangeCount}</li>
+                  <li>Duration: {Math.round((new Date().getTime() - interviewData.startTime.getTime()) / 1000 / 60)} minutes</li>
+                  <li>Messages recorded: {interviewData.messages.length}</li>
+                </ul>
+              </div>
+              <p style={{ fontSize: '16px', color: '#737373', marginBottom: '24px' }}>
+                Your interview has been recorded and will be processed to create your digital twin profile. 
+                This involves extracting psychological patterns, behavioral preferences, and decision-making styles.
+              </p>
+            </div>
+          )}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '32px' }}>
             <Link href="/" className="btn-secondary">
               ← Back to Home
             </Link>
-            <button onClick={handleSave} className="btn-primary">
-              💾 Save Profile & Start Training
-            </button>
+            {interviewPhase === 'setup' && (
+              <button 
+                onClick={startInterview} 
+                disabled={!userName.trim()}
+                className="btn-primary"
+              >
+                🎤 Start Interview
+              </button>
+            )}
+            {interviewPhase === 'complete' && (
+              <button onClick={handleCompleteInterview} className="btn-primary">
+                📊 Extract Profile & Continue
+              </button>
+            )}
           </div>
         </div>
       </main>
