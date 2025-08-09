@@ -86,21 +86,49 @@ export default function CreateProfile() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
       const recognition = new SpeechRecognition()
       
-      recognition.continuous = false
-      recognition.interimResults = true
+      // Better settings for natural conversation
+      recognition.continuous = true          // Keep listening continuously
+      recognition.interimResults = true     // Show results as you speak
       recognition.lang = 'en-US'
+      
+      // Add timeout to prevent premature ending
+      let silenceTimer: NodeJS.Timeout | null = null
+      let lastTranscriptTime = Date.now()
       
       recognition.onstart = () => {
         setIsListening(true)
+        lastTranscriptTime = Date.now()
       }
       
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        lastTranscriptTime = Date.now()
+        
+        // Clear any existing silence timer
+        if (silenceTimer) {
+          clearTimeout(silenceTimer)
+          silenceTimer = null
+        }
+        
+        // Get the latest transcript
+        const results = Array.from(event.results)
+        const transcript = results
           .map(result => result[0])
           .map(result => result.transcript)
           .join('')
         
         setCurrentMessage(transcript)
+        
+        // Check if we have final results
+        const hasFinalResult = results.some(result => result.isFinal)
+        
+        // Set a timer to stop after silence (only if no final result)
+        if (!hasFinalResult) {
+          silenceTimer = setTimeout(() => {
+            if (Date.now() - lastTranscriptTime > 2000) { // 2 seconds of silence
+              recognition.stop()
+            }
+          }, 2500)
+        }
       }
       
       recognition.onerror = (event) => {
@@ -112,6 +140,9 @@ export default function CreateProfile() {
       recognition.onend = () => {
         setIsListening(false)
         setIsRecording(false)
+        if (silenceTimer) {
+          clearTimeout(silenceTimer)
+        }
       }
       
       recognitionRef.current = recognition
@@ -510,7 +541,7 @@ export default function CreateProfile() {
                       backgroundColor: isRecording ? '#ef4444' : (isListening ? '#00d924' : '#00d924'),
                       animation: isListening ? 'pulse 1.5s ease-in-out infinite' : 'none'
                     }}
-                    title={isRecording ? "Stop recording" : "Start voice recording"}
+                    title={isRecording ? "Click to stop recording" : "Start voice recording"}
                   >
                     {isRecording ? '⏹️' : '🎤'}
                   </button>
@@ -531,7 +562,18 @@ export default function CreateProfile() {
                     color: '#00d924',
                     fontWeight: '500'
                   }}>
-                    🎙️ Listening... Speak now
+                    🎙️ Listening... Take your time, I'll wait for you to finish speaking
+                  </div>
+                )}
+                {isRecording && !isListening && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    marginTop: '8px', 
+                    fontSize: '14px', 
+                    color: '#737373',
+                    fontWeight: '500'
+                  }}>
+                    Processing your speech...
                   </div>
                 )}
               </div>
