@@ -3,6 +3,38 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
 
+// Add TypeScript declarations for speech recognition
+interface SpeechRecognitionConstructor {
+  new(): SpeechRecognition
+}
+
+interface SpeechRecognition {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onstart: () => void
+  onresult: (event: SpeechRecognitionEvent) => void
+  onerror: (event: SpeechRecognitionErrorEvent) => void
+  onend: () => void
+  start: () => void
+  stop: () => void
+}
+
+interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: SpeechRecognitionConstructor
+    webkitSpeechRecognition: SpeechRecognitionConstructor
+  }
+}
+
 interface Message {
   id: string
   type: 'user' | 'ai'
@@ -24,6 +56,8 @@ export default function CreateProfile() {
   const [userName, setUserName] = useState('')
   const [currentMessage, setCurrentMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [isListening, setIsListening] = useState(false)
   const [interviewData, setInterviewData] = useState<InterviewData>({
     name: '',
     messages: [],
@@ -34,6 +68,7 @@ export default function CreateProfile() {
   })
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -42,6 +77,61 @@ export default function CreateProfile() {
   useEffect(() => {
     scrollToBottom()
   }, [interviewData.messages])
+  
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+      const recognition = new SpeechRecognition()
+      
+      recognition.continuous = false
+      recognition.interimResults = true
+      recognition.lang = 'en-US'
+      
+      recognition.onstart = () => {
+        setIsListening(true)
+      }
+      
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0])
+          .map(result => result.transcript)
+          .join('')
+        
+        setCurrentMessage(transcript)
+      }
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error)
+        setIsRecording(false)
+        setIsListening(false)
+      }
+      
+      recognition.onend = () => {
+        setIsListening(false)
+        setIsRecording(false)
+      }
+      
+      recognitionRef.current = recognition
+    }
+  }, [])
+  
+  const startVoiceRecording = () => {
+    if (!recognitionRef.current) {
+      alert('Voice recognition not supported in this browser')
+      return
+    }
+    
+    setIsRecording(true)
+    setCurrentMessage('')
+    recognitionRef.current.start()
+  }
+  
+  const stopVoiceRecording = () => {
+    if (recognitionRef.current && isRecording) {
+      recognitionRef.current.stop()
+    }
+  }
   
   const startInterview = () => {
     if (!userName.trim()) return
@@ -316,32 +406,63 @@ export default function CreateProfile() {
               </div>
               
               <div style={{ borderTop: '1px solid #e5e5e5', paddingTop: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <input
                     type="text"
-                    placeholder="Share your thoughts..."
+                    placeholder={isListening ? "Listening..." : "Share your thoughts or click mic to speak..."}
                     style={{
                       flex: '1',
                       padding: '12px 16px',
-                      border: '1px solid #e5e5e5',
+                      border: isListening ? '2px solid #00d924' : '1px solid #e5e5e5',
                       borderRadius: '24px',
                       fontSize: '16px',
-                      outline: 'none'
+                      outline: 'none',
+                      backgroundColor: isListening ? '#f0fdf0' : 'white'
                     }}
                     value={currentMessage}
                     onChange={(e) => setCurrentMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    disabled={isLoading}
+                    disabled={isLoading || isListening}
                   />
                   <button
-                    onClick={handleSendMessage}
-                    disabled={!currentMessage.trim() || isLoading}
-                    className="btn-primary"
-                    style={{ borderRadius: '24px', fontSize: '14px' }}
+                    onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
+                    disabled={isLoading}
+                    className={isRecording ? "btn-secondary" : "btn-primary"}
+                    style={{ 
+                      borderRadius: '50%', 
+                      width: '48px', 
+                      height: '48px', 
+                      fontSize: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isRecording ? '#ef4444' : (isListening ? '#00d924' : '#00d924'),
+                      animation: isListening ? 'pulse 1.5s ease-in-out infinite' : 'none'
+                    }}
+                    title={isRecording ? "Stop recording" : "Start voice recording"}
                   >
-                    Send ➤
+                    {isRecording ? '⏹️' : '🎤'}
+                  </button>
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!currentMessage.trim() || isLoading || isListening}
+                    className="btn-primary"
+                    style={{ borderRadius: '24px', fontSize: '14px', minWidth: '80px' }}
+                  >
+                    {isLoading ? '...' : 'Send ➤'}
                   </button>
                 </div>
+                {isListening && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    marginTop: '8px', 
+                    fontSize: '14px', 
+                    color: '#00d924',
+                    fontWeight: '500'
+                  }}>
+                    🎙️ Listening... Speak now
+                  </div>
+                )}
               </div>
             </div>
           )}
