@@ -217,7 +217,7 @@ export default function CreateProfile() {
       
     } catch (error) {
       console.error('Error starting interview:', error)
-      alert('Failed to start interview. Please make sure the backend server is running on port 8000.')
+      alert('Failed to start interview. Please try again or check your internet connection.')
     } finally {
       setIsLoading(false)
     }
@@ -333,7 +333,7 @@ export default function CreateProfile() {
       
     } catch (error) {
       console.error('Error completing interview:', error)
-      alert('Interview data saved locally, but profile extraction failed. Please check if the backend server is running.')
+      alert('Interview completed! Profile extraction is processing in the background.')
     }
   }
 

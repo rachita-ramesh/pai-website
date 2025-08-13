@@ -29,10 +29,32 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Headers', 'Content-Type')
             self.end_headers()
             
+            # Format messages for frontend
+            messages = []
+            if session.messages:
+                for msg in session.messages:
+                    messages.append({
+                        'id': msg.id,
+                        'type': msg.type,
+                        'content': msg.content,
+                        'timestamp': msg.timestamp.isoformat()
+                    })
+            else:
+                # Add initial AI greeting message
+                import uuid
+                from datetime import datetime
+                messages.append({
+                    'id': str(uuid.uuid4()),
+                    'type': 'ai',
+                    'content': "Hello! Let's begin our conversation about skincare.",
+                    'timestamp': datetime.now().isoformat()
+                })
+            
             response = {
                 'session_id': session.session_id,
                 'participant_name': session.participant_name,
-                'ai_message': session.messages[-1].content if session.messages else "Hello! Let's begin our conversation about skincare.",
+                'messages': messages,
+                'start_time': session.start_time.isoformat(),
                 'exchange_count': session.exchange_count,
                 'is_complete': session.is_complete,
                 'current_topic': session.current_topic
