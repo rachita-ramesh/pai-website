@@ -49,7 +49,7 @@ export default function ValidationTest() {
 
   const loadSurvey = async () => {
     try {
-      const response = await fetch('http://localhost:8000/validation/survey')
+      const response = await fetch('/api/validation')
       if (response.ok) {
         const surveyData = await response.json()
         setSurvey(surveyData)
@@ -104,7 +104,7 @@ export default function ValidationTest() {
         if (humanAnswer) {
           console.log(`Processing question ${question.id}:`, humanAnswer)
           
-          const response = await fetch('http://localhost:8000/validation/compare', {
+          const response = await fetch('/api/validation', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -139,7 +139,7 @@ export default function ValidationTest() {
       // Save results to backend
       try {
         const testSessionId = `test_${Date.now()}`
-        const saveResponse = await fetch('http://localhost:8000/validation/save-results', {
+        const saveResponse = await fetch('/api/validation', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

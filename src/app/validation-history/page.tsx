@@ -34,7 +34,7 @@ export default function ValidationHistory() {
 
   const loadValidationHistory = async () => {
     try {
-      const response = await fetch('http://localhost:8000/validation/results/history')
+      const response = await fetch('/api/validation')
       if (response.ok) {
         const data = await response.json()
         setHistory(data)
@@ -51,7 +51,7 @@ export default function ValidationHistory() {
   const loadDetailedResults = async (testSessionId: string) => {
     try {
       setShowingDetails(true)
-      const response = await fetch(`http://localhost:8000/validation/results/detail/${testSessionId}`)
+      const response = await fetch(`/api/validation`)
       if (response.ok) {
         const data = await response.json()
         setSelectedResult(data)

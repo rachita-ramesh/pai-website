@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
+import { API_ENDPOINTS } from '../../lib/api'
 
 // Add TypeScript declarations for speech recognition
 interface SpeechRecognitionConstructor {
@@ -173,7 +174,7 @@ export default function CreateProfile() {
     
     try {
       // Call backend to start interview session
-      const response = await fetch('http://localhost:8000/interview/start', {
+      const response = await fetch('/api/start-interview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -245,7 +246,7 @@ export default function CreateProfile() {
     
     try {
       // Call the Python backend API
-      const response = await fetch('http://localhost:8000/interview/message', {
+      const response = await fetch('/api/send-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -282,7 +283,7 @@ export default function CreateProfile() {
         setInterviewPhase('complete')
         // Automatically complete the interview on the backend
         try {
-          await fetch(`http://localhost:8000/interview/${finalData.sessionId}/complete`, {
+          await fetch(`/api/complete-interview`, {
             method: 'POST'
           })
           console.log('Interview completed on backend')
@@ -314,7 +315,7 @@ export default function CreateProfile() {
   const handleCompleteInterview = async () => {
     try {
       // Call backend to extract profile
-      const response = await fetch(`http://localhost:8000/interview/${interviewData.sessionId}/complete`, {
+      const response = await fetch(`/api/complete-interview`, {
         method: 'POST'
       })
       

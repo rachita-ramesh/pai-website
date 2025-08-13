@@ -52,7 +52,7 @@ export default function Chat() {
       // Use real digital twin if it's Rachita, otherwise use mock responses
       if (selectedPerson === 'rachita') {
         // Call backend to get digital twin response
-        const response = await fetch('http://localhost:8000/chat/message', {
+        const response = await fetch('/api/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
