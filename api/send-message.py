@@ -39,10 +39,11 @@ class handler(BaseHTTPRequestHandler):
                 session = active_sessions[session_id]
             
             # Get AI response
-            ai_response = interviewer.get_response(message, session)
+            ai_response = interviewer.get_ai_response(session, message)
             
-            # Update session
-            active_sessions[session_id] = session
+            # Update session with the new message exchange
+            updated_session = interviewer.update_session(session, message, ai_response)
+            active_sessions[session_id] = updated_session
             
             # Send response
             self.send_response(200)
@@ -53,11 +54,11 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             
             response = {
-                'session_id': session.session_id,
-                'ai_message': ai_response,
-                'exchange_count': session.exchange_count,
-                'is_complete': session.is_complete,
-                'current_topic': session.current_topic
+                'session_id': updated_session.session_id,
+                'ai_response': ai_response,
+                'exchange_count': updated_session.exchange_count,
+                'is_complete': updated_session.is_complete,
+                'current_topic': updated_session.current_topic
             }
             
             self.wfile.write(json.dumps(response).encode('utf-8'))
