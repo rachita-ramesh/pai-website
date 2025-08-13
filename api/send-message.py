@@ -50,19 +50,28 @@ class handler(BaseHTTPRequestHandler):
                 import anthropic
                 client = anthropic.Anthropic(api_key=api_key)
                 
+                # Create a simple conversation context
+                conversation_messages = [{"role": "user", "content": message}]
+                
                 response = client.messages.create(
                     model="claude-3-5-sonnet-20241022",
-                    max_tokens=500,  # Reduced for faster response
+                    max_tokens=300,  # Further reduced for faster response
                     temperature=0.7,
-                    system="You are a friendly AI interviewer asking about skincare. Keep responses to 1-2 sentences and ask one follow-up question.",
-                    messages=[{"role": "user", "content": message}],
-                    timeout=30.0  # 30 second timeout
+                    system="You are a friendly AI skincare interviewer. Ask thoughtful follow-up questions about skincare habits, routines, and preferences. Keep responses brief and conversational.",
+                    messages=conversation_messages,
+                    timeout=20.0  # Reduced timeout to 20 seconds
                 )
                 
                 ai_response = response.content[0].text
                 
+            except anthropic.APITimeoutError as e:
+                raise Exception(f"API timeout - please try again: {str(e)}")
+            except anthropic.APIConnectionError as e:
+                raise Exception(f"Connection error - check your internet: {str(e)}")
+            except anthropic.RateLimitError as e:
+                raise Exception(f"Rate limit reached - please wait a moment: {str(e)}")
             except Exception as e:
-                raise Exception(f"Claude API error: {str(e)}")
+                raise Exception(f"AI service error: {str(e)}")
             
             # Send response
             self.send_response(200)
