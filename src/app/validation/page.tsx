@@ -61,7 +61,7 @@ export default function ValidationTest() {
     }
   }
 
-  const selectPerson = (person: any) => {
+  const selectPerson = (person: { id: string; name: string; profileId: string; hasProfile: boolean }) => {
     if (!person.hasProfile) {
       alert(`${person.name}'s profile hasn't been created yet. Please complete their profile first.`)
       return
@@ -384,10 +384,7 @@ export default function ValidationTest() {
                         fontSize: '16px',
                         textAlign: 'left',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        ':hover': {
-                          borderColor: '#00d924'
-                        }
+                        transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = '#00d924'

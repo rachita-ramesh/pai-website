@@ -25,7 +25,7 @@ interface ValidationHistory {
 export default function ValidationHistory() {
   const [history, setHistory] = useState<ValidationHistory | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedResult, setSelectedResult] = useState<any>(null)
+  const [selectedResult, setSelectedResult] = useState<{ profile_id: string; accuracy_percentage: number; total_questions: number; correct_answers: number; timestamp: string; digital_twin_version: string; model_version: string; comparisons: { question_id: string; human_answer: string; predicted_answer: string; is_match: boolean; confidence: number; reasoning?: string }[] } | null>(null)
   const [showingDetails, setShowingDetails] = useState(false)
 
   useEffect(() => {
@@ -185,7 +185,7 @@ export default function ValidationHistory() {
 
             {/* Detailed Question Results */}
             <div style={{ display: 'grid', gap: '16px' }}>
-              {selectedResult.comparisons.map((comparison: any, index: number) => (
+              {selectedResult.comparisons.map((comparison: { question_id: string; human_answer: string; predicted_answer: string; is_match: boolean; confidence: number; reasoning?: string }, index: number) => (
                 <div 
                   key={comparison.question_id} 
                   className="card"
@@ -300,7 +300,7 @@ export default function ValidationHistory() {
             </div>
           ) : (
             <div style={{ display: 'grid', gap: '16px' }}>
-              {history.results.map((result, index) => (
+              {history.results.map((result) => (
                 <div key={result.test_session_id} className="card" style={{ padding: '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div>
