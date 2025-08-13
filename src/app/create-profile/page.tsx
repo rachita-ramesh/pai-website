@@ -102,6 +102,7 @@ export default function CreateProfile() {
       }
       
       recognition.onresult = (event: SpeechRecognitionEvent) => {
+        console.log('Speech recognition result received:', event)
         lastTranscriptTime = Date.now()
         
         // Clear any existing silence timer
@@ -110,17 +111,17 @@ export default function CreateProfile() {
           silenceTimer = null
         }
         
-        // Get the latest transcript
-        const results = Array.from(event.results)
-        const transcript = results
-          .map(result => result[0])
-          .map(result => result.transcript)
-          .join('')
+        // Get the latest transcript - simplified approach
+        let transcript = ''
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript
+        }
         
+        console.log('Transcript:', transcript)
         setCurrentMessage(transcript)
         
         // Check if we have final results
-        const hasFinalResult = results.some(result => result.isFinal)
+        const hasFinalResult = Array.from(event.results).some(result => result.isFinal)
         
         // Set a timer to stop after silence (only if no final result)
         if (!hasFinalResult) {
@@ -156,9 +157,17 @@ export default function CreateProfile() {
       return
     }
     
+    console.log('Starting voice recording...')
     setIsRecording(true)
     setCurrentMessage('')
-    recognitionRef.current.start()
+    
+    try {
+      recognitionRef.current.start()
+      console.log('Voice recognition started successfully')
+    } catch (error) {
+      console.error('Error starting voice recognition:', error)
+      setIsRecording(false)
+    }
   }
   
   const stopVoiceRecording = () => {
@@ -258,7 +267,8 @@ export default function CreateProfile() {
       })
       
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+        const errorData = await response.json()
+        throw new Error(`API Error ${response.status}: ${errorData.error || 'Unknown error'}`)
       }
       
       const data = await response.json()
@@ -293,11 +303,17 @@ export default function CreateProfile() {
       }
     } catch (error) {
       console.error('Error generating AI response:', error)
-      // Fallback for offline mode
+      
+      // Show the actual error message
+      let errorMessage = "Unknown error occurred"
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: "I'm having trouble connecting to the AI service right now. Could you please try that again?",
+        content: `🚨 DEBUG - ${errorMessage}`,
         timestamp: new Date()
       }
       
