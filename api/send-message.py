@@ -3,13 +3,7 @@ import json
 import sys
 import os
 
-# Add the backend directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
-
-from ai_interviewer import AIInterviewer
-
-# Global storage for sessions (in production, use a database)
-active_sessions = {}
+# Simple API handler for AI responses
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -27,27 +21,14 @@ class handler(BaseHTTPRequestHandler):
             if not api_key:
                 raise Exception('ANTHROPIC_API_KEY environment variable is required')
             
-            # Initialize AI Interviewer
-            interviewer = AIInterviewer(api_key)
-            
-            # Create a minimal session for this request (since Vercel functions are stateless)
-            from ai_interviewer import InterviewSession, InterviewMessage
-            from datetime import datetime
-            
-            # Create a basic session structure
-            session = InterviewSession(
-                session_id=session_id,
-                participant_name=data.get('participant_name', 'User'),
-                messages=[],  # We'll build conversation history from context if needed
-                start_time=datetime.now(),
-                current_topic="skincare_conversation",
-                exchange_count=data.get('exchange_count', 0),
-                is_complete=False
-            )
-            
             # Get AI response directly using Claude API
             try:
                 import anthropic
+                
+                # Validate API key format
+                if not api_key.startswith('sk-ant-'):
+                    raise Exception('Invalid API key format')
+                
                 client = anthropic.Anthropic(api_key=api_key)
                 
                 # Create a simple conversation context
@@ -55,11 +36,11 @@ class handler(BaseHTTPRequestHandler):
                 
                 response = client.messages.create(
                     model="claude-3-5-sonnet-20241022",
-                    max_tokens=300,  # Further reduced for faster response
+                    max_tokens=200,  # Even smaller for faster response
                     temperature=0.7,
-                    system="You are a friendly AI skincare interviewer. Ask thoughtful follow-up questions about skincare habits, routines, and preferences. Keep responses brief and conversational.",
+                    system="You are a friendly AI skincare interviewer. Ask one thoughtful follow-up question about skincare. Keep responses very brief.",
                     messages=conversation_messages,
-                    timeout=20.0  # Reduced timeout to 20 seconds
+                    timeout=15.0  # Even shorter timeout
                 )
                 
                 ai_response = response.content[0].text
