@@ -20,19 +20,16 @@ export default function Chat() {
     {
       id: '1',
       type: 'ai',
-      content: "Hi! I'm Rachita's digital twin. Ask me anything and I'll respond as she would.",
+      content: "Hi! I'm Rachita's digital twin, created from her real skincare interview. Ask me about skincare decisions, wellness approaches, or how I make choices - I'll respond based on her actual psychological profile!",
       person: 'rachita'
     }
   ])
   const [isLoading, setIsLoading] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const [speechEnabled, setSpeechEnabled] = useState(true)
-  const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const people = [
-    { id: 'rachita', name: 'Rachita', initial: 'R', voice: 'female' },
-    { id: 'everhett', name: 'Everhett', initial: 'E', voice: 'male' },
-    { id: 'gigi', name: 'Gigi', initial: 'G', voice: 'female' },
+    { id: 'rachita', name: 'Rachita', initial: 'R' },
+    { id: 'everhett', name: 'Everhett', initial: 'E' },
+    { id: 'gigi', name: 'Gigi', initial: 'G' },
   ]
 
   const selectedPersonData = people.find(f => f.id === selectedPerson)
@@ -51,26 +48,63 @@ export default function Chat() {
     setQuery('')
     setIsLoading(true)
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Use real digital twin if it's Rachita, otherwise use mock responses
+      if (selectedPerson === 'rachita') {
+        // Call backend to get digital twin response
+        const response = await fetch('http://localhost:8000/chat/message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            profile_id: 'rachita_v1',
+            message: query
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'ai',
+            content: data.response,
+            person: selectedPerson,
+            timestamp: new Date(),
+            rating: null
+          }
+          setMessages(prev => [...prev, aiMessage])
+          
+        } else {
+          throw new Error('Backend API error')
+        }
+      } else {
+        // Use mock response for other personas
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: generateMockResponse(query, selectedPerson),
+          person: selectedPerson,
+          timestamp: new Date(),
+          rating: null
+        }
+        setMessages(prev => [...prev, aiMessage])
+      }
+    } catch (error) {
+      console.error('Error getting AI response:', error)
+      // Fallback to mock response
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: generateMockResponse(query, selectedPerson),
+        content: "I'm having trouble connecting to my digital twin right now. Could you try asking again?",
         person: selectedPerson,
         timestamp: new Date(),
         rating: null
       }
       setMessages(prev => [...prev, aiMessage])
+    } finally {
       setIsLoading(false)
-      
-      // Auto-speak AI response if speech is enabled
-      if (speechEnabled) {
-        setTimeout(() => {
-          speakMessage(aiMessage.content, selectedPerson)
-        }, 500)
-      }
-    }, 2000)
+    }
   }
 
   const generateMockResponse = (question: string, person: string): string => {
@@ -111,87 +145,29 @@ export default function Chat() {
     )
   }
 
-  const speakMessage = (text: string, person: string) => {
-    if (!speechEnabled || !('speechSynthesis' in window)) return
+  
+  const clearChat = (personId?: string) => {
+    const targetPerson = personId || selectedPerson
+    const targetPersonData = people.find(f => f.id === targetPerson)
     
-    // Stop any current speech
-    window.speechSynthesis.cancel()
-    
-    const utterance = new SpeechSynthesisUtterance(text)
-    
-    // Configure voice based on person
-    const voices = window.speechSynthesis.getVoices()
-    const personData = people.find(p => p.id === person)
-    
-    if (personData?.voice === 'female') {
-      const femaleVoice = voices.find(voice => 
-        voice.name.toLowerCase().includes('female') || 
-        voice.name.toLowerCase().includes('woman') ||
-        voice.name.toLowerCase().includes('samantha') ||
-        voice.name.toLowerCase().includes('victoria') ||
-        voice.name.toLowerCase().includes('zira') ||
-        voice.name.toLowerCase().includes('eva')
-      )
-      if (femaleVoice) utterance.voice = femaleVoice
+    // Generate specific welcome message based on person
+    let welcomeContent
+    if (targetPerson === 'rachita') {
+      welcomeContent = "Hi! I'm Rachita's digital twin, created from her real skincare interview. Ask me about skincare decisions, wellness approaches, or how I make choices - I'll respond based on her actual psychological profile!"
     } else {
-      const maleVoice = voices.find(voice => 
-        voice.name.toLowerCase().includes('male') || 
-        voice.name.toLowerCase().includes('man') ||
-        voice.name.toLowerCase().includes('daniel') ||
-        voice.name.toLowerCase().includes('alex') ||
-        voice.name.toLowerCase().includes('david') ||
-        voice.name.toLowerCase().includes('mark')
-      )
-      if (maleVoice) utterance.voice = maleVoice
+      welcomeContent = `Hi! I'm ${targetPersonData?.name}'s digital twin. Ask me anything and I'll respond as they would.`
     }
     
-    // Configure speech parameters
-    utterance.rate = 0.9
-    utterance.pitch = 1.0
-    utterance.volume = 0.8
-    
-    utterance.onstart = () => setIsSpeaking(true)
-    utterance.onend = () => setIsSpeaking(false)
-    utterance.onerror = () => setIsSpeaking(false)
-    
-    speechRef.current = utterance
-    window.speechSynthesis.speak(utterance)
-  }
-  
-  const stopSpeaking = () => {
-    window.speechSynthesis.cancel()
-    setIsSpeaking(false)
-  }
-  
-  const clearChat = () => {
-    stopSpeaking()
     const welcomeMessage = {
       id: '1',
       type: 'ai' as const,
-      content: `Hi! I'm ${selectedPersonData?.name}'s digital twin. Ask me anything and I'll respond as they would.`,
-      person: selectedPerson,
+      content: welcomeContent,
+      person: targetPerson,
       timestamp: new Date()
     }
     setMessages([welcomeMessage])
-    
-    // Speak welcome message if speech is enabled
-    if (speechEnabled) {
-      setTimeout(() => {
-        speakMessage(welcomeMessage.content, selectedPerson)
-      }, 500)
-    }
   }
   
-  // Load voices when component mounts
-  useEffect(() => {
-    if ('speechSynthesis' in window) {
-      const loadVoices = () => {
-        window.speechSynthesis.getVoices()
-      }
-      loadVoices()
-      window.speechSynthesis.onvoiceschanged = loadVoices
-    }
-  }, [])
 
   return (
     <div>
@@ -236,7 +212,7 @@ export default function Chat() {
                       key={person.id}
                       onClick={() => {
                         setSelectedPerson(person.id)
-                        clearChat()
+                        clearChat(person.id)
                       }}
                       style={{
                         width: '100%',
@@ -263,7 +239,37 @@ export default function Chat() {
                 <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Quick Questions</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <button 
-                    onClick={() => setQuery("How do you make difficult decisions?")}
+                    onClick={() => setQuery("How do you choose skincare products?")}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      backgroundColor: '#f5f5f5',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
+                  >
+                    Skincare decisions
+                  </button>
+                  <button 
+                    onClick={() => setQuery("What's your approach to wellness and health?")}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      backgroundColor: '#f5f5f5',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
+                  >
+                    Wellness philosophy
+                  </button>
+                  <button 
+                    onClick={() => setQuery("How do you balance simplicity with effectiveness?")}
                     style={{
                       width: '100%',
                       padding: '8px 12px',
@@ -276,36 +282,6 @@ export default function Chat() {
                     }}
                   >
                     Decision making
-                  </button>
-                  <button 
-                    onClick={() => setQuery("What's your work style like?")}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '8px',
-                      backgroundColor: '#f5f5f5',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      textAlign: 'left'
-                    }}
-                  >
-                    Work style
-                  </button>
-                  <button 
-                    onClick={() => setQuery("How do you handle stress?")}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '8px',
-                      backgroundColor: '#f5f5f5',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      textAlign: 'left'
-                    }}
-                  >
-                    Stress management
                   </button>
                 </div>
               </div>
@@ -336,25 +312,7 @@ export default function Chat() {
                 </div>
 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
-                    onClick={() => setSpeechEnabled(!speechEnabled)}
-                    className={speechEnabled ? "btn-primary" : "btn-secondary"}
-                    style={{ fontSize: '14px', padding: '8px 12px' }}
-                    title={speechEnabled ? "Voice enabled" : "Voice disabled"}
-                  >
-                    {speechEnabled ? '🔊' : '🔇'}
-                  </button>
-                  {isSpeaking && (
-                    <button
-                      onClick={stopSpeaking}
-                      className="btn-secondary"
-                      style={{ fontSize: '14px', padding: '8px 12px' }}
-                      title="Stop speaking"
-                    >
-                      ⏹️
-                    </button>
-                  )}
-                  <button
-                    onClick={clearChat}
+                    onClick={() => clearChat()}
                     className="btn-secondary"
                     style={{ fontSize: '14px', padding: '8px 16px' }}
                   >
@@ -409,20 +367,6 @@ export default function Chat() {
                         
                         {message.type === 'ai' && (
                           <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                            <button
-                              onClick={() => speakMessage(message.content, message.person || selectedPerson)}
-                              style={{
-                                border: 'none',
-                                background: 'none',
-                                cursor: 'pointer',
-                                fontSize: '16px',
-                                opacity: isSpeaking ? '0.5' : '1'
-                              }}
-                              disabled={isSpeaking}
-                              title="Play voice"
-                            >
-                              🔊
-                            </button>
                             <button
                               onClick={() => rateResponse(message.id, 'good')}
                               style={{

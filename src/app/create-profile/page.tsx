@@ -613,9 +613,14 @@ export default function CreateProfile() {
               </button>
             )}
             {interviewPhase === 'complete' && (
-              <button onClick={handleCompleteInterview} className="btn-primary">
-                📊 Extract Profile & Continue
-              </button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={handleCompleteInterview} className="btn-primary">
+                  📊 Extract Profile & Continue
+                </button>
+                <button onClick={() => window.open('/profile', '_blank')} className="btn-secondary">
+                  👤 View My Digital Twin
+                </button>
+              </div>
             )}
           </div>
         </div>

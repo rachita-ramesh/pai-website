@@ -105,11 +105,11 @@ Return ONLY the JSON profile, no additional text."""
         """Extract structured profile from interview transcript"""
         try:
             # Format the prompt with the transcript
-            prompt = self.extraction_prompt.format(transcript=interview_transcript)
+            prompt = self.extraction_prompt.replace("{transcript}", interview_transcript)
             
             # Call Claude API for extraction
             response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=2000,
                 temperature=0.3,  # Lower temperature for more consistent structured output
                 messages=[{"role": "user", "content": prompt}]

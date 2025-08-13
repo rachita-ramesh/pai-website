@@ -89,15 +89,11 @@ Return ONLY the JSON response, no additional text."""
             profile_json = json.dumps(profile.dict(), indent=2)
             options_text = "\n".join([f"- {opt}" for opt in question.options])
             
-            prompt = self.prediction_prompt.format(
-                profile=profile_json,
-                question=question.question,
-                options=options_text
-            )
+            prompt = self.prediction_prompt.replace("{profile}", profile_json).replace("{question}", question.question).replace("{options}", options_text)
             
             # Call Claude API
             response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=1500,
                 temperature=0.3,
                 messages=[{"role": "user", "content": prompt}]

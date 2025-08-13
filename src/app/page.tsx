@@ -1,6 +1,32 @@
+'use client'
+
 import Link from "next/link"
+import { useState, useEffect } from 'react'
 
 export default function Home() {
+  const [profileProgress, setProfileProgress] = useState(0)
+
+  // Check profile completion status
+  useEffect(() => {
+    const checkProfileCompletion = async () => {
+      try {
+        // Check if Rachita's profile exists via backend API
+        const response = await fetch('http://localhost:8000/status')
+        if (response.ok) {
+          const data = await response.json()
+          // If profiles_created > 0, then profile is completed
+          setProfileProgress(data.profiles_created > 0 ? 100 : 0)
+        } else {
+          setProfileProgress(0)
+        }
+      } catch (error) {
+        console.error('Error checking profile:', error)
+        setProfileProgress(0)
+      }
+    }
+    
+    checkProfileCompletion()
+  }, [])
   return (
     <div>
       {/* Header */}
@@ -40,8 +66,14 @@ export default function Home() {
               <Link href="/create-profile" className="btn-primary">
                 Get Started →
               </Link>
-              <Link href="/chat" className="btn-secondary">
-                ▶ Test Conversations
+              <Link href="/chat" className="btn-secondary" title="Have open conversations with digital twins">
+                ▶ Chat with Twins
+              </Link>
+              <Link href="/validation" className="btn-secondary" title="Scientific accuracy testing with multiple choice questions">
+                📊 Accuracy Test
+              </Link>
+              <Link href="/validation-history" className="btn-secondary" title="View all previous validation test results">
+                📈 Test History
               </Link>
             </div>
           </section>
@@ -84,15 +116,15 @@ export default function Home() {
                 <div className="progress">
                   <div className="progress-header">
                     <span className="progress-label">Training Progress</span>
-                    <span className="progress-value">0%</span>
+                    <span className="progress-value">{profileProgress}%</span>
                   </div>
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: '0%' }}></div>
+                    <div className="progress-fill" style={{ width: `${profileProgress}%` }}></div>
                   </div>
                 </div>
                 
                 <Link href="/create-profile?name=rachita" className="btn-card">
-                  ⚙ Complete Profile
+                  {profileProgress === 100 ? 'Re-create Profile' : 'Complete Profile'}
                 </Link>
               </div>
 
@@ -150,34 +182,6 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Actions */}
-          <section className="actions">
-            <Link href="/create-profile" className="card">
-              <div className="action-header">
-                <div className="action-icon">⚙</div>
-                <div>
-                  <div className="action-title">Training Session</div>
-                  <div className="action-desc">Build your digital persona</div>
-                </div>
-              </div>
-              <p>
-                Complete comprehensive personality profiles and behavioral assessments to create highly accurate AI replicas.
-              </p>
-            </Link>
-
-            <Link href="/chat" className="card">
-              <div className="action-header">
-                <div className="action-icon">▶</div>
-                <div>
-                  <div className="action-title">AI Conversations</div>
-                  <div className="action-desc">Test twin accuracy</div>
-                </div>
-              </div>
-              <p>
-                Engage in real-time conversations with digital twins and evaluate response accuracy through advanced rating systems.
-              </p>
-            </Link>
-          </section>
         </div>
       </main>
     </div>

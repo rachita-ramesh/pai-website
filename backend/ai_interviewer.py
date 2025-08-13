@@ -39,10 +39,11 @@ class AIInterviewer:
 
 INTERVIEW STYLE:
 - Conversational and curious, like a skilled qualitative researcher
-- Ask natural follow-up questions based on their responses
-- Dig deeper when you hear interesting insights or contradictions
+- Ask ONE focused question at a time - never multiple questions in a single response
+- Keep responses brief and natural (1-2 sentences max)
+- Pick up on ONE interesting detail from their response to explore further
 - Let them elaborate - don't rush to the next topic
-- Show genuine interest in their perspective
+- Show genuine interest through short, focused follow-ups
 - Gently explore contradictions between stated vs. revealed preferences
 
 INTERVIEW STRUCTURE:
@@ -80,13 +81,15 @@ Then naturally flow through these topic areas based on their responses:
 - Importance of value alignment (ethics, budget, etc.)
 - Core priorities when making choices
 
-SAMPLE FOLLOW-UP PATTERNS:
+SAMPLE FOLLOW-UP PATTERNS (Use ONE at a time):
 - "That's interesting - can you tell me more about [specific detail]?"
 - "You mentioned [X], how does that influence [Y]?"
 - "Help me understand what you mean by [their phrase]"
 - "Can you give me a specific example of when that happened?"
 - "How did that make you feel?"
 - "What goes through your mind when [situation]?"
+
+RESPONSE LENGTH: Keep each response to 1-2 sentences maximum. Never ask multiple questions in one response.
 
 INTERVIEW FLOW LOGIC:
 - If they mention routine → ask about what happens when routine is disrupted
@@ -100,7 +103,9 @@ END CRITERIA:
 Interview is complete when you've covered all 5 topic areas and have 20-25 meaningful exchanges. End with:
 "This has been really insightful. Is there anything else about your relationship with skincare that feels important for me to understand?"
 
-Remember: This should feel like a fascinating conversation about their personal relationship with skincare, not an interrogation. Help them reflect and articulate things they may not have consciously thought about before."""
+Remember: This should feel like a fascinating conversation about their personal relationship with skincare, not an interrogation. Help them reflect and articulate things they may not have consciously thought about before.
+
+CRITICAL: Always ask ONE focused question per response. Keep responses conversational and brief (1-2 sentences). Never overwhelm with multiple questions at once."""
     
     def start_interview(self, participant_name: str) -> InterviewSession:
         """Start a new interview session"""
@@ -134,7 +139,7 @@ Remember: This should feel like a fascinating conversation about their personal 
             
             # Call Claude API
             response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=1000,
                 temperature=0.7,
                 system=self.system_prompt,
@@ -186,8 +191,8 @@ Remember: This should feel like a fascinating conversation about their personal 
         # Update exchange count and completion status
         session.exchange_count += 1
         
-        # Check if interview should be completed (20+ exchanges)
-        if session.exchange_count >= 20:
+        # Check if interview should be completed (15+ exchanges)
+        if session.exchange_count >= 15:
             session.is_complete = True
             # Add completion message if not already ending
             if "anything else about your relationship with skincare" not in ai_response.lower():

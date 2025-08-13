@@ -1,0 +1,70 @@
+{
+  "session_id": "interview_20250809_rachita_manual",
+  "participant_name": "Rachita",
+  "messages": [
+    {
+      "id": "1",
+      "type": "ai",
+      "content": "Hi Rachita! I'd love to understand your relationship with skincare. Tell me, is skincare something you think about a lot, or is it more just routine for you?",
+      "timestamp": "2025-08-09T15:49:19.000000"
+    },
+    {
+      "id": "2", 
+      "type": "user",
+      "content": "I think about this from time to time maybe like once a week and I apply some skin pack or something and every night before I go to sleep I put hyaluronic acid niacinamide and retinol on my face",
+      "timestamp": "2025-08-09T15:49:30.000000"
+    },
+    {
+      "id": "3",
+      "type": "ai", 
+      "content": "That's interesting - you have quite a specific nighttime routine with active ingredients. What led you to choose those particular products?",
+      "timestamp": "2025-08-09T15:49:35.000000"
+    },
+    {
+      "id": "4",
+      "type": "user",
+      "content": "I think I just learned that those ingredients are good for you so hyaluronic acid maintains the the water capacity niacinamide is good for like spots and darker spots and retinologist is good for like wrinkles and stuff so I choose that I think about it from time to time because usually I just have this cream as part of my night routine and maybe I use the Cetaphil face wash but apart from that I don't really invest in a lot of routines",
+      "timestamp": "2025-08-09T15:49:45.000000"
+    },
+    {
+      "id": "5",
+      "type": "ai",
+      "content": "I see - so you've educated yourself about these key ingredients and their benefits. When you say you learned about these ingredients, where did you get this information from?",
+      "timestamp": "2025-08-09T15:49:50.000000"
+    },
+    {
+      "id": "6",
+      "type": "user", 
+      "content": "I love that information from a friend who really is into a skincare and she knows what kind of chemicals are important to have and I don't know if I feel confident that these products are making a difference but it's just something that I know that you need to put and you will see the benefits of this a few years down the line so I just put it I draw the line in terms of routine based on how much time it's required to spend on these things I don't want to get up and like really think about my face routine and stuff like that but I do want to make sure that I'm presentable and that my skin looks healthy and I feel healthy those things really matter to me",
+      "timestamp": "2025-08-09T15:50:05.000000"
+    },
+    {
+      "id": "7",
+      "type": "ai",
+      "content": "That's really interesting how you balance long-term benefits with practical time constraints. You mentioned having a friend who's really into skincare - how do you feel when she talks about skincare?",
+      "timestamp": "2025-08-09T15:50:10.000000"  
+    },
+    {
+      "id": "8",
+      "type": "user",
+      "content": "I'm pretty comfortable with my minimalist approach I'm I know there's some people who think about a lot in terms of what needs to be put on your face but I prefer to have a more healthier lifestyle which includes like what I eat how much do I exercise how much water do I drink and stuff like to complement it with those kind of things instead of putting a bunch of stuff on my face and yeah like it's it's important that my skin is healthy and it does not have any wrinkles it's moisturized well feels plump and it it when your skin is sort of healthy you sort of know that you're living a healthier lifestyle because anything that you eat or if you don't do any physical activity sort of shows up in your skin as well and so use that as indicators of how much of a healthy lifestyle I'm leading",
+      "timestamp": "2025-08-09T15:50:25.000000"
+    },
+    {
+      "id": "9", 
+      "type": "ai",
+      "content": "That's a fascinating perspective - you're viewing skin health as more of a holistic indicator of overall wellness rather than something to address purely through topical products. Can you give me a specific example of when you've noticed this connection in your own life?",
+      "timestamp": "2025-08-09T15:50:30.000000"
+    },
+    {
+      "id": "10",
+      "type": "user",
+      "content": "yeah Lego specific example would be getting a lot of pimples or acne on my face if I have a lot of heat in my body the specifically happens when I drink a lot of tea and a specific kind of tea even so I'm noticed that which leads directly to my lifestyle I don't think a lot about aging and skin changes but the only time I think about it is when I need to make sure that I'm healthier on the inside and I do and partake in healthy activities which is like a mix of cardio as well as weight training apart from that I don't really think about aging as much I think I've always found a balance between skincare and wellness I think I got to Wellness before skincare skincare is more of a recent in involvement in My overall wellness and in terms of watch with shaped my current philosophy it's more so that as you grow older you sort of need to have a good sense of like what to eat or put in your body or to put in your face and look presentable and well put together at all times",
+      "timestamp": "2025-08-09T15:50:50.000000"
+    }
+  ],
+  "start_time": "2025-08-09T15:49:19.000000",
+  "current_topic": "category_relationship", 
+  "exchange_count": 17,
+  "is_complete": true
+}
