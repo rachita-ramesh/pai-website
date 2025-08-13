@@ -15,8 +15,13 @@ class handler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
             
+            # Get API key from environment
+            api_key = os.getenv('ANTHROPIC_API_KEY')
+            if not api_key:
+                raise Exception('ANTHROPIC_API_KEY environment variable is required')
+            
             # Initialize AI Interviewer
-            interviewer = AIInterviewer()
+            interviewer = AIInterviewer(api_key)
             
             # Start interview
             session = interviewer.start_interview(data.get('participant_name', 'User'))

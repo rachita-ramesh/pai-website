@@ -15,8 +15,13 @@ class handler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
             
+            # Get API key from environment
+            api_key = os.getenv('ANTHROPIC_API_KEY')
+            if not api_key:
+                raise Exception('ANTHROPIC_API_KEY environment variable is required')
+            
             # Initialize Profile Extractor
-            extractor = ProfileExtractor()
+            extractor = ProfileExtractor(api_key)
             
             # Extract profile from interview data
             profile = extractor.extract_profile(data.get('interview_data', {}))

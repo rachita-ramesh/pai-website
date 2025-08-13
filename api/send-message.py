@@ -22,8 +22,13 @@ class handler(BaseHTTPRequestHandler):
             session_id = data.get('session_id')
             message = data.get('message', '')
             
+            # Get API key from environment
+            api_key = os.getenv('ANTHROPIC_API_KEY')
+            if not api_key:
+                raise Exception('ANTHROPIC_API_KEY environment variable is required')
+            
             # Initialize AI Interviewer
-            interviewer = AIInterviewer()
+            interviewer = AIInterviewer(api_key)
             
             # Get or create session
             if session_id not in active_sessions:
