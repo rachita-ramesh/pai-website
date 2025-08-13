@@ -30,20 +30,38 @@ class handler(BaseHTTPRequestHandler):
             # Initialize AI Interviewer
             interviewer = AIInterviewer(api_key)
             
-            # Get or create session
-            if session_id not in active_sessions:
-                # Create new session
-                session = interviewer.start_interview(data.get('participant_name', 'User'))
-                active_sessions[session_id] = session
-            else:
-                session = active_sessions[session_id]
+            # Create a minimal session for this request (since Vercel functions are stateless)
+            from ai_interviewer import InterviewSession, InterviewMessage
+            from datetime import datetime
             
-            # Get AI response
-            ai_response = interviewer.get_ai_response(session, message)
+            # Create a basic session structure
+            session = InterviewSession(
+                session_id=session_id,
+                participant_name=data.get('participant_name', 'User'),
+                messages=[],  # We'll build conversation history from context if needed
+                start_time=datetime.now(),
+                current_topic="skincare_conversation",
+                exchange_count=data.get('exchange_count', 0),
+                is_complete=False
+            )
             
-            # Update session with the new message exchange
-            updated_session = interviewer.update_session(session, message, ai_response)
-            active_sessions[session_id] = updated_session
+            # Get AI response directly using Claude API
+            try:
+                import anthropic
+                client = anthropic.Anthropic(api_key=api_key)
+                
+                response = client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=1000,
+                    temperature=0.7,
+                    system=interviewer.system_prompt,
+                    messages=[{"role": "user", "content": message}]
+                )
+                
+                ai_response = response.content[0].text
+                
+            except Exception as e:
+                raise Exception(f"Claude API error: {str(e)}")
             
             # Send response
             self.send_response(200)
@@ -54,11 +72,11 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             
             response = {
-                'session_id': updated_session.session_id,
+                'session_id': session_id,
                 'ai_response': ai_response,
-                'exchange_count': updated_session.exchange_count,
-                'is_complete': updated_session.is_complete,
-                'current_topic': updated_session.current_topic
+                'exchange_count': data.get('exchange_count', 0) + 1,
+                'is_complete': False,
+                'current_topic': 'skincare_conversation'
             }
             
             self.wfile.write(json.dumps(response).encode('utf-8'))
