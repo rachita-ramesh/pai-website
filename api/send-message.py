@@ -25,34 +25,36 @@ class handler(BaseHTTPRequestHandler):
             try:
                 import anthropic
                 
-                # Validate API key format
-                if not api_key.startswith('sk-ant-'):
-                    raise Exception('Invalid API key format')
+                # Validate API key
+                if not api_key or len(api_key) < 50:
+                    raise Exception(f'Invalid API key: length={len(api_key) if api_key else 0}')
                 
-                client = anthropic.Anthropic(api_key=api_key)
+                client = anthropic.Anthropic(
+                    api_key=api_key,
+                    timeout=10.0  # Set client-level timeout
+                )
                 
-                # Create a simple conversation context
-                conversation_messages = [{"role": "user", "content": message}]
-                
+                # Simple message
                 response = client.messages.create(
                     model="claude-3-5-sonnet-20241022",
-                    max_tokens=200,  # Even smaller for faster response
+                    max_tokens=150,
                     temperature=0.7,
-                    system="You are a friendly AI skincare interviewer. Ask one thoughtful follow-up question about skincare. Keep responses very brief.",
-                    messages=conversation_messages,
-                    timeout=15.0  # Even shorter timeout
+                    system="You are interviewing about skincare. Ask a brief follow-up question.",
+                    messages=[{"role": "user", "content": message}]
                 )
                 
                 ai_response = response.content[0].text
                 
             except anthropic.APITimeoutError as e:
-                raise Exception(f"API timeout - please try again: {str(e)}")
+                raise Exception(f"API timeout error: {str(e)}")
             except anthropic.APIConnectionError as e:
-                raise Exception(f"Connection error - check your internet: {str(e)}")
+                raise Exception(f"API connection error: {str(e)}")
             except anthropic.RateLimitError as e:
-                raise Exception(f"Rate limit reached - please wait a moment: {str(e)}")
+                raise Exception(f"Rate limit error: {str(e)}")
+            except anthropic.AuthenticationError as e:
+                raise Exception(f"Authentication error - check API key: {str(e)}")
             except Exception as e:
-                raise Exception(f"AI service error: {str(e)}")
+                raise Exception(f"Anthropic API error: {str(e)}")
             
             # Send response
             self.send_response(200)
