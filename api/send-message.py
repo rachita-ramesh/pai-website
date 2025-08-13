@@ -52,10 +52,11 @@ class handler(BaseHTTPRequestHandler):
                 
                 response = client.messages.create(
                     model="claude-3-5-sonnet-20241022",
-                    max_tokens=1000,
+                    max_tokens=500,  # Reduced for faster response
                     temperature=0.7,
-                    system=interviewer.system_prompt,
-                    messages=[{"role": "user", "content": message}]
+                    system="You are a friendly AI interviewer asking about skincare. Keep responses to 1-2 sentences and ask one follow-up question.",
+                    messages=[{"role": "user", "content": message}],
+                    timeout=30.0  # 30 second timeout
                 )
                 
                 ai_response = response.content[0].text
