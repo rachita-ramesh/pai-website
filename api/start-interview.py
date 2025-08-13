@@ -51,7 +51,7 @@ class handler(BaseHTTPRequestHandler):
                 messages.append({
                     'id': str(uuid.uuid4()),
                     'type': 'ai',
-                    'content': "Hello! Let's begin our conversation about skincare.",
+                    'content': "Hi! I'd love to understand your relationship with skincare. Tell me, is skincare something you think about a lot, or is it more just routine for you?",
                     'timestamp': datetime.now().isoformat()
                 })
             
