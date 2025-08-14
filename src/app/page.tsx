@@ -63,10 +63,7 @@ export default function Home() {
             </p>
             
             <div className="buttons">
-              <Link href="/create-profile" className="btn-primary">
-                Get Started →
-              </Link>
-              <Link href="/create-questionnaire" className="btn-primary" style={{ backgroundColor: '#8b5cf6' }}>
+              <Link href="/create-questionnaire" className="btn-primary">
                 📝 Create Questionnaire
               </Link>
               <Link href="/chat" className="btn-secondary" title="Have open conversations with digital twins">
