@@ -9,6 +9,28 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 from response_predictor import ResponsePredictor
 
 class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        try:
+            # Return the validation survey
+            survey_path = os.path.join(os.path.dirname(__file__), '..', 'backend', 'data', 'validation_results', 'validation_survey.json')
+            
+            with open(survey_path, 'r') as f:
+                survey_data = json.load(f)
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            self.end_headers()
+            
+            self.wfile.write(json.dumps(survey_data).encode('utf-8'))
+            
+        except Exception as e:
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
     def do_POST(self):
         try:
             content_length = int(self.headers['Content-Length'])
