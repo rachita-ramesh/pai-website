@@ -24,10 +24,6 @@ class handler(BaseHTTPRequestHandler):
             if not api_key or len(api_key) < 50:
                 raise Exception(f'Invalid API key: length={len(api_key) if api_key else 0}')
             
-            # Check for malformed API key (like the FastAPI issue we saw earlier)
-            if 'FastAPI' in api_key or 'port' in api_key:
-                raise Exception('API key appears to contain extra text. Please check your ANTHROPIC_API_KEY environment variable in Vercel.')
-            
             # Make direct HTTP request to Anthropic API
             url = "https://api.anthropic.com/v1/messages"
             
@@ -75,26 +71,8 @@ Remember: This should feel like a natural conversation, not a survey. Ask follow
             )
             
             with urllib.request.urlopen(req, timeout=30) as response:
-                response_body = response.read().decode('utf-8')
-                
-                # Check if we got a valid response
-                if not response_body:
-                    raise Exception('Empty response from Anthropic API')
-                
-                try:
-                    response_data = json.loads(response_body)
-                except json.JSONDecodeError as e:
-                    raise Exception(f'Invalid JSON response from Anthropic API: {response_body[:200]}...')
-                
-                # Validate response structure
-                if 'content' not in response_data or not response_data['content']:
-                    raise Exception(f'Invalid response structure: {response_data}')
-                
+                response_data = json.loads(response.read().decode('utf-8'))
                 ai_response = response_data['content'][0]['text']
-                
-                # Ensure we have a valid response
-                if not ai_response or not ai_response.strip():
-                    raise Exception('Empty AI response received')
             
             # Send response
             self.send_response(200)
@@ -115,30 +93,10 @@ Remember: This should feel like a natural conversation, not a survey. Ask follow
             self.wfile.write(json.dumps(response).encode('utf-8'))
             
         except Exception as e:
-            # Ensure we always send valid JSON response
-            try:
-                error_message = str(e)
-                self.send_response(500)
-                self.send_header('Content-type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-                self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-                self.end_headers()
-                
-                error_response = {
-                    'error': error_message,
-                    'session_id': data.get('session_id', 'unknown') if 'data' in locals() else 'unknown',
-                    'status': 'error'
-                }
-                
-                self.wfile.write(json.dumps(error_response).encode('utf-8'))
-                
-            except Exception as json_error:
-                # Fallback if JSON encoding fails
-                self.send_response(500)
-                self.send_header('Content-type', 'text/plain')
-                self.end_headers()
-                self.wfile.write(f'API Error: {str(e)}'.encode('utf-8'))
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
     
     def do_OPTIONS(self):
         self.send_response(200)
