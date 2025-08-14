@@ -22,7 +22,7 @@ class handler(BaseHTTPRequestHandler):
                 from lib.supabase import SupabaseClient
                 
                 supabase = SupabaseClient()
-                profiles = supabase.get_all_profiles()
+                profiles = supabase.get_active_profiles()
                 profiles_count = len(profiles)
                 storage_source = "supabase"
                 

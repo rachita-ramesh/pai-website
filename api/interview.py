@@ -131,20 +131,31 @@ class handler(BaseHTTPRequestHandler):
                 profile_dict = profile.dict() if hasattr(profile, 'dict') else profile
                 profile_id = f"{participant_name.lower()}_v1"
                 
-                # Prepare data for Supabase
+                # Ensure person exists
+                supabase.create_person(participant_name.lower())
+                
+                # Determine version number
+                existing_profiles = supabase.get_person_profiles(participant_name.lower())
+                version_number = len(existing_profiles) + 1
+                if version_number > 1:
+                    profile_id = f"{participant_name.lower()}_v{version_number}"
+                
+                # Prepare profile version data for Supabase
                 profile_data = {
                     'profile_id': profile_id,
-                    'participant_name': participant_name,
-                    'profile_data': profile_dict
+                    'person_name': participant_name.lower(),
+                    'version_number': version_number,
+                    'profile_data': profile_dict,
+                    'is_active': True
                 }
                 
                 # Try to insert or update
-                existing_profile = supabase.get_profile(profile_id)
+                existing_profile = supabase.get_profile_version(profile_id)
                 if existing_profile:
-                    supabase.update_profile(profile_id, profile_data)
+                    supabase.update_profile_version(profile_id, profile_data)
                     action = 'updated'
                 else:
-                    supabase.insert_profile(profile_data)
+                    supabase.insert_profile_version(profile_data)
                     action = 'created'
                 
                 response_data = {
