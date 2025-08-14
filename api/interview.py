@@ -48,6 +48,9 @@ class handler(BaseHTTPRequestHandler):
         questionnaire_id = data.get('questionnaire_id', 'default')
         initial_message = None
         
+        print(f"DEBUG: Received questionnaire_id: {questionnaire_id}")
+        print(f"DEBUG: Full data received: {data}")
+        
         if questionnaire_id != 'default':
             # Load custom questionnaire from Supabase
             try:
@@ -61,6 +64,9 @@ class handler(BaseHTTPRequestHandler):
                     category = questionnaire.get('category', 'general')
                     title = questionnaire.get('title', 'Custom Questionnaire')
                     
+                    print(f"DEBUG: Found questionnaire: {questionnaire}")
+                    print(f"DEBUG: Category: {category}")
+                    
                     category_prompts = {
                         'fitness': f"Hi! I'd love to understand your relationship with fitness and exercise. Tell me, is staying active something you think about a lot, or is it more just routine for you?",
                         'nutrition': f"Hi! I'd love to understand your relationship with nutrition and healthy eating. Tell me, is your diet something you think about a lot, or is it more just routine for you?",
@@ -73,6 +79,7 @@ class handler(BaseHTTPRequestHandler):
                     }
                     
                     initial_message = category_prompts.get(category, f"Hi! I'd love to understand your thoughts about {category}. Tell me, what role does {category} play in your life?")
+                    print(f"DEBUG: Generated initial message: {initial_message}")
             except Exception as e:
                 print(f"Error loading questionnaire {questionnaire_id}: {e}")
                 # Fall back to default
