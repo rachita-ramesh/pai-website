@@ -117,16 +117,33 @@ class handler(BaseHTTPRequestHandler):
                     transcript += f"AI: {msg['content']}\n"
             
             # Extract profile
-            profile = extractor.extract_profile(transcript)
-            profile_file = f"data/profiles/{participant_name.lower()}_v1_profile.json"
+            profile = extractor.extract_profile(transcript, participant_name)
             
-            # Save profile (simplified for Vercel)
-            response_data = {
-                'message': 'Interview completed and profile extracted',
-                'profile_created': True,
-                'profile_id': f"{participant_name.lower()}_v1",
-                'profile_file': profile_file
-            }
+            # Save profile to /tmp for Vercel (temporary but persistent during request)
+            import os
+            import json
+            os.makedirs('/tmp/profiles', exist_ok=True)
+            profile_file = f"/tmp/profiles/{participant_name.lower()}_v1_profile.json"
+            
+            # Actually save the profile
+            try:
+                profile_dict = profile.dict() if hasattr(profile, 'dict') else profile
+                with open(profile_file, 'w') as f:
+                    json.dump(profile_dict, f, indent=2)
+                
+                response_data = {
+                    'message': 'Interview completed and profile extracted',
+                    'profile_created': True,
+                    'profile_id': f"{participant_name.lower()}_v1",
+                    'profile_file': profile_file,
+                    'profile_data': profile_dict
+                }
+            except Exception as save_error:
+                response_data = {
+                    'message': f'Profile extracted but save failed: {str(save_error)}',
+                    'profile_created': False,
+                    'error': str(save_error)
+                }
         else:
             response_data = {
                 'message': 'Interview completed',

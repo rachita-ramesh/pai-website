@@ -14,10 +14,10 @@ class handler(BaseHTTPRequestHandler):
         try:
             # Look for profile files in possible locations
             possible_dirs = [
-                "backend/data/profiles",
-                "/Users/rachita/Projects/Pai/backend/data/profiles",
-                "/tmp/profiles",
-                os.path.join(os.getcwd(), "backend/data/profiles")
+                "/tmp/profiles",  # Vercel serverless storage
+                "backend/data/profiles",  # Local development
+                "/Users/rachita/Projects/Pai/backend/data/profiles",  # Absolute local path
+                os.path.join(os.getcwd(), "backend/data/profiles")  # Current working directory
             ]
             
             profiles_count = 0
