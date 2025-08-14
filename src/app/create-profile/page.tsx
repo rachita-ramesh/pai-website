@@ -58,7 +58,14 @@ interface Questionnaire {
   description: string
   category: string
   estimated_duration: number
-  questions: unknown[]
+  questions: {
+    id: string
+    text: string
+    type: string
+    options?: string[]
+    required: boolean
+    helpText?: string
+  }[]
 }
 
 export default function CreateProfile() {

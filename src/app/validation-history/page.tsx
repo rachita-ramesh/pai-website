@@ -56,10 +56,10 @@ export default function ValidationHistory() {
         const data = await response.json()
         setSelectedResult(data)
       } else {
-        console.error('Failed to load detailed results')
+        console.error('Failed to load detailed results for session:', testSessionId)
       }
     } catch (error) {
-      console.error('Error loading detailed results:', error)
+      console.error('Error loading detailed results for session:', testSessionId, error)
     }
   }
 

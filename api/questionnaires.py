@@ -68,12 +68,25 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode('utf-8'))
             
         except Exception as e:
+            # Debug environment variables
+            supabase_url = os.getenv('SUPABASE_URL')
+            supabase_key = os.getenv('SUPABASE_ANON_KEY')
             print(f"Error creating questionnaire: {str(e)}")
+            print(f"SUPABASE_URL available: {'Yes' if supabase_url else 'No'}")
+            print(f"SUPABASE_ANON_KEY available: {'Yes' if supabase_key else 'No'}")
+            
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            error_response = {'error': str(e), 'success': False}
+            error_response = {
+                'error': str(e), 
+                'success': False,
+                'debug': {
+                    'supabase_url_available': bool(supabase_url),
+                    'supabase_key_available': bool(supabase_key)
+                }
+            }
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
     
     def do_GET(self):
