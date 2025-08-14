@@ -417,7 +417,7 @@ export default function CreateProfile() {
               Build Your <span className="highlight">Digital Twin</span>
             </h1>
             <p style={{ fontSize: '18px', color: '#737373', maxWidth: '600px', margin: '0 auto' }}>
-              {interviewPhase === 'setup' && 'Our AI will conduct a natural 15-20 minute conversation to understand your skincare attitudes and behaviors.'}
+              {interviewPhase === 'setup' && 'Our AI will conduct a natural 15-20 minute conversation to understand your attitudes and behaviors.'}
               {interviewPhase === 'interview' && `AI Interview in Progress - ${interviewData.exchangeCount} exchanges so far`}
               {interviewPhase === 'complete' && 'Interview Complete! Your responses will be analyzed to create your digital twin.'}
             </p>
@@ -425,9 +425,9 @@ export default function CreateProfile() {
 
           {interviewPhase === 'setup' && (
             <div className="card" style={{ marginBottom: '32px' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>AI Skincare Interview</h2>
+              <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>AI Interview</h2>
               <p style={{ fontSize: '16px', color: '#737373', marginBottom: '32px' }}>
-                Our AI researcher will conduct a natural conversation to understand your attitudes and behaviors around skincare. 
+                Our AI researcher will conduct a natural conversation to understand your attitudes and behaviors. 
                 This typically takes 15-20 minutes and helps us create a detailed psychological profile.
               </p>
               
@@ -475,17 +475,6 @@ export default function CreateProfile() {
                     </option>
                   ))}
                 </select>
-                
-                <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px', marginBottom: '24px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>What to expect:</h3>
-                  <ul style={{ fontSize: '14px', color: '#737373', paddingLeft: '20px', margin: '0' }}>
-                    <li>Natural conversation about your skincare habits and attitudes</li>
-                    <li>Questions about your relationship with skincare and beauty</li>
-                    <li>Discussion of your decision-making patterns and preferences</li>
-                    <li>Exploration of your values and priorities around self-care</li>
-                    <li>Approximately 20-25 back-and-forth exchanges</li>
-                  </ul>
-                </div>
               </div>
             </div>
           )}
