@@ -183,7 +183,7 @@ export default function CreateProfile() {
     
     try {
       // Call backend to start interview session
-      const response = await fetch('/api/start-interview', {
+      const response = await fetch('/api/interview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -293,7 +293,7 @@ export default function CreateProfile() {
         setInterviewPhase('complete')
         // Automatically complete the interview on the backend
         try {
-          await fetch(`/api/complete-interview`, {
+          await fetch(`/api/interview?action=complete`, {
             method: 'POST'
           })
           console.log('Interview completed on backend')
@@ -331,7 +331,7 @@ export default function CreateProfile() {
   const handleCompleteInterview = async () => {
     try {
       // Call backend to extract profile
-      const response = await fetch(`/api/complete-interview`, {
+      const response = await fetch(`/api/interview?action=complete`, {
         method: 'POST'
       })
       
