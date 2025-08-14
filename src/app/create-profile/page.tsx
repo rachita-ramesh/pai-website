@@ -53,6 +53,15 @@ interface InterviewData {
   isComplete: boolean
 }
 
+interface Questionnaire {
+  questionnaire_id: string
+  title: string
+  description: string
+  category: string
+  estimated_duration: number
+  questions: any[]
+}
+
 export default function CreateProfile() {
   const [interviewPhase, setInterviewPhase] = useState<'setup' | 'interview' | 'complete'>('setup')
   const [userName, setUserName] = useState('')
@@ -60,6 +69,8 @@ export default function CreateProfile() {
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isListening, setIsListening] = useState(false)
+  const [availableQuestionnaires, setAvailableQuestionnaires] = useState<Questionnaire[]>([])
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<string>('default')
   const [interviewData, setInterviewData] = useState<InterviewData>({
     name: '',
     sessionId: '',
@@ -80,6 +91,23 @@ export default function CreateProfile() {
   useEffect(() => {
     scrollToBottom()
   }, [interviewData.messages])
+  
+  // Load available questionnaires
+  useEffect(() => {
+    const loadQuestionnaires = async () => {
+      try {
+        const response = await fetch('/api/questionnaires')
+        if (response.ok) {
+          const data = await response.json()
+          setAvailableQuestionnaires(data.questionnaires || [])
+        }
+      } catch (error) {
+        console.error('Error loading questionnaires:', error)
+      }
+    }
+    
+    loadQuestionnaires()
+  }, [])
   
   // Initialize speech recognition
   useEffect(() => {
@@ -416,6 +444,30 @@ export default function CreateProfile() {
                   onChange={(e) => setUserName(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && startInterview()}
                 />
+                
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                  Choose Interview Type
+                </label>
+                <select
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px 16px', 
+                    border: '1px solid #e5e5e5', 
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    outline: 'none',
+                    marginBottom: '24px'
+                  }}
+                  value={selectedQuestionnaire}
+                  onChange={(e) => setSelectedQuestionnaire(e.target.value)}
+                >
+                  <option value="default">Default AI Skincare Interview (~20 min)</option>
+                  {availableQuestionnaires.map((q) => (
+                    <option key={q.questionnaire_id} value={q.questionnaire_id}>
+                      {q.title} (~{q.estimated_duration} min) - {q.category}
+                    </option>
+                  ))}
+                </select>
                 
                 <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px', marginBottom: '24px' }}>
                   <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>What to expect:</h3>

@@ -205,3 +205,55 @@ class SupabaseClient:
             return result[0] if result else None
         except:
             return None
+    
+    # ============================================================================
+    # CUSTOM QUESTIONNAIRES
+    # ============================================================================
+    
+    def create_custom_questionnaire(self, questionnaire_data: Dict) -> Dict:
+        """Create a new custom questionnaire"""
+        return self._make_request('POST', 'custom_questionnaires', questionnaire_data)
+    
+    def add_questionnaire_question(self, question_data: Dict) -> Dict:
+        """Add a question to a questionnaire"""
+        return self._make_request('POST', 'questionnaire_questions', question_data)
+    
+    def get_custom_questionnaire(self, questionnaire_id: str) -> Optional[Dict]:
+        """Get a custom questionnaire by ID"""
+        try:
+            result = self._make_request('GET', f'custom_questionnaires?questionnaire_id=eq.{questionnaire_id}')
+            return result[0] if result else None
+        except:
+            return None
+    
+    def get_questionnaire_questions(self, questionnaire_id: str) -> List[Dict]:
+        """Get all questions for a questionnaire"""
+        try:
+            return self._make_request('GET', f'questionnaire_questions?questionnaire_id=eq.{questionnaire_id}&order=question_order.asc')
+        except:
+            return []
+    
+    def get_public_questionnaires(self) -> List[Dict]:
+        """Get all public questionnaires"""
+        try:
+            return self._make_request('GET', 'custom_questionnaires?is_public=eq.true&is_active=eq.true&order=created_at.desc')
+        except:
+            return []
+    
+    def get_questionnaires_by_category(self, category: str) -> List[Dict]:
+        """Get questionnaires by category"""
+        try:
+            return self._make_request('GET', f'custom_questionnaires?category=eq.{category}&is_active=eq.true&order=usage_count.desc')
+        except:
+            return []
+    
+    def increment_questionnaire_usage(self, questionnaire_id: str) -> Dict:
+        """Increment usage count for a questionnaire"""
+        return self._make_request('PATCH', f'custom_questionnaires?questionnaire_id=eq.{questionnaire_id}', {
+            'usage_count': 'usage_count + 1',
+            'updated_at': 'NOW()'
+        })
+    
+    def record_questionnaire_usage(self, usage_data: Dict) -> Dict:
+        """Record questionnaire usage tracking"""
+        return self._make_request('POST', 'questionnaire_usage', usage_data)
