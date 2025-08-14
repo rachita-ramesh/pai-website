@@ -223,7 +223,8 @@ export default function CreateProfile() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          participant_name: userName
+          participant_name: userName,
+          questionnaire_id: selectedQuestionnaire
         })
       })
       

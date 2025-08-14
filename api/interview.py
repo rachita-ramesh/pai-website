@@ -44,6 +44,40 @@ class handler(BaseHTTPRequestHandler):
         # Initialize AI Interviewer
         interviewer = AIInterviewer(api_key)
         
+        # Get questionnaire details if not default
+        questionnaire_id = data.get('questionnaire_id', 'default')
+        initial_message = None
+        
+        if questionnaire_id != 'default':
+            # Load custom questionnaire from Supabase
+            try:
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+                from lib.supabase import SupabaseClient
+                supabase = SupabaseClient()
+                questionnaire = supabase.get_custom_questionnaire(questionnaire_id)
+                
+                if questionnaire:
+                    # Create initial message based on questionnaire category
+                    category = questionnaire.get('category', 'general')
+                    title = questionnaire.get('title', 'Custom Questionnaire')
+                    
+                    category_prompts = {
+                        'fitness': f"Hi! I'd love to understand your relationship with fitness and exercise. Tell me, is staying active something you think about a lot, or is it more just routine for you?",
+                        'nutrition': f"Hi! I'd love to understand your relationship with nutrition and healthy eating. Tell me, is your diet something you think about a lot, or is it more just routine for you?",
+                        'career': f"Hi! I'd love to understand your career goals and professional development. Tell me, is your career something you actively plan and strategize about?",
+                        'relationships': f"Hi! I'd love to understand your approach to relationships and social connections. Tell me, how important are close relationships in your life?",
+                        'lifestyle': f"Hi! I'd love to understand your lifestyle choices and daily habits. Tell me, do you have specific routines or practices that are important to you?",
+                        'mental_health': f"Hi! I'd love to understand your approach to mental health and wellbeing. Tell me, what does taking care of your mental health look like for you?",
+                        'hobbies': f"Hi! I'd love to understand your interests and hobbies. Tell me, what activities do you find most fulfilling in your free time?",
+                        'travel': f"Hi! I'd love to understand your relationship with travel and exploration. Tell me, how important is travel and experiencing new places to you?"
+                    }
+                    
+                    initial_message = category_prompts.get(category, f"Hi! I'd love to understand your thoughts about {category}. Tell me, what role does {category} play in your life?")
+            except Exception as e:
+                print(f"Error loading questionnaire {questionnaire_id}: {e}")
+                # Fall back to default
+                initial_message = None
+        
         # Start interview
         session = interviewer.start_interview(data.get('participant_name', 'User'))
         
@@ -61,10 +95,13 @@ class handler(BaseHTTPRequestHandler):
             # Add initial AI greeting message
             import uuid
             from datetime import datetime
+            default_message = "Hi! I'd love to understand your relationship with skincare. Tell me, is skincare something you think about a lot, or is it more just routine for you?"
+            content = initial_message if initial_message else default_message
+            
             messages.append({
                 'id': str(uuid.uuid4()),
                 'type': 'ai',
-                'content': "Hi! I'd love to understand your relationship with skincare. Tell me, is skincare something you think about a lot, or is it more just routine for you?",
+                'content': content,
                 'timestamp': datetime.now().isoformat()
             })
         
