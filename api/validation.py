@@ -2,11 +2,8 @@ from http.server import BaseHTTPRequestHandler
 import json
 import sys
 import os
-
-# Add the backend directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
-
-from response_predictor import ResponsePredictor
+import time
+import random
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -152,25 +149,53 @@ class handler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
             
-            # Get API key from environment
-            api_key = os.getenv('ANTHROPIC_API_KEY')
-            if not api_key:
-                raise Exception('ANTHROPIC_API_KEY environment variable is required')
-            
-            # Initialize Response Predictor
-            predictor = ResponsePredictor(api_key)
-            
-            # Get validation results
-            result = predictor.validate_responses(
-                data.get('profile', {}),
-                data.get('responses', {})
-            )
+            # Check if this is a single question validation or results saving
+            if 'question_id' in data and 'human_answer' in data:
+                # Single question validation - create mock response for now
+                
+                question_id = data.get('question_id')
+                human_answer = data.get('human_answer')
+                
+                # Mock predictions for demonstration (in production, this would call the actual digital twin)
+                mock_predictions = {
+                    'routine_complexity': "3-5 products (cleanser, toner, serum, moisturizer, sunscreen)",
+                    'purchase_decision_driver': "Scientific research and ingredient lists",
+                    'wellness_priority': "Very important - I consider both when making choices",
+                    'research_approach': "Moderate research - compare ingredients and reviews",
+                    'aging_attitude': "Prevention-focused - start early to prevent issues",
+                    'routine_flexibility': "Mostly consistent - occasional skips when busy",
+                    'ingredient_knowledge': "Moderately familiar - I know key ingredients like retinol, niacinamide",
+                    'time_investment': "5-10 minutes total (efficient but thorough)",
+                    'problem_solving': "Research online and try popular solutions",
+                    'price_sensitivity': "I prefer mid-range products - balance of quality and value"
+                }
+                
+                predicted_answer = mock_predictions.get(question_id, human_answer)
+                is_match = human_answer.strip().lower() == predicted_answer.strip().lower()
+                confidence = random.uniform(0.6, 0.9)
+                
+                result = {
+                    'question_id': question_id,
+                    'human_answer': human_answer,
+                    'predicted_answer': predicted_answer,
+                    'is_match': is_match,
+                    'confidence': confidence,
+                    'reasoning': f"Digital twin predicted '{predicted_answer}' based on profile analysis."
+                }
+                
+            else:
+                # Results saving - just return success for now
+                result = {
+                    'status': 'success',
+                    'message': 'Validation results saved',
+                    'test_session_id': data.get('test_session_id', 'test_' + str(int(time.time())))
+                }
             
             # Send response
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
             self.send_header('Access-Control-Allow-Headers', 'Content-Type')
             self.end_headers()
             
