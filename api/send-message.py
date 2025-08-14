@@ -74,12 +74,13 @@ Remember: This should feel like a natural conversation, not a survey. Ask follow
                 response_data = json.loads(response.read().decode('utf-8'))
                 ai_response = response_data['content'][0]['text']
             
-            # Send response
+            # Send response with explicit headers
             self.send_response(200)
-            self.send_header('Content-type', 'application/json')
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
             self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            self.send_header('Cache-Control', 'no-cache')
             self.end_headers()
             
             response = {
@@ -90,13 +91,21 @@ Remember: This should feel like a natural conversation, not a survey. Ask follow
                 'current_topic': 'skincare_conversation'
             }
             
-            self.wfile.write(json.dumps(response).encode('utf-8'))
+            # Debug: Log what we're sending
+            response_json = json.dumps(response)
+            print(f"DEBUG: Sending response length: {len(response_json)}")
+            print(f"DEBUG: Response preview: {response_json[:100]}...")
+            
+            self.wfile.write(response_json.encode('utf-8'))
             
         except Exception as e:
+            print(f"DEBUG: Exception occurred: {str(e)}")
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
+            error_response = {'error': str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
     
     def do_OPTIONS(self):
         self.send_response(200)
