@@ -8,6 +8,14 @@ import os
 import json
 import sys
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("⚠️  python-dotenv not installed. Make sure environment variables are set manually.")
+    pass
+
 # Add lib to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from lib.supabase import SupabaseClient
@@ -102,6 +110,25 @@ def populate_existing_profiles():
     
     return True
 
+def check_interview_templates():
+    """Check if interview templates are loaded in Supabase"""
+    try:
+        supabase = SupabaseClient()
+        templates = supabase.get_active_interview_templates()
+        
+        if templates:
+            print(f"✅ Found {len(templates)} interview templates in database")
+            for template in templates:
+                print(f"   - {template['template_name']}: {template['title']}")
+            return True
+        else:
+            print("⚠️  No interview templates found. Run supabase_interview_templates.sql first!")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error checking interview templates: {str(e)}")
+        return False
+
 def main():
     print("🚀 Populating Supabase with initial data...")
     
@@ -113,17 +140,26 @@ def main():
     
     success = True
     
-    print("\n1️⃣ Populating survey templates...")
+    print("\n1️⃣ Checking interview templates...")
+    if not check_interview_templates():
+        print("   💡 To fix: Run supabase_interview_templates.sql in your Supabase SQL editor")
+        success = False
+    
+    print("\n2️⃣ Populating survey templates...")
     if not populate_survey_templates():
         success = False
     
-    print("\n2️⃣ Populating existing profiles...")
+    print("\n3️⃣ Populating existing profiles...")
     if not populate_existing_profiles():
         success = False
     
     if success:
         print("\n🎉 All data populated successfully!")
         print("Your Supabase database is ready for the PAI platform.")
+        print("\n📊 Database contains:")
+        print("   - Interview templates (for profile creation)")
+        print("   - Survey templates (for validation)")
+        print("   - Existing profile data")
     else:
         print("\n❌ Some operations failed. Check the errors above.")
 

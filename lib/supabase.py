@@ -85,7 +85,33 @@ class SupabaseClient:
         return self._make_request('PATCH', f'profile_versions?profile_id=eq.{profile_id}', profile_data)
     
     # ============================================================================
-    # INTERVIEW MANAGEMENT
+    # INTERVIEW TEMPLATES & MANAGEMENT
+    # ============================================================================
+    
+    def get_interview_template(self, template_name: str) -> Optional[Dict]:
+        """Get interview template by name"""
+        try:
+            result = self._make_request('GET', f'interview_templates?template_name=eq.{template_name}')
+            return result[0] if result else None
+        except:
+            return None
+    
+    def get_interview_topics(self, template_name: str) -> List[Dict]:
+        """Get interview topics for a template"""
+        try:
+            return self._make_request('GET', f'interview_topics?template_name=eq.{template_name}&order=topic_order.asc')
+        except:
+            return []
+    
+    def get_active_interview_templates(self) -> List[Dict]:
+        """Get all active interview templates"""
+        try:
+            return self._make_request('GET', 'interview_templates?is_active=eq.true')
+        except:
+            return []
+    
+    # ============================================================================
+    # INTERVIEW SESSIONS
     # ============================================================================
     
     def insert_interview_session(self, interview_data: Dict) -> Dict:
