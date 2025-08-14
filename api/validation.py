@@ -9,11 +9,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
 from response_predictor import ResponsePredictor, SurveyQuestion
 from profile_extractor import ProfileExtractor
+import glob
 
 # Define survey data for reference
 def get_validation_survey_data():
     return {
-        "survey_title": "Skincare Attitudes & Usage Validation Study",
+        "survey_name": "validation_survey_1",
+        "survey_title": "Skincare Attitudes & Usage Validation Study", 
         "description": "Comprehensive validation questions to test digital twin accuracy in predicting skincare behaviors and attitudes",
         "target_accuracy": 0.6,
         "questions": [
@@ -131,6 +133,36 @@ def get_validation_survey_data():
             }
         ]
     }
+
+def get_validation_results_path():
+    """Get the validation results directory path"""
+    return os.path.join(os.path.dirname(__file__), '..', 'backend', 'data', 'validation_results')
+
+def get_next_test_counter(survey_name, profile_id, results_dir):
+    """Get the next counter for this survey-profile combination"""
+    # Look for existing files matching the pattern: survey_name_profile_id_*.json
+    pattern = os.path.join(results_dir, f"{survey_name}_{profile_id}_*.json")
+    existing_files = glob.glob(pattern)
+    
+    # Extract counter numbers from existing files
+    counters = []
+    for filepath in existing_files:
+        filename = os.path.basename(filepath)
+        # Extract counter from filename like: survey_1_rachita_v1_3.json -> 3
+        parts = filename.replace('.json', '').split('_')
+        if len(parts) >= 4:
+            try:
+                counter = int(parts[-1])
+                counters.append(counter)
+            except ValueError:
+                continue
+    
+    # Return next counter (max + 1, or 1 if no files exist)
+    return max(counters) + 1 if counters else 1
+
+def generate_validation_filename(survey_name, profile_id, counter):
+    """Generate validation filename: survey_name_profile_id_counter.json"""
+    return f"{survey_name}_{profile_id}_{counter}.json"
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -338,12 +370,25 @@ class handler(BaseHTTPRequestHandler):
                 correct_answers = data.get('correct_answers', 0)
                 model_version = data.get('model_version', 'claude-3-5-sonnet-20241022')
                 
+                # Get survey info and determine counter
+                survey_data = get_validation_survey_data()
+                survey_name = survey_data['survey_name']
+                results_dir = get_validation_results_path()
+                
+                # Ensure results directory exists
+                os.makedirs(results_dir, exist_ok=True)
+                
+                # Get next counter for this survey-profile combination
+                test_counter = get_next_test_counter(survey_name, profile_id, results_dir)
+                
                 # Create comprehensive validation result
                 validation_result = {
                     'test_metadata': {
                         'test_session_id': test_session_id,
                         'timestamp': time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime()),
+                        'survey_name': survey_name,
                         'profile_version': profile_id,
+                        'test_counter': test_counter,
                         'llm_model': model_version,
                         'test_type': 'digital_twin_validation',
                         'total_questions': total_questions,
@@ -390,11 +435,10 @@ class handler(BaseHTTPRequestHandler):
                         'category': question_data['category'] if question_data else 'unknown'
                     })
                 
-                # Save to file
+                # Save to file with proper naming
                 try:
-                    import os
-                    os.makedirs('/tmp/validation_results', exist_ok=True)
-                    filepath = f'/tmp/validation_results/{test_session_id}_validation.json'
+                    filename = generate_validation_filename(survey_name, profile_id, test_counter)
+                    filepath = os.path.join(results_dir, filename)
                     
                     with open(filepath, 'w', encoding='utf-8') as f:
                         json.dump(validation_result, f, indent=2, ensure_ascii=False)
@@ -403,12 +447,16 @@ class handler(BaseHTTPRequestHandler):
                         'status': 'success',
                         'message': 'Validation results saved successfully',
                         'test_session_id': test_session_id,
+                        'filename': filename,
                         'filepath': filepath,
+                        'test_counter': test_counter,
                         'summary': {
                             'accuracy': f"{accuracy_percentage}%",
                             'correct': f"{correct_answers}/{total_questions}",
+                            'survey_name': survey_name,
                             'profile_tested': profile_id,
-                            'model_used': model_version
+                            'model_used': model_version,
+                            'test_number': test_counter
                         }
                     }
                     
