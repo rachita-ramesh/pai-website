@@ -119,31 +119,67 @@ class handler(BaseHTTPRequestHandler):
             # Extract profile
             profile = extractor.extract_profile(transcript, participant_name)
             
-            # Save profile to /tmp for Vercel (temporary but persistent during request)
-            import os
-            import json
-            os.makedirs('/tmp/profiles', exist_ok=True)
-            profile_file = f"/tmp/profiles/{participant_name.lower()}_v1_profile.json"
-            
-            # Actually save the profile
+            # Save profile to Supabase
             try:
-                profile_dict = profile.dict() if hasattr(profile, 'dict') else profile
-                with open(profile_file, 'w') as f:
-                    json.dump(profile_dict, f, indent=2)
+                # Import Supabase client
+                import sys
+                import os
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+                from lib.supabase import SupabaseClient
                 
-                response_data = {
-                    'message': 'Interview completed and profile extracted',
-                    'profile_created': True,
-                    'profile_id': f"{participant_name.lower()}_v1",
-                    'profile_file': profile_file,
+                supabase = SupabaseClient()
+                profile_dict = profile.dict() if hasattr(profile, 'dict') else profile
+                profile_id = f"{participant_name.lower()}_v1"
+                
+                # Prepare data for Supabase
+                profile_data = {
+                    'profile_id': profile_id,
+                    'participant_name': participant_name,
                     'profile_data': profile_dict
                 }
-            except Exception as save_error:
+                
+                # Try to insert or update
+                existing_profile = supabase.get_profile(profile_id)
+                if existing_profile:
+                    supabase.update_profile(profile_id, profile_data)
+                    action = 'updated'
+                else:
+                    supabase.insert_profile(profile_data)
+                    action = 'created'
+                
                 response_data = {
-                    'message': f'Profile extracted but save failed: {str(save_error)}',
-                    'profile_created': False,
-                    'error': str(save_error)
+                    'message': f'Interview completed and profile {action}',
+                    'profile_created': True,
+                    'profile_id': profile_id,
+                    'action': action,
+                    'storage': 'supabase'
                 }
+                
+            except Exception as save_error:
+                # Fallback to temporary storage if Supabase fails
+                import os
+                import json
+                os.makedirs('/tmp/profiles', exist_ok=True)
+                profile_file = f"/tmp/profiles/{participant_name.lower()}_v1_profile.json"
+                
+                try:
+                    profile_dict = profile.dict() if hasattr(profile, 'dict') else profile
+                    with open(profile_file, 'w') as f:
+                        json.dump(profile_dict, f, indent=2)
+                    
+                    response_data = {
+                        'message': f'Profile saved to fallback storage (Supabase failed: {str(save_error)})',
+                        'profile_created': True,
+                        'profile_id': f"{participant_name.lower()}_v1",
+                        'storage': 'tmp_fallback',
+                        'supabase_error': str(save_error)
+                    }
+                except Exception as fallback_error:
+                    response_data = {
+                        'message': f'Profile extraction failed: Supabase error: {str(save_error)}, Fallback error: {str(fallback_error)}',
+                        'profile_created': False,
+                        'error': str(save_error)
+                    }
         else:
             response_data = {
                 'message': 'Interview completed',

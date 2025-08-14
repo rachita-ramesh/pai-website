@@ -12,22 +12,37 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         # Handle status requests
         try:
-            # Look for profile files in possible locations
-            possible_dirs = [
-                "/tmp/profiles",  # Vercel serverless storage
-                "backend/data/profiles",  # Local development
-                "/Users/rachita/Projects/Pai/backend/data/profiles",  # Absolute local path
-                os.path.join(os.getcwd(), "backend/data/profiles")  # Current working directory
-            ]
-            
             profiles_count = 0
-            for profiles_dir in possible_dirs:
-                if os.path.exists(profiles_dir):
-                    try:
-                        profile_files = [f for f in os.listdir(profiles_dir) if f.endswith('_profile.json')]
-                        profiles_count += len(profile_files)
-                    except (OSError, PermissionError):
-                        continue
+            storage_source = "unknown"
+            
+            # Try Supabase first
+            try:
+                import sys
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+                from lib.supabase import SupabaseClient
+                
+                supabase = SupabaseClient()
+                profiles = supabase.get_all_profiles()
+                profiles_count = len(profiles)
+                storage_source = "supabase"
+                
+            except Exception as supabase_error:
+                # Fallback to file system check
+                possible_dirs = [
+                    "/tmp/profiles",  # Vercel serverless storage
+                    "backend/data/profiles",  # Local development
+                    "/Users/rachita/Projects/Pai/backend/data/profiles",  # Absolute local path
+                    os.path.join(os.getcwd(), "backend/data/profiles")  # Current working directory
+                ]
+                
+                for profiles_dir in possible_dirs:
+                    if os.path.exists(profiles_dir):
+                        try:
+                            profile_files = [f for f in os.listdir(profiles_dir) if f.endswith('_profile.json')]
+                            profiles_count += len(profile_files)
+                            storage_source = "filesystem"
+                        except (OSError, PermissionError):
+                            continue
             
             # Send response
             self.send_response(200)
@@ -41,7 +56,8 @@ class handler(BaseHTTPRequestHandler):
                 "status": "healthy",
                 "profiles_created": profiles_count,
                 "active_twins": 3,
-                "system": "operational"
+                "system": "operational",
+                "storage_source": storage_source
             }
             
             self.wfile.write(json.dumps(response).encode('utf-8'))
