@@ -11,7 +11,7 @@ export default function Home() {
     const checkProfileCompletion = async () => {
       try {
         // Check if Rachita's profile exists via backend API
-        const response = await fetch('/api/status')
+        const response = await fetch('/api/create-profile')
         if (response.ok) {
           const data = await response.json()
           // If profiles_created > 0, then profile is completed

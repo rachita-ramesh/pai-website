@@ -9,6 +9,51 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 from profile_extractor import ProfileExtractor
 
 class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        # Handle status requests
+        try:
+            # Look for profile files in possible locations
+            possible_dirs = [
+                "backend/data/profiles",
+                "/Users/rachita/Projects/Pai/backend/data/profiles",
+                "/tmp/profiles",
+                os.path.join(os.getcwd(), "backend/data/profiles")
+            ]
+            
+            profiles_count = 0
+            for profiles_dir in possible_dirs:
+                if os.path.exists(profiles_dir):
+                    try:
+                        profile_files = [f for f in os.listdir(profiles_dir) if f.endswith('_profile.json')]
+                        profiles_count += len(profile_files)
+                    except (OSError, PermissionError):
+                        continue
+            
+            # Send response
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            self.end_headers()
+            
+            response = {
+                "status": "healthy",
+                "profiles_created": profiles_count,
+                "active_twins": 3,
+                "system": "operational"
+            }
+            
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+            
+        except Exception as e:
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            error_response = {'error': str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+
     def do_POST(self):
         try:
             content_length = int(self.headers['Content-Length'])
@@ -45,6 +90,6 @@ class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
