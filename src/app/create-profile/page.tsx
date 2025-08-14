@@ -262,7 +262,8 @@ export default function CreateProfile() {
         },
         body: JSON.stringify({
           session_id: updatedData.sessionId,
-          message: currentMessage
+          message: currentMessage,
+          exchange_count: updatedData.exchangeCount
         })
       })
       
