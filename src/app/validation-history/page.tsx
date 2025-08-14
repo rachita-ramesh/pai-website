@@ -51,7 +51,7 @@ export default function ValidationHistory() {
   const loadDetailedResults = async (testSessionId: string) => {
     try {
       setShowingDetails(true)
-      const response = await fetch(`/api/validation`)
+      const response = await fetch(`/api/validation?test_session_id=${testSessionId}`)
       if (response.ok) {
         const data = await response.json()
         setSelectedResult(data)

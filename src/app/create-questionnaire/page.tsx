@@ -324,7 +324,7 @@ export default function CreateQuestionnaire() {
                     outline: 'none'
                   }}
                   value={currentQuestion.type}
-                  onChange={(e) => setCurrentQuestion({...currentQuestion, type: e.target.value as any})}
+                  onChange={(e) => setCurrentQuestion({...currentQuestion, type: e.target.value as 'open_ended' | 'multiple_choice' | 'yes_no' | 'scale'})}
                 >
                   {questionTypes.map(type => (
                     <option key={type.value} value={type.value}>{type.label}</option>

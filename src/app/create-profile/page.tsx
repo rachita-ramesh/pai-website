@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
-import { API_ENDPOINTS } from '../../lib/api'
 
 // Add TypeScript declarations for speech recognition
 interface SpeechRecognitionConstructor {
@@ -59,7 +58,7 @@ interface Questionnaire {
   description: string
   category: string
   estimated_duration: number
-  questions: any[]
+  questions: unknown[]
 }
 
 export default function CreateProfile() {
