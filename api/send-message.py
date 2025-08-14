@@ -73,6 +73,9 @@ Remember: This should feel like a natural conversation, not a survey. Ask follow
             with urllib.request.urlopen(req, timeout=30) as response:
                 response_data = json.loads(response.read().decode('utf-8'))
                 ai_response = response_data['content'][0]['text']
+                
+                # Clean up markdown formatting for plain text display
+                ai_response = ai_response.replace('*', '').replace('**', '').replace('_', '')
             
             # Send response with explicit headers
             self.send_response(200)
