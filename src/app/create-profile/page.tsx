@@ -255,7 +255,7 @@ export default function CreateProfile() {
     
     try {
       // Call the Python backend API (using direct HTTP approach)
-      const response = await fetch('/api/send-message-direct', {
+      const response = await fetch('/api/send-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
