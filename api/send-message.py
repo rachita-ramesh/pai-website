@@ -76,30 +76,33 @@ class handler(BaseHTTPRequestHandler):
             # Create AI interviewer with proper context
             interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
             
-            # Check if we should ask the next questionnaire question
-            next_question = None
+            # Simple approach: Get the next questionnaire question based on how many user messages we've received
+            ai_response = None
+            
             if questionnaire_context and 'questions' in questionnaire_context:
                 questions = questionnaire_context['questions']
-                # Count how many AI questions have been asked so far
-                ai_question_count = sum(1 for msg in conversation_history if msg.get('role') == 'assistant')
                 
-                print(f"DEBUG: Found {len(questions)} questions in questionnaire")
-                print(f"DEBUG: AI messages in history: {ai_question_count}")
-                print(f"DEBUG: Questions so far: {[q.get('question_text', '') for q in questions[:ai_question_count+1]]}")
+                # Count user messages in conversation history
+                user_message_count = sum(1 for msg in conversation_history if msg.get('role') == 'user')
                 
-                # If we haven't exhausted all questionnaire questions, use the next one
-                if ai_question_count < len(questions):
-                    next_question = questions[ai_question_count]
+                print(f"DEBUG: User messages so far: {user_message_count}")
+                print(f"DEBUG: Total questions available: {len(questions)}")
+                
+                # Question index = user message count (0-based)
+                # First user message -> ask question 1 (index 1)
+                # Second user message -> ask question 2 (index 2), etc.
+                question_index = user_message_count  # This will be 0, 1, 2, etc.
+                
+                if question_index < len(questions):
+                    next_question = questions[question_index]
                     ai_response = next_question.get('question_text', '')
-                    print(f"DEBUG: Using questionnaire question {ai_question_count + 1}: {ai_response}")
+                    print(f"DEBUG: Asking question {question_index + 1}: {ai_response}")
                 else:
-                    print(f"DEBUG: All questionnaire questions used, will generate AI follow-up")
+                    print(f"DEBUG: All questions asked, generating AI follow-up")
             
-            # Only generate AI response if we don't have a specific questionnaire question
-            if not next_question:
-                # Use AI to generate follow-up questions after questionnaire is done
+            # If we don't have a questionnaire question, generate AI response
+            if not ai_response:
                 if conversation_history:
-                    # Add current message to history
                     conversation_history.append({"role": "user", "content": message})
                     
                     response = interviewer.client.messages.create(
@@ -111,8 +114,7 @@ class handler(BaseHTTPRequestHandler):
                     )
                     ai_response = response.content[0].text
                 else:
-                    # Fallback
-                    ai_response = "Thank you for sharing that. Could you tell me more about your experience?"
+                    ai_response = "Thank you for sharing that. Could you tell me more?"
             
             print(f"DEBUG: Generated response for {questionnaire_context['category'] if questionnaire_context else 'default'} interview")
             
