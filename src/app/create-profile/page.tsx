@@ -286,8 +286,8 @@ export default function CreateProfile() {
     
     const updatedData = {
       ...interviewData,
-      messages: [...interviewData.messages, userMessage]
-      // Don't increment exchangeCount here - only count AI questions, not user messages
+      messages: [...interviewData.messages, userMessage],
+      exchangeCount: interviewData.exchangeCount + 1 // Increment for each user message
     }
     
     setInterviewData(updatedData)
@@ -304,7 +304,7 @@ export default function CreateProfile() {
         body: JSON.stringify({
           session_id: updatedData.sessionId,
           message: currentMessage,
-          exchange_count: updatedData.exchangeCount,
+          exchange_count: updatedData.exchangeCount, // This should increment with each user message
           questionnaire_id: selectedQuestionnaire
         })
       })
