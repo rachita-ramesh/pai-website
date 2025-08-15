@@ -79,6 +79,12 @@ INTERVIEW FLOW:
 - When user shares something intriguing, dig deeper before moving on
 - Naturally weave in the key topics throughout the conversation
 - Ask follow-ups based on their specific responses and personality
+- STAY FOCUSED ONLY ON {category} - do not bring up unrelated topics like skincare, beauty, or other categories
+
+FORBIDDEN TOPICS:
+- Do NOT mention skincare, beauty routines, or cosmetics unless directly related to {category}
+- Do NOT cross-contaminate with other interview categories
+- ONLY focus on the {category} topics and questions provided
 
 END CRITERIA:
 Interview is complete when you've covered the main topics and have 20-25 meaningful exchanges. End with:
@@ -86,7 +92,7 @@ Interview is complete when you've covered the main topics and have 20-25 meaning
 
 Remember: This should feel like a fascinating conversation about their personal relationship with {category}, not an interrogation. Help them reflect and articulate things they may not have consciously thought about before.
 
-CRITICAL: Always ask ONE focused question per response. Keep responses conversational and brief (1-2 sentences). Never overwhelm with multiple questions at once."""
+CRITICAL: Always ask ONE focused question per response. Keep responses conversational and brief (1-2 sentences). Never overwhelm with multiple questions at once. NEVER mention topics outside of {category}."""
         
         else:
             # Default skincare prompt
