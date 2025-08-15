@@ -268,10 +268,12 @@ class handler(BaseHTTPRequestHandler):
                     print(f"DEBUG: Question {i}: {q.get('question_text', 'NO TEXT')}")
                 
                 # If we haven't asked all the questionnaire questions yet, ask the next one
+                # ai_count represents how many questions we've already asked
+                # So if ai_count = 1, we should ask question[1] (second question)
                 if ai_count < len(questions):
                     next_question = questions[ai_count]
                     ai_response = next_question.get('question_text', 'Tell me more')
-                    print(f"DEBUG: Asking question {ai_count} (index {ai_count}): {ai_response}")
+                    print(f"DEBUG: We've asked {ai_count} questions, asking question {ai_count + 1} (index {ai_count}): {ai_response}")
                 else:
                     # All questionnaire questions asked, generate simple follow-up
                     ai_response = "Thank you for sharing all of that! Is there anything else you'd like to tell me about this topic?"
