@@ -14,6 +14,8 @@ class handler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
             
+            print(f"DEBUG: Creating questionnaire with data: {data}")
+            
             supabase = SupabaseClient()
             
             # Create questionnaire
@@ -29,8 +31,11 @@ class handler(BaseHTTPRequestHandler):
                 'is_active': True
             }
             
+            print(f"DEBUG: Questionnaire data prepared: {questionnaire_data}")
+            
             # Insert questionnaire
             questionnaire_result = supabase.create_custom_questionnaire(questionnaire_data)
+            print(f"DEBUG: Questionnaire created: {questionnaire_result}")
             
             # Insert individual questions
             questions_inserted = []
