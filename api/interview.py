@@ -21,10 +21,12 @@ class handler(BaseHTTPRequestHandler):
             parsed_url = urlparse(self.path)
             query_params = parse_qs(parsed_url.query)
             
-            # Determine operation: start or complete
+            # Determine operation: start, continue, or complete
             operation = query_params.get('action', ['start'])[0]
             if 'complete' in self.path or operation == 'complete':
                 return self._handle_complete_interview(data)
+            elif data.get('message'):  # If there's a message, this is a continuation
+                return self._handle_continue_interview(data)
             else:
                 return self._handle_start_interview(data)
                 
@@ -199,6 +201,92 @@ class handler(BaseHTTPRequestHandler):
         }
         
         # Send response
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+        
+        self.wfile.write(json.dumps(response).encode('utf-8'))
+    
+    def _handle_continue_interview(self, data):
+        """Handle continuing an interview conversation"""
+        # Get API key from environment
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            raise Exception('ANTHROPIC_API_KEY environment variable is required')
+        
+        # Get data from request
+        session_id = data.get('session_id')
+        message = data.get('message', '')
+        exchange_count = data.get('exchange_count', 0)
+        questionnaire_id = data.get('questionnaire_id', 'default')
+        
+        print(f"DEBUG: Continuing interview - Session: {session_id}, Message: {message}")
+        
+        # Load questionnaire context
+        questionnaire_context = None
+        try:
+            if questionnaire_id != 'default':
+                from lib.supabase import SupabaseClient
+                supabase = SupabaseClient()
+                questionnaire = supabase.get_custom_questionnaire(questionnaire_id)
+                
+                if questionnaire:
+                    questions = supabase.get_questionnaire_questions(questionnaire_id)
+                    questionnaire_context = {
+                        'title': questionnaire.get('title', 'Custom Questionnaire'),
+                        'category': questionnaire.get('category', 'general'),
+                        'description': questionnaire.get('description', ''),
+                        'questions': questions,
+                        'target_questions': len(questions) + 3
+                    }
+                    print(f"DEBUG: Loaded questionnaire context for {questionnaire_context['category']}")
+        except Exception as e:
+            print(f"DEBUG: Error loading questionnaire context: {e}")
+            questionnaire_context = None
+        
+        # Create AIInterviewer with questionnaire context
+        interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
+        
+        # Create a mock session (in a real system, you'd load this from storage)
+        from lib.ai_interviewer import InterviewSession, InterviewMessage
+        from datetime import datetime
+        
+        session = InterviewSession(
+            session_id=session_id,
+            participant_name="User",
+            messages=[],  # We'll let AIInterviewer handle the conversation flow
+            start_time=datetime.now(),
+            current_topic="interview",
+            exchange_count=exchange_count,
+            is_complete=False
+        )
+        
+        # Get AI response
+        ai_response = interviewer.get_ai_response(session, message)
+        
+        # Update session
+        session = interviewer.update_session(session, message, ai_response)
+        
+        # Calculate completion
+        target_questions = 15  # Default
+        if questionnaire_context and 'target_questions' in questionnaire_context:
+            target_questions = questionnaire_context['target_questions']
+        
+        new_exchange_count = exchange_count + 1
+        is_complete = new_exchange_count >= target_questions
+        
+        # Send response
+        response = {
+            'session_id': session_id,
+            'ai_response': ai_response,
+            'exchange_count': new_exchange_count,
+            'is_complete': is_complete,
+            'target_questions': target_questions
+        }
+        
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')

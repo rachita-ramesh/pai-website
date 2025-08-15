@@ -295,8 +295,8 @@ export default function CreateProfile() {
     setIsLoading(true)
     
     try {
-      // Call the Python backend API (using direct HTTP approach)
-      const response = await fetch('/api/send-message', {
+      // Call the interview API to continue the conversation
+      const response = await fetch('/api/interview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
