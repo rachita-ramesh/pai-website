@@ -423,7 +423,7 @@ class handler(BaseHTTPRequestHandler):
                     from datetime import datetime
                     minimal_session = {
                         'session_id': session_id,
-                        'person_name': session_id.split('_')[-1] if '_' in session_id else 'Unknown',  # Extract name from session_id
+                        'person_name': session_id.split('_')[-1].strip() if '_' in session_id else 'Unknown',  # Extract name from session_id
                         'transcript': 'Interview transcript not available - session was not properly stored',
                         'messages': [],
                         'exchange_count': 0,
@@ -444,8 +444,19 @@ class handler(BaseHTTPRequestHandler):
             profile_data = self._extract_profile_from_interview(interview_session, api_key)
             
             # Get latest version number for this person
-            person_name = interview_session['person_name']
+            person_name = interview_session['person_name'].strip()  # Remove any trailing spaces
             print(f"DEBUG: Getting latest profile version for person: {person_name}")
+            
+            # Ensure person exists in database before creating profile
+            try:
+                person = supabase.get_person(person_name)
+                if not person:
+                    print(f"DEBUG: Person {person_name} not found, creating...")
+                    supabase.create_person(person_name)
+                    print(f"DEBUG: Created person: {person_name}")
+            except Exception as e:
+                print(f"DEBUG: Error ensuring person exists: {e}")
+            
             latest_profile = supabase.get_latest_profile_version(person_name)
             print(f"DEBUG: Latest profile found: {latest_profile}")
             next_version = (latest_profile['version_number'] + 1) if latest_profile else 1
