@@ -76,29 +76,26 @@ class handler(BaseHTTPRequestHandler):
             # Create AI interviewer with proper context
             interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
             
-            # Simple approach: Get the next questionnaire question based on how many user messages we've received
+            # SIMPLE: Just ask questions from questionnaire in order
             ai_response = None
             
             if questionnaire_context and 'questions' in questionnaire_context:
                 questions = questionnaire_context['questions']
                 
-                # Count user messages in conversation history
-                user_message_count = sum(1 for msg in conversation_history if msg.get('role') == 'user')
+                print(f"DEBUG: Found {len(questions)} questions in questionnaire")
+                for i, q in enumerate(questions):
+                    print(f"DEBUG: Question {i}: {q.get('question_text', '')}")
                 
-                print(f"DEBUG: User messages so far: {user_message_count}")
-                print(f"DEBUG: Total questions available: {len(questions)}")
+                # We're going to use exchange_count to track which question to ask
+                # exchange_count comes from frontend and represents how many user-AI exchanges have happened
+                # So if exchange_count = 1, we should ask question[1] (second question)
                 
-                # Question index = user message count (0-based)
-                # First user message -> ask question 1 (index 1)
-                # Second user message -> ask question 2 (index 2), etc.
-                question_index = user_message_count  # This will be 0, 1, 2, etc.
-                
-                if question_index < len(questions):
-                    next_question = questions[question_index]
+                if exchange_count < len(questions):
+                    next_question = questions[exchange_count]
                     ai_response = next_question.get('question_text', '')
-                    print(f"DEBUG: Asking question {question_index + 1}: {ai_response}")
+                    print(f"DEBUG: Exchange count: {exchange_count}, asking question {exchange_count}: {ai_response}")
                 else:
-                    print(f"DEBUG: All questions asked, generating AI follow-up")
+                    print(f"DEBUG: Exchange count {exchange_count} >= {len(questions)}, generating AI follow-up")
             
             # If we don't have a questionnaire question, generate AI response
             if not ai_response:
@@ -166,16 +163,16 @@ class handler(BaseHTTPRequestHandler):
             if questionnaire_context and 'target_questions' in questionnaire_context:
                 target_questions = questionnaire_context['target_questions']
             
-            # Count AI questions by counting AI messages in conversation history + this new response
-            ai_question_count = sum(1 for msg in conversation_history if msg.get('role') == 'assistant') + 1
-            is_complete = ai_question_count >= target_questions
+            # Use exchange_count + 1 for the new count (since we're responding to this exchange)
+            new_exchange_count = exchange_count + 1
+            is_complete = new_exchange_count >= target_questions
             
-            print(f"DEBUG: AI Question {ai_question_count} of {target_questions}, Complete: {is_complete}")
+            print(f"DEBUG: Exchange {new_exchange_count} of {target_questions}, Complete: {is_complete}")
             
             response = {
                 'session_id': session_id,
                 'ai_response': ai_response,
-                'exchange_count': ai_question_count,  # This now represents AI questions asked
+                'exchange_count': new_exchange_count,
                 'is_complete': is_complete,
                 'target_questions': target_questions
             }
