@@ -213,10 +213,12 @@ export default function CreateProfile() {
   const startInterview = async () => {
     if (!userName.trim()) return
     
+    console.log('DEBUG: Starting interview with:', { userName, selectedQuestionnaire })
     setIsLoading(true)
     
     try {
       // Call backend to start interview session
+      console.log('DEBUG: Calling /api/interview')
       const response = await fetch('/api/interview', {
         method: 'POST',
         headers: {
@@ -233,6 +235,7 @@ export default function CreateProfile() {
       }
       
       const sessionData = await response.json()
+      console.log('DEBUG: Interview session data:', sessionData)
       
       // Convert backend messages to our format
       const messages = sessionData.messages.map((msg: {
