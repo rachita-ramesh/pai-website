@@ -147,21 +147,11 @@ class handler(BaseHTTPRequestHandler):
             messages.append(initial_ai_message)
             print(f"DEBUG: Using default skincare message")
         
-        # Store initial AI message in Supabase for conversation history
+        # Store initial interview session in Supabase
         if initial_ai_message:
             try:
                 from lib.supabase import SupabaseClient
                 supabase = SupabaseClient()
-                
-                ai_message_data = {
-                    'session_id': session.session_id,
-                    'type': 'ai',
-                    'content': initial_ai_message['content'],
-                    'exchange_count': 0,
-                    'timestamp': initial_ai_message['timestamp']
-                }
-                supabase.store_message(ai_message_data)
-                print(f"DEBUG: Stored initial AI message for session {session.session_id}")
                 
                 # Create person if doesn't exist
                 person = supabase.get_person(participant_name)
@@ -169,7 +159,7 @@ class handler(BaseHTTPRequestHandler):
                     supabase.create_person(participant_name)
                     print(f"DEBUG: Created new person: {participant_name}")
                 
-                # Create interview session record
+                # Create interview session record with initial AI message
                 interview_session_data = {
                     'session_id': session.session_id,
                     'person_name': participant_name,
