@@ -8,7 +8,6 @@ from urllib.parse import urlparse, parse_qs
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from lib.ai_interviewer import AIInterviewer
-from lib.profile_extractor import ProfileExtractor
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
