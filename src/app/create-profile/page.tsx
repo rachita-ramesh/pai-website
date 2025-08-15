@@ -414,7 +414,8 @@ export default function CreateProfile() {
       
     } catch (error) {
       console.error('Error completing interview:', error)
-      alert(`Interview completed but profile extraction failed: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Interview completed but profile extraction failed: ${errorMessage}`)
     }
   }
 
