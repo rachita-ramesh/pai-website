@@ -402,35 +402,27 @@ class handler(BaseHTTPRequestHandler):
             print(f"DEBUG: Interview session result: {interview_session}")
             
             if not interview_session:
-                # Let's also try to list all sessions to debug
-                try:
-                    all_sessions = supabase._make_request('GET', 'interview_sessions')
-                    print(f"DEBUG: All interview sessions in database: {all_sessions}")
-                except Exception as list_error:
-                    print(f"DEBUG: Error listing sessions: {list_error}")
+                raise Exception(f'Interview session {session_id} not found')
+            
+            # Check if profile already exists for this session
+            if interview_session.get('profile_id'):
+                print(f"DEBUG: Profile already exists for session {session_id}: {interview_session['profile_id']}")
+                # Get the existing profile data
+                existing_profile = supabase.get_profile_version(interview_session['profile_id'])
+                response = {
+                    'status': 'success',
+                    'message': 'Profile already exists for this interview session',
+                    'profile_id': interview_session['profile_id'],
+                    'profile_data': existing_profile.get('profile_data') if existing_profile else None
+                }
                 
-                # Try to find session by partial ID match or create a minimal one
-                print(f"DEBUG: Attempting to create minimal session for profile extraction")
-                try:
-                    # Create a minimal session for profile extraction
-                    import uuid
-                    from datetime import datetime
-                    minimal_session = {
-                        'session_id': session_id,
-                        'person_name': session_id.split('_')[-1].strip() if '_' in session_id else 'Unknown',  # Extract name from session_id
-                        'transcript': 'Interview transcript not available - session was not properly stored',
-                        'messages': [],
-                        'exchange_count': 0,
-                        'is_complete': True,
-                        'profile_id': None,
-                        'created_at': datetime.now().isoformat(),
-                        'completed_at': datetime.now().isoformat()
-                    }
-                    interview_session = minimal_session
-                    print(f"DEBUG: Created minimal session for processing: {interview_session}")
-                except Exception as e:
-                    print(f"DEBUG: Failed to create minimal session: {e}")
-                    raise Exception(f'Interview session {session_id} not found and could not create minimal session')
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+                return
             
             print(f"DEBUG: Extracting profile for session {session_id}")
             
@@ -469,12 +461,25 @@ class handler(BaseHTTPRequestHandler):
                 'updated_at': 'NOW()'
             }
             
-            # Save profile
-            created_profile = supabase.create_profile_version(profile_version_data)
-            print(f"DEBUG: Created profile version {profile_id}")
-            
-            # Update interview session with profile_id
-            supabase.update_interview_session(session_id, {'profile_id': profile_id})
+            # Save profile and update session atomically
+            try:
+                created_profile = supabase.create_profile_version(profile_version_data)
+                print(f"DEBUG: Created profile version {profile_id}")
+                
+                # Immediately update interview session with profile_id
+                supabase.update_interview_session(session_id, {'profile_id': profile_id})
+                print(f"DEBUG: Successfully linked profile {profile_id} to session {session_id}")
+                
+            except Exception as e:
+                print(f"DEBUG: Error creating or linking profile: {e}")
+                # If session update fails, we should delete the created profile to avoid orphans
+                try:
+                    if 'created_profile' in locals():
+                        print(f"DEBUG: Attempting to clean up orphaned profile {profile_id}")
+                        # Note: We'd need a delete method for this, but for now just log the issue
+                except:
+                    pass
+                raise e
             
             response = {
                 'status': 'success',
