@@ -103,6 +103,17 @@ class handler(BaseHTTPRequestHandler):
         # Start interview
         session = interviewer.start_interview(data.get('participant_name', 'User'))
         
+        # Save session and questionnaire context for send-message.py to use
+        import pickle
+        session_file = f"/tmp/interview_session_{session.session_id}.pkl"
+        session_data = {
+            'session': session,
+            'questionnaire_context': questionnaire_context
+        }
+        with open(session_file, 'wb') as f:
+            pickle.dump(session_data, f)
+        print(f"DEBUG: Saved session to {session_file}")
+        
         # Format messages for frontend
         messages = []
         if initial_message:

@@ -2,9 +2,13 @@ from http.server import BaseHTTPRequestHandler
 import json
 import sys
 import os
+import pickle
+from datetime import datetime
 
 # Add the lib directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from lib.ai_interviewer import AIInterviewer, InterviewSession
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -27,41 +31,47 @@ class handler(BaseHTTPRequestHandler):
             if not api_key:
                 raise Exception('ANTHROPIC_API_KEY environment variable is required')
             
-            # TODO: Get questionnaire context from session storage
-            # For now, use a simplified approach with direct Claude API but better prompts
-            # This needs proper session management to maintain questionnaire context
+            # Load the session from temporary storage
+            session_file = f"/tmp/interview_session_{session_id}.pkl"
+            questionnaire_context = None
             
-            import anthropic
-            client = anthropic.Anthropic(api_key=api_key)
+            try:
+                with open(session_file, 'rb') as f:
+                    session_data = pickle.load(f)
+                    session = session_data['session']
+                    questionnaire_context = session_data.get('questionnaire_context')
+                    print(f"DEBUG: Loaded session with {len(session.messages)} messages")
+            except FileNotFoundError:
+                print(f"DEBUG: Session file not found, creating new session")
+                # Create a minimal session if not found
+                session = InterviewSession(
+                    session_id=session_id,
+                    participant_name="User",
+                    messages=[],
+                    start_time=datetime.now(),
+                    current_topic="interview",
+                    exchange_count=0,
+                    is_complete=False
+                )
             
-            # Use a more intelligent generic prompt that can adapt to context
-            system_prompt = """You are an expert A&U (Attitudes & Usage) researcher conducting an interview. 
-
-CRITICAL INSTRUCTIONS:
-- Look at what the user just said to understand the TOPIC they're discussing
-- If they mention exercise/fitness, ask follow-ups ONLY about fitness topics
-- If they mention nutrition/diet, ask follow-ups ONLY about nutrition topics  
-- If they mention skincare, ask follow-ups ONLY about skincare topics
-- If they mention career, ask follow-ups ONLY about career topics
-- NEVER change or mix topics - stay laser-focused on THEIR topic
-
-INTERVIEW STYLE:
-- Ask ONE focused follow-up question based on their response
-- Keep it conversational and brief (1-2 sentences max)
-- Show genuine curiosity about details they shared
-- Help them elaborate on interesting points
-
-FORBIDDEN: Do NOT introduce new topics or categories. Only ask about what THEY brought up."""
-
-            response = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=200,
-                temperature=0.7,
-                system=system_prompt,
-                messages=[{"role": "user", "content": message}]
-            )
+            # Initialize AI Interviewer with questionnaire context
+            interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
             
-            ai_response = response.content[0].text
+            # Get AI response with full conversation context
+            ai_response = interviewer.get_ai_response(session, message)
+            
+            # Update session with new exchange
+            updated_session = interviewer.update_session(session, message, ai_response)
+            
+            # Save updated session
+            session_data = {
+                'session': updated_session,
+                'questionnaire_context': questionnaire_context
+            }
+            with open(session_file, 'wb') as f:
+                pickle.dump(session_data, f)
+                
+            print(f"DEBUG: Updated session, now has {len(updated_session.messages)} messages")
             
             # Clean up markdown formatting for plain text display
             ai_response = ai_response.replace('*', '').replace('**', '').replace('_', '')
@@ -80,8 +90,8 @@ FORBIDDEN: Do NOT introduce new topics or categories. Only ask about what THEY b
             response = {
                 'session_id': session_id,
                 'ai_response': ai_response,
-                'exchange_count': exchange_count + 1,
-                'is_complete': False  # TODO: Determine completion logic
+                'exchange_count': updated_session.exchange_count,
+                'is_complete': updated_session.is_complete
             }
             
             response_json = json.dumps(response)
