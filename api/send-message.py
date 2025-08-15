@@ -60,6 +60,7 @@ class handler(BaseHTTPRequestHandler):
                         print(f"DEBUG: Loaded questionnaire context for {questionnaire_context['category']}")
                 except Exception as e:
                     print(f"DEBUG: Error loading questionnaire context: {e}")
+                    questionnaire_context = None
             
             # Load conversation history from Supabase for context
             conversation_history = []
@@ -123,7 +124,8 @@ class handler(BaseHTTPRequestHandler):
             ai_response = interviewer.get_ai_response(session, message)
             print(f"DEBUG: AIInterviewer generated response: {ai_response}")
             
-            print(f"DEBUG: Generated response for {questionnaire_context['category'] if questionnaire_context else 'default'} interview")
+            category = questionnaire_context.get('category', 'default') if questionnaire_context else 'default'
+            print(f"DEBUG: Generated response for {category} interview")
             
             # Clean up markdown formatting for plain text display
             ai_response = ai_response.replace('*', '').replace('**', '').replace('_', '')
