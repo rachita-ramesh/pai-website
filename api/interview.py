@@ -181,8 +181,30 @@ class handler(BaseHTTPRequestHandler):
                 }
                 supabase.store_message(ai_message_data)
                 print(f"DEBUG: Stored initial AI message for session {session.session_id}")
+                
+                # Create person if doesn't exist
+                person = supabase.get_person(participant_name)
+                if not person:
+                    supabase.create_person(participant_name)
+                    print(f"DEBUG: Created new person: {participant_name}")
+                
+                # Create interview session record
+                interview_session_data = {
+                    'session_id': session.session_id,
+                    'person_name': participant_name,
+                    'transcript': f"AI: {initial_ai_message['content']}",
+                    'messages': [initial_ai_message],
+                    'exchange_count': 0,
+                    'is_complete': False,
+                    'profile_id': None,  # Will be set when profile is created
+                    'created_at': session.start_time.isoformat(),
+                    'completed_at': None
+                }
+                supabase.create_interview_session(interview_session_data)
+                print(f"DEBUG: Created interview session record for {session.session_id}")
+                
             except Exception as e:
-                print(f"DEBUG: Error storing initial AI message: {e}")
+                print(f"DEBUG: Error storing initial interview data: {e}")
         
         # Get target questions from questionnaire context
         target_questions = 20  # Default for skincare interviews
@@ -300,16 +322,56 @@ class handler(BaseHTTPRequestHandler):
             supabase.store_message(ai_message_data)
             
             print(f"DEBUG: Stored conversation messages for session {session_id}")
+            
+            # Update interview session with new messages and transcript
+            try:
+                # Get all messages for this session to build complete transcript
+                all_messages = supabase.get_session_messages(session_id, limit=100)
+                
+                # Build transcript
+                transcript_lines = []
+                for msg in all_messages:
+                    speaker = "User" if msg.get('type') == 'user' else "AI"
+                    transcript_lines.append(f"{speaker}: {msg.get('content', '')}")
+                transcript = "\n\n".join(transcript_lines)
+                
+                # Determine completion status
+                target_questions = 15  # Default
+                if questionnaire_context and 'target_questions' in questionnaire_context:
+                    target_questions = questionnaire_context['target_questions']
+                
+                new_exchange_count = exchange_count + 1
+                is_complete = new_exchange_count >= target_questions
+                
+                # Update interview session
+                session_updates = {
+                    'transcript': transcript,
+                    'messages': all_messages,
+                    'exchange_count': new_exchange_count,
+                    'is_complete': is_complete,
+                    'completed_at': datetime.now().isoformat() if is_complete else None
+                }
+                
+                supabase.update_interview_session(session_id, session_updates)
+                print(f"DEBUG: Updated interview session with complete transcript")
+                
+            except Exception as e:
+                print(f"DEBUG: Error updating interview session: {e}")
+                # Calculate completion anyway for response
+                target_questions = 15
+                if questionnaire_context and 'target_questions' in questionnaire_context:
+                    target_questions = questionnaire_context['target_questions']
+                new_exchange_count = exchange_count + 1
+                is_complete = new_exchange_count >= target_questions
+                
         except Exception as e:
             print(f"DEBUG: Error storing conversation messages: {e}")
-        
-        # Calculate completion
-        target_questions = 15  # Default
-        if questionnaire_context and 'target_questions' in questionnaire_context:
-            target_questions = questionnaire_context['target_questions']
-        
-        new_exchange_count = exchange_count + 1
-        is_complete = new_exchange_count >= target_questions
+            # Calculate completion anyway for response
+            target_questions = 15
+            if questionnaire_context and 'target_questions' in questionnaire_context:
+                target_questions = questionnaire_context['target_questions']
+            new_exchange_count = exchange_count + 1
+            is_complete = new_exchange_count >= target_questions
         
         # Send response
         response = {

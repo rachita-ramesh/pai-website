@@ -275,3 +275,52 @@ class SupabaseClient:
             return self._make_request('GET', endpoint)
         except:
             return []
+    
+    # ============================================================================
+    # INTERVIEW SESSIONS & PROFILE MANAGEMENT
+    # ============================================================================
+    
+    def create_person(self, name: str) -> Dict:
+        """Create a new person record"""
+        person_data = {
+            'name': name,
+            'created_at': 'NOW()',
+            'updated_at': 'NOW()'
+        }
+        return self._make_request('POST', 'people', person_data)
+    
+    def get_person(self, name: str) -> Optional[Dict]:
+        """Get person by name"""
+        try:
+            result = self._make_request('GET', f'people?name=eq.{name}')
+            return result[0] if result else None
+        except:
+            return None
+    
+    def create_interview_session(self, session_data: Dict) -> Dict:
+        """Create a new interview session"""
+        return self._make_request('POST', 'interview_sessions', session_data)
+    
+    def update_interview_session(self, session_id: str, updates: Dict) -> Dict:
+        """Update an existing interview session"""
+        return self._make_request('PATCH', f'interview_sessions?session_id=eq.{session_id}', updates)
+    
+    def get_interview_session(self, session_id: str) -> Optional[Dict]:
+        """Get interview session by ID"""
+        try:
+            result = self._make_request('GET', f'interview_sessions?session_id=eq.{session_id}')
+            return result[0] if result else None
+        except:
+            return None
+    
+    def create_profile_version(self, profile_data: Dict) -> Dict:
+        """Create a new profile version"""
+        return self._make_request('POST', 'profile_versions', profile_data)
+    
+    def get_latest_profile_version(self, person_name: str) -> Optional[Dict]:
+        """Get the latest profile version for a person"""
+        try:
+            result = self._make_request('GET', f'profile_versions?person_name=eq.{person_name}&order=version_number.desc&limit=1')
+            return result[0] if result else None
+        except:
+            return None
