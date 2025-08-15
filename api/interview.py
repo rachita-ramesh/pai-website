@@ -90,7 +90,19 @@ class handler(BaseHTTPRequestHandler):
         
         # Format messages for frontend
         messages = []
-        if session.messages:
+        if initial_message:
+            # Use custom questionnaire message
+            import uuid
+            from datetime import datetime
+            messages.append({
+                'id': str(uuid.uuid4()),
+                'type': 'ai',
+                'content': initial_message,
+                'timestamp': datetime.now().isoformat()
+            })
+            print(f"DEBUG: Using custom initial message: {initial_message}")
+        elif session.messages:
+            # Use session messages from interviewer
             for msg in session.messages:
                 messages.append({
                     'id': msg.id,
@@ -98,19 +110,20 @@ class handler(BaseHTTPRequestHandler):
                     'content': msg.content,
                     'timestamp': msg.timestamp.isoformat()
                 })
+            print(f"DEBUG: Using session messages: {len(session.messages)} messages")
         else:
-            # Add initial AI greeting message
+            # Fallback to default skincare message
             import uuid
             from datetime import datetime
             default_message = "Hi! I'd love to understand your relationship with skincare. Tell me, is skincare something you think about a lot, or is it more just routine for you?"
-            content = initial_message if initial_message else default_message
             
             messages.append({
                 'id': str(uuid.uuid4()),
                 'type': 'ai',
-                'content': content,
+                'content': default_message,
                 'timestamp': datetime.now().isoformat()
             })
+            print(f"DEBUG: Using default skincare message")
         
         response = {
             'session_id': session.session_id,
