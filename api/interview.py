@@ -437,11 +437,15 @@ class handler(BaseHTTPRequestHandler):
             
             # Get latest version number for this person
             person_name = interview_session['person_name']
+            print(f"DEBUG: Getting latest profile version for person: {person_name}")
             latest_profile = supabase.get_latest_profile_version(person_name)
+            print(f"DEBUG: Latest profile found: {latest_profile}")
             next_version = (latest_profile['version_number'] + 1) if latest_profile else 1
+            print(f"DEBUG: Next version will be: {next_version}")
             
             # Create profile version
             profile_id = f"{person_name}_v{next_version}"
+            print(f"DEBUG: Creating profile with ID: {profile_id}")
             profile_version_data = {
                 'profile_id': profile_id,
                 'person_name': person_name,
