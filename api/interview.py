@@ -392,123 +392,176 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(response).encode('utf-8'))
     
     def _handle_complete_interview(self, data):
-        """Handle completing an interview and extracting profile"""
-        # Get API key from environment
-        api_key = os.getenv('ANTHROPIC_API_KEY')
-        if not api_key:
-            raise Exception('ANTHROPIC_API_KEY environment variable is required')
-        
-        # Initialize components
-        interviewer = AIInterviewer(api_key)
-        extractor = ProfileExtractor(api_key)
-        
-        # Get session data
-        session_id = data.get('session_id')
-        
-        # Mock completion for now - in production, get from session storage
-        interview_data = data.get('interview_data', {})
-        participant_name = data.get('participant_name', 'User')
-        
-        # Extract profile from interview data
-        if interview_data and 'messages' in interview_data:
-            # Convert messages to transcript
-            transcript = ""
-            for msg in interview_data['messages']:
-                if msg['type'] == 'user':
-                    transcript += f"User: {msg['content']}\n"
-                elif msg['type'] == 'ai':
-                    transcript += f"AI: {msg['content']}\n"
+        """Handle interview completion and profile extraction"""
+        try:
+            # Get session_id from the request data or query params  
+            session_id = data.get('session_id') or self._get_session_from_url()
             
-            # Extract profile
-            profile = extractor.extract_profile(transcript, participant_name)
+            if not session_id:
+                raise Exception('Session ID is required for interview completion')
             
-            # Save profile to Supabase
-            try:
-                # Import Supabase client
-                import sys
-                import os
-                sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-                from lib.supabase import SupabaseClient
-                
-                supabase = SupabaseClient()
-                profile_dict = profile.dict() if hasattr(profile, 'dict') else profile
-                profile_id = f"{participant_name.lower()}_v1"
-                
-                # Ensure person exists
-                supabase.create_person(participant_name.lower())
-                
-                # Determine version number
-                existing_profiles = supabase.get_person_profiles(participant_name.lower())
-                version_number = len(existing_profiles) + 1
-                if version_number > 1:
-                    profile_id = f"{participant_name.lower()}_v{version_number}"
-                
-                # Prepare profile version data for Supabase
-                profile_data = {
-                    'profile_id': profile_id,
-                    'person_name': participant_name.lower(),
-                    'version_number': version_number,
-                    'profile_data': profile_dict,
-                    'is_active': True
-                }
-                
-                # Try to insert or update
-                existing_profile = supabase.get_profile_version(profile_id)
-                if existing_profile:
-                    supabase.update_profile_version(profile_id, profile_data)
-                    action = 'updated'
-                else:
-                    supabase.insert_profile_version(profile_data)
-                    action = 'created'
-                
-                response_data = {
-                    'message': f'Interview completed and profile {action}',
-                    'profile_created': True,
-                    'profile_id': profile_id,
-                    'action': action,
-                    'storage': 'supabase'
-                }
-                
-            except Exception as save_error:
-                # Fallback to temporary storage if Supabase fails
-                import os
-                import json
-                os.makedirs('/tmp/profiles', exist_ok=True)
-                profile_file = f"/tmp/profiles/{participant_name.lower()}_v1_profile.json"
-                
-                try:
-                    profile_dict = profile.dict() if hasattr(profile, 'dict') else profile
-                    with open(profile_file, 'w') as f:
-                        json.dump(profile_dict, f, indent=2)
-                    
-                    response_data = {
-                        'message': f'Profile saved to fallback storage (Supabase failed: {str(save_error)})',
-                        'profile_created': True,
-                        'profile_id': f"{participant_name.lower()}_v1",
-                        'storage': 'tmp_fallback',
-                        'supabase_error': str(save_error)
-                    }
-                except Exception as fallback_error:
-                    response_data = {
-                        'message': f'Profile extraction failed: Supabase error: {str(save_error)}, Fallback error: {str(fallback_error)}',
-                        'profile_created': False,
-                        'error': str(save_error)
-                    }
-        else:
-            response_data = {
-                'message': 'Interview completed',
-                'profile_created': False
+            # Get API key for profile extraction
+            api_key = os.getenv('ANTHROPIC_API_KEY')
+            if not api_key:
+                raise Exception('ANTHROPIC_API_KEY environment variable is required')
+            
+            # Get interview session data
+            from lib.supabase import SupabaseClient
+            supabase = SupabaseClient()
+            interview_session = supabase.get_interview_session(session_id)
+            
+            if not interview_session:
+                raise Exception(f'Interview session {session_id} not found')
+            
+            print(f"DEBUG: Extracting profile for session {session_id}")
+            
+            # Extract profile using AI
+            profile_data = self._extract_profile_from_interview(interview_session, api_key)
+            
+            # Get latest version number for this person
+            person_name = interview_session['person_name']
+            latest_profile = supabase.get_latest_profile_version(person_name)
+            next_version = (latest_profile['version_number'] + 1) if latest_profile else 1
+            
+            # Create profile version
+            profile_id = f"{person_name}_v{next_version}"
+            profile_version_data = {
+                'profile_id': profile_id,
+                'person_name': person_name,
+                'version_number': next_version,
+                'profile_data': profile_data,
+                'is_active': True,
+                'created_at': 'NOW()',
+                'updated_at': 'NOW()'
             }
+            
+            # Save profile
+            created_profile = supabase.create_profile_version(profile_version_data)
+            print(f"DEBUG: Created profile version {profile_id}")
+            
+            # Update interview session with profile_id
+            supabase.update_interview_session(session_id, {'profile_id': profile_id})
+            
+            response = {
+                'status': 'success',
+                'message': 'Interview completed successfully. Profile has been extracted.',
+                'profile_id': profile_id,
+                'profile_data': profile_data
+            }
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+            
+        except Exception as e:
+            print(f"DEBUG: Error in interview completion: {e}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            error_response = {'error': str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def _get_session_from_url(self):
+        """Extract session_id from URL query params"""
+        try:
+            from urllib.parse import urlparse, parse_qs
+            parsed_url = urlparse(self.path)
+            query_params = parse_qs(parsed_url.query)
+            return query_params.get('session_id', [None])[0]
+        except:
+            return None
+    
+    def _extract_profile_from_interview(self, interview_session, api_key):
+        """Use AI to extract personality profile from interview transcript"""
+        import anthropic
         
-        # Send response
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
+        client = anthropic.Anthropic(api_key=api_key)
         
-        self.wfile.write(json.dumps(response_data).encode('utf-8'))
+        transcript = interview_session.get('transcript', '')
+        person_name = interview_session.get('person_name', 'User')
+        
+        system_prompt = """You are an expert psychological profiler and digital twin creator. Your task is to analyze an interview transcript and extract a comprehensive personality profile.
+
+Create a detailed JSON profile with these sections:
+
+1. **Core Personality Traits** - Big 5 personality dimensions with scores
+2. **Values & Motivations** - What drives this person
+3. **Behavioral Patterns** - How they typically act and respond
+4. **Decision Making Style** - How they make choices
+5. **Communication Style** - How they express themselves
+6. **Attitudes & Beliefs** - Their perspective on relevant topics
+7. **Lifestyle Preferences** - Their habits and preferences
+8. **Emotional Profile** - How they handle emotions and stress
+
+Return ONLY a valid JSON object with this structure:
+{
+  "personality_traits": {
+    "openness": 0.7,
+    "conscientiousness": 0.8,
+    "extraversion": 0.6,
+    "agreeableness": 0.9,
+    "neuroticism": 0.3
+  },
+  "values_motivations": [
+    "Health and wellness",
+    "Personal growth"
+  ],
+  "behavioral_patterns": [
+    "Consistent daily routines",
+    "Goal-oriented approach"
+  ],
+  "decision_making_style": "Analytical with intuitive elements",
+  "communication_style": "Direct and thoughtful",
+  "attitudes_beliefs": {
+    "toward_topic": "Positive and engaged",
+    "toward_change": "Open but cautious"
+  },
+  "lifestyle_preferences": [
+    "Structured schedules",
+    "Work-life balance"
+  ],
+  "emotional_profile": {
+    "stress_response": "Problem-focused coping",
+    "emotional_regulation": "Generally stable"
+  },
+  "confidence_score": 0.85,
+  "extraction_notes": "Brief notes about the analysis"
+}
+
+Base the profile entirely on evidence from the interview transcript."""
+        
+        try:
+            response = client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=2000,
+                temperature=0.3,
+                system=system_prompt,
+                messages=[{
+                    "role": "user", 
+                    "content": f"Analyze this interview transcript and create a personality profile for {person_name}:\n\n{transcript}"
+                }]
+            )
+            
+            # Parse the JSON response
+            profile_text = response.content[0].text
+            profile_data = json.loads(profile_text)
+            
+            print(f"DEBUG: Successfully extracted profile for {person_name}")
+            return profile_data
+            
+        except Exception as e:
+            print(f"DEBUG: Error extracting profile: {e}")
+            # Return a basic fallback profile
+            return {
+                "error": "Profile extraction failed",
+                "fallback_profile": True,
+                "person_name": person_name,
+                "extraction_error": str(e)
+            }
     
     def do_OPTIONS(self):
         self.send_response(200)

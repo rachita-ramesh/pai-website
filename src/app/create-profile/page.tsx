@@ -335,12 +335,25 @@ export default function CreateProfile() {
       
       if (finalData.isComplete) {
         setInterviewPhase('complete')
-        // Automatically complete the interview on the backend
+        // Automatically extract profile when interview completes
         try {
-          await fetch(`/api/interview?action=complete`, {
-            method: 'POST'
+          const completeResponse = await fetch(`/api/interview?action=complete`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              session_id: finalData.sessionId
+            })
           })
-          console.log('Interview completed on backend')
+          
+          if (completeResponse.ok) {
+            const completeResult = await completeResponse.json()
+            console.log('Profile automatically extracted:', completeResult)
+            // Profile extraction happened automatically - user will see completion screen
+          } else {
+            console.error('Error in automatic profile extraction')
+          }
         } catch (completeError) {
           console.error('Error completing interview on backend:', completeError)
         }
@@ -376,24 +389,32 @@ export default function CreateProfile() {
     try {
       // Call backend to extract profile
       const response = await fetch(`/api/interview?action=complete`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: interviewData.sessionId
+        })
       })
       
       if (response.ok) {
         const result = await response.json()
-        console.log('Profile extraction started:', result)
-        alert(`Interview completed! ${interviewData.exchangeCount} exchanges recorded. Profile extraction has started in the background. Check the backend logs for progress.`)
+        console.log('Profile extraction completed:', result)
+        
+        if (result.profile_data) {
+          alert(`🎉 Interview completed! Profile "${result.profile_id}" has been created successfully.`)
+        } else {
+          alert(`Interview completed! Profile extraction started. Profile ID: ${result.profile_id || 'Processing...'}`)
+        }
       } else {
-        throw new Error('Failed to complete interview')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to complete interview')
       }
-      
-      // Optionally redirect to a results page or show profile extraction status
-      // For now, just log the completion
-      console.log('Interview complete:', interviewData)
       
     } catch (error) {
       console.error('Error completing interview:', error)
-      alert('Interview completed! Profile extraction is processing in the background.')
+      alert(`Interview completed but profile extraction failed: ${error.message}`)
     }
   }
 
