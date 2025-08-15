@@ -28,6 +28,14 @@ class handler(BaseHTTPRequestHandler):
             print(f"DEBUG: Exchange count: {exchange_count}")
             print(f"DEBUG: Questionnaire ID: {questionnaire_id}")
             
+            # Check if we're getting the questionnaire data
+            print(f"DEBUG: Questionnaire context loaded: {questionnaire_context is not None}")
+            if questionnaire_context:
+                print(f"DEBUG: Questionnaire context keys: {questionnaire_context.keys()}")
+                print(f"DEBUG: Questions in context: {'questions' in questionnaire_context}")
+                if 'questions' in questionnaire_context:
+                    print(f"DEBUG: Number of questions: {len(questionnaire_context['questions'])}")
+            
             # Get API key from environment
             api_key = os.getenv('ANTHROPIC_API_KEY')
             if not api_key:
