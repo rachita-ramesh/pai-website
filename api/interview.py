@@ -41,11 +41,9 @@ class handler(BaseHTTPRequestHandler):
         if not api_key:
             raise Exception('ANTHROPIC_API_KEY environment variable is required')
         
-        # Initialize AI Interviewer
-        interviewer = AIInterviewer(api_key)
-        
         # Get questionnaire details if not default
         questionnaire_id = data.get('questionnaire_id', 'default')
+        questionnaire_context = None
         initial_message = None
         
         print(f"DEBUG: Received questionnaire_id: {questionnaire_id}")
@@ -63,11 +61,21 @@ class handler(BaseHTTPRequestHandler):
                     # Load the actual questions from the questionnaire
                     questions = supabase.get_questionnaire_questions(questionnaire_id)
                     title = questionnaire.get('title', 'Custom Questionnaire')
+                    category = questionnaire.get('category', 'general')
+                    description = questionnaire.get('description', '')
                     
                     print(f"DEBUG: Found questionnaire: {questionnaire}")
                     print(f"DEBUG: Loaded {len(questions)} questions")
                     
                     if questions:
+                        # Prepare questionnaire context for AI interviewer
+                        questionnaire_context = {
+                            'title': title,
+                            'category': category,
+                            'description': description,
+                            'questions': questions
+                        }
+                        
                         # Use the first question as the initial message
                         first_question = questions[0]
                         question_text = first_question.get('question_text', '')
@@ -81,13 +89,16 @@ class handler(BaseHTTPRequestHandler):
                         print(f"DEBUG: Using first question as initial message: {initial_message}")
                     else:
                         # Fallback to category-based message if no questions
-                        category = questionnaire.get('category', 'general')
                         initial_message = f"Hi! Let's explore your thoughts about {category}. What role does {category} play in your life?"
                         print(f"DEBUG: No questions found, using category fallback: {initial_message}")
             except Exception as e:
                 print(f"Error loading questionnaire {questionnaire_id}: {e}")
                 # Fall back to default
+                questionnaire_context = None
                 initial_message = None
+        
+        # Initialize AI Interviewer with questionnaire context
+        interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
         
         # Start interview
         session = interviewer.start_interview(data.get('participant_name', 'User'))
