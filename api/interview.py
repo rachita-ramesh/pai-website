@@ -98,8 +98,8 @@ class handler(BaseHTTPRequestHandler):
         # Initialize AI Interviewer with questionnaire context
         interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
         
-        # Get participant name from request
-        participant_name = data.get('participant_name', 'User')
+        # Get participant name from request and strip any whitespace
+        participant_name = data.get('participant_name', 'User').strip()
         
         # Start interview
         session = interviewer.start_interview(participant_name)
@@ -153,11 +153,15 @@ class handler(BaseHTTPRequestHandler):
                 from lib.supabase import SupabaseClient
                 supabase = SupabaseClient()
                 
-                # Create person if doesn't exist
+                # Ensure person exists BEFORE creating interview session
+                print(f"DEBUG: Checking if person exists: '{participant_name}'")
                 person = supabase.get_person(participant_name)
                 if not person:
+                    print(f"DEBUG: Person '{participant_name}' not found, creating...")
                     supabase.create_person(participant_name)
-                    print(f"DEBUG: Created new person: {participant_name}")
+                    print(f"DEBUG: Successfully created person: '{participant_name}'")
+                else:
+                    print(f"DEBUG: Person '{participant_name}' already exists")
                 
                 # Create interview session record with initial AI message
                 interview_session_data = {

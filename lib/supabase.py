@@ -299,9 +299,13 @@ class SupabaseClient:
     def create_interview_session(self, session_data: Dict) -> Dict:
         """Create a new interview session"""
         print(f"DEBUG: Creating interview session with data: {session_data}")
-        result = self._make_request('POST', 'interview_sessions', session_data)
-        print(f"DEBUG: Created interview session result: {result}")
-        return result
+        try:
+            result = self._make_request('POST', 'interview_sessions', session_data)
+            print(f"DEBUG: Successfully created interview session: {result}")
+            return result
+        except Exception as e:
+            print(f"DEBUG: Failed to create interview session: {e}")
+            raise e
     
     def update_interview_session(self, session_id: str, updates: Dict) -> Dict:
         """Update an existing interview session"""
