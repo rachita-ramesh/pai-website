@@ -173,6 +173,7 @@ class handler(BaseHTTPRequestHandler):
                 interview_session_data = {
                     'session_id': session.session_id,
                     'person_name': participant_name,
+                    'questionnaire_id': questionnaire_id,  # Add questionnaire tracking
                     'transcript': f"AI: {initial_ai_message['content']}",
                     'messages': [initial_ai_message],
                     'exchange_count': 0,
@@ -290,24 +291,32 @@ class handler(BaseHTTPRequestHandler):
                 'exchange_count': exchange_count,
                 'timestamp': datetime.now().isoformat()
             }
-            supabase.store_message(user_message_data)
-            
-            # Store AI response
-            ai_message_data = {
-                'session_id': session_id,
-                'type': 'ai',
-                'content': ai_response,
-                'exchange_count': exchange_count + 1,
-                'timestamp': datetime.now().isoformat()
-            }
-            supabase.store_message(ai_message_data)
+            # Messages will be stored directly in interview_sessions table below
             
             print(f"DEBUG: Stored conversation messages for session {session_id}")
             
             # Update interview session with new messages and transcript
             try:
                 # Get all messages for this session to build complete transcript
-                all_messages = supabase.get_session_messages(session_id, limit=100)
+                # Get current session and build updated messages
+                current_session = supabase.get_interview_session(session_id)
+                existing_messages = current_session.get('messages', []) if current_session else []
+                
+                # Add new messages
+                new_user_message = {
+                    'id': f"user_{exchange_count}",
+                    'type': 'user', 
+                    'content': message,
+                    'timestamp': datetime.now().isoformat()
+                }
+                new_ai_message = {
+                    'id': f"ai_{exchange_count + 1}",
+                    'type': 'ai',
+                    'content': ai_response, 
+                    'timestamp': datetime.now().isoformat()
+                }
+                
+                all_messages = existing_messages + [new_user_message, new_ai_message]
                 
                 # Build transcript
                 transcript_lines = []

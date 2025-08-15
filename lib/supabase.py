@@ -262,20 +262,16 @@ class SupabaseClient:
         return self._make_request('POST', 'questionnaire_usage', usage_data)
     
     # ============================================================================
-    # CONVERSATION MESSAGE STORAGE
+    # CONVERSATION MESSAGE STORAGE (stored in interview_sessions.messages JSONB)
     # ============================================================================
     
-    def store_message(self, message_data: Dict) -> Dict:
-        """Store a conversation message"""
-        return self._make_request('POST', 'conversation_messages', message_data)
-    
-    def get_session_messages(self, session_id: str, limit: int = 20) -> List[Dict]:
-        """Get conversation messages for a session"""
+    def get_session_messages_from_interview(self, session_id: str) -> List[Dict]:
+        """Get conversation messages from interview_sessions.messages JSONB field"""
         try:
-            endpoint = f'conversation_messages?session_id=eq.{session_id}&order=timestamp.asc'
-            if limit:
-                endpoint += f'&limit={limit}'
-            return self._make_request('GET', endpoint)
+            interview_session = self.get_interview_session(session_id)
+            if interview_session:
+                return interview_session.get('messages', [])
+            return []
         except:
             return []
     
