@@ -523,55 +523,90 @@ class handler(BaseHTTPRequestHandler):
         transcript = interview_session.get('transcript', '')
         person_name = interview_session.get('person_name', 'User')
         
-        system_prompt = """You are an expert psychological profiler and digital twin creator. Your task is to analyze an interview transcript and extract a comprehensive personality profile.
+        system_prompt = f"""You are an expert psychological profiler and digital twin creator. Your task is to analyze an interview transcript and extract a comprehensive PAI (Profile AI Interview) personality profile.
 
-Create a detailed JSON profile with these sections:
+Create a detailed JSON profile following the PAI structured format. Analyze the interview transcript and extract insights about the person's psychology, attitudes, behaviors, and decision-making patterns.
 
-1. **Core Personality Traits** - Big 5 personality dimensions with scores
-2. **Values & Motivations** - What drives this person
-3. **Behavioral Patterns** - How they typically act and respond
-4. **Decision Making Style** - How they make choices
-5. **Communication Style** - How they express themselves
-6. **Attitudes & Beliefs** - Their perspective on relevant topics
-7. **Lifestyle Preferences** - Their habits and preferences
-8. **Emotional Profile** - How they handle emotions and stress
+Return ONLY a valid JSON object with this exact structure:
 
-Return ONLY a valid JSON object with this structure:
-{
-  "personality_traits": {
-    "openness": 0.7,
-    "conscientiousness": 0.8,
-    "extraversion": 0.6,
-    "agreeableness": 0.9,
-    "neuroticism": 0.3
-  },
-  "values_motivations": [
-    "Health and wellness",
-    "Personal growth"
+{{
+  "profile_id": "{profile_id}",
+  "demographics": {{
+    "age_range": "25-34",
+    "lifestyle": "urban_professional|student|homemaker|retired|entrepreneur",
+    "context": "wellness_oriented|career_focused|family_oriented|creative"
+  }},
+  "core_attitudes": {{
+    "aging_approach": "proactive_prevention|acceptance|denial|anxiety",
+    "beauty_philosophy": "natural|scientific|minimal|maximalist",
+    "risk_tolerance": "conservative|moderate|experimental",
+    "trust_orientation": "expert_authority|social_proof|self_research|brand_loyalty"
+  }},
+  "decision_psychology": {{
+    "research_style": "extensive_researcher|social_validator|expert_seeker|intuitive_decider",
+    "influence_hierarchy": [
+      "peer_recommendations",
+      "expert_advice",
+      "scientific_evidence",
+      "convenience"
+    ],
+    "purchase_triggers": [
+      "friend_recommendations",
+      "problem_solving",
+      "prevention"
+    ],
+    "regret_patterns": [
+      "too_expensive",
+      "too_complex",
+      "ineffective"
+    ]
+  }},
+  "usage_patterns": {{
+    "routine_adherence": "strict|flexible|inconsistent",
+    "context_sensitivity": "weather|mood|lifestyle_changes|time_pressure",
+    "emotional_drivers": [
+      "confidence",
+      "health_indicators",
+      "social_situations"
+    ],
+    "change_catalysts": [
+      "life_events",
+      "seasonal_changes",
+      "social_influence"
+    ]
+  }},
+  "value_system": {{
+    "priority_hierarchy": [
+      "effectiveness",
+      "convenience",
+      "price",
+      "ethics"
+    ],
+    "non_negotiables": [
+      "time_efficiency",
+      "ingredient_safety"
+    ],
+    "ideal_outcome": "clear_skin|anti_aging|minimal_effort|natural_glow",
+    "core_motivation": "health|appearance|confidence|social_acceptance"
+  }},
+  "behavioral_quotes": [
+    "Direct quotes from the interview that reveal key behavioral insights"
   ],
-  "behavioral_patterns": [
-    "Consistent daily routines",
-    "Goal-oriented approach"
-  ],
-  "decision_making_style": "Analytical with intuitive elements",
-  "communication_style": "Direct and thoughtful",
-  "attitudes_beliefs": {
-    "toward_topic": "Positive and engaged",
-    "toward_change": "Open but cautious"
-  },
-  "lifestyle_preferences": [
-    "Structured schedules",
-    "Work-life balance"
-  ],
-  "emotional_profile": {
-    "stress_response": "Problem-focused coping",
-    "emotional_regulation": "Generally stable"
-  },
-  "confidence_score": 0.85,
-  "extraction_notes": "Brief notes about the analysis"
-}
+  "prediction_weights": {{
+    "price_sensitivity": 0.5,
+    "ingredient_focus": 0.7,
+    "routine_complexity_tolerance": 0.3,
+    "brand_loyalty": 0.4,
+    "social_influence_susceptibility": 0.6
+  }}
+}}
 
-Base the profile entirely on evidence from the interview transcript."""
+Important guidelines:
+- Use actual quotes from the interview for behavioral_quotes
+- Set prediction_weights as decimals between 0.0-1.0 based on the interview evidence
+- Choose values from the provided options that best match the person's responses
+- Base everything on evidence from the interview transcript
+- If information isn't available, make reasonable inferences based on what was discussed"""
         
         try:
             response = client.messages.create(
