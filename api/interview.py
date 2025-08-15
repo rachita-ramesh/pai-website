@@ -247,47 +247,35 @@ class handler(BaseHTTPRequestHandler):
             print(f"DEBUG: Error loading questionnaire context: {e}")
             questionnaire_context = None
         
-        # Create AIInterviewer with questionnaire context
-        interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
+        # SIMPLE: Just get the next question from the questionnaire
+        ai_response = "Thank you for sharing that!"
         
-        # Load conversation history from Supabase
-        from lib.ai_interviewer import InterviewSession, InterviewMessage
-        from datetime import datetime
-        
-        conversation_messages = []
-        try:
-            from lib.supabase import SupabaseClient
-            supabase = SupabaseClient()
-            # Get conversation history from Supabase
-            recent_messages = supabase.get_session_messages(session_id, limit=50)
+        if questionnaire_context and 'questions' in questionnaire_context:
+            questions = questionnaire_context['questions']
             
-            for i, msg in enumerate(recent_messages):
-                conversation_messages.append(InterviewMessage(
-                    id=str(i),
-                    type=msg.get('type', 'user'),
-                    content=msg.get('content', ''),
-                    timestamp=datetime.fromisoformat(msg.get('timestamp', datetime.now().isoformat()))
-                ))
-            
-            print(f"DEBUG: Loaded {len(conversation_messages)} messages from history")
-        except Exception as e:
-            print(f"DEBUG: Error loading conversation history: {e}")
-        
-        session = InterviewSession(
-            session_id=session_id,
-            participant_name="User",
-            messages=conversation_messages,  # Now has actual conversation history
-            start_time=datetime.now(),
-            current_topic="interview",
-            exchange_count=exchange_count,
-            is_complete=False
-        )
-        
-        # Get AI response
-        ai_response = interviewer.get_ai_response(session, message)
-        
-        # Update session
-        session = interviewer.update_session(session, message, ai_response)
+            # Count how many AI responses we've already given
+            try:
+                from lib.supabase import SupabaseClient  
+                supabase = SupabaseClient()
+                ai_messages = [msg for msg in supabase.get_session_messages(session_id, limit=100) if msg.get('type') == 'ai']
+                ai_count = len(ai_messages)
+                
+                print(f"DEBUG: Found {ai_count} AI messages in history")
+                print(f"DEBUG: Available questions: {len(questions)}")
+                
+                # If we haven't asked all the questionnaire questions yet, ask the next one
+                if ai_count < len(questions):
+                    next_question = questions[ai_count]
+                    ai_response = next_question.get('question_text', 'Tell me more')
+                    print(f"DEBUG: Asking question {ai_count + 1}: {ai_response}")
+                else:
+                    # All questionnaire questions asked, generate simple follow-up
+                    ai_response = "Thank you for sharing all of that! Is there anything else you'd like to tell me about this topic?"
+                    print(f"DEBUG: All questionnaire questions asked, using generic follow-up")
+                    
+            except Exception as e:
+                print(f"DEBUG: Error counting messages: {e}")
+                ai_response = "Could you tell me more about that?"
         
         # Store the conversation messages in Supabase
         try:
