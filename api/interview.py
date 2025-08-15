@@ -250,14 +250,33 @@ class handler(BaseHTTPRequestHandler):
         # Create AIInterviewer with questionnaire context
         interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
         
-        # Create a mock session (in a real system, you'd load this from storage)
+        # Load conversation history from Supabase
         from lib.ai_interviewer import InterviewSession, InterviewMessage
         from datetime import datetime
+        
+        conversation_messages = []
+        try:
+            from lib.supabase import SupabaseClient
+            supabase = SupabaseClient()
+            # Get conversation history from Supabase
+            recent_messages = supabase.get_session_messages(session_id, limit=50)
+            
+            for i, msg in enumerate(recent_messages):
+                conversation_messages.append(InterviewMessage(
+                    id=str(i),
+                    type=msg.get('type', 'user'),
+                    content=msg.get('content', ''),
+                    timestamp=datetime.fromisoformat(msg.get('timestamp', datetime.now().isoformat()))
+                ))
+            
+            print(f"DEBUG: Loaded {len(conversation_messages)} messages from history")
+        except Exception as e:
+            print(f"DEBUG: Error loading conversation history: {e}")
         
         session = InterviewSession(
             session_id=session_id,
             participant_name="User",
-            messages=[],  # We'll let AIInterviewer handle the conversation flow
+            messages=conversation_messages,  # Now has actual conversation history
             start_time=datetime.now(),
             current_topic="interview",
             exchange_count=exchange_count,
@@ -269,6 +288,32 @@ class handler(BaseHTTPRequestHandler):
         
         # Update session
         session = interviewer.update_session(session, message, ai_response)
+        
+        # Store the conversation messages in Supabase
+        try:
+            # Store user message
+            user_message_data = {
+                'session_id': session_id,
+                'type': 'user',
+                'content': message,
+                'exchange_count': exchange_count,
+                'timestamp': datetime.now().isoformat()
+            }
+            supabase.store_message(user_message_data)
+            
+            # Store AI response
+            ai_message_data = {
+                'session_id': session_id,
+                'type': 'ai',
+                'content': ai_response,
+                'exchange_count': exchange_count + 1,
+                'timestamp': datetime.now().isoformat()
+            }
+            supabase.store_message(ai_message_data)
+            
+            print(f"DEBUG: Stored conversation messages for session {session_id}")
+        except Exception as e:
+            print(f"DEBUG: Error storing conversation messages: {e}")
         
         # Calculate completion
         target_questions = 15  # Default
