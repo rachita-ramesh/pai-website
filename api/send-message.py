@@ -76,46 +76,38 @@ class handler(BaseHTTPRequestHandler):
             # Create AI interviewer with proper context
             interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
             
-            # If we have conversation history, use it; otherwise use simplified prompt
-            if conversation_history:
-                # Add current message to history
-                conversation_history.append({"role": "user", "content": message})
+            # Check if we should ask the next questionnaire question
+            next_question = None
+            if questionnaire_context and 'questions' in questionnaire_context:
+                questions = questionnaire_context['questions']
+                # Count how many AI questions have been asked so far
+                ai_question_count = sum(1 for msg in conversation_history if msg.get('role') == 'assistant')
                 
-                response = interviewer.client.messages.create(
-                    model="claude-3-5-sonnet-20241022",
-                    max_tokens=200,
-                    temperature=0.7,
-                    system=interviewer.system_prompt,
-                    messages=conversation_history
-                )
-            else:
-                # Fallback to simple approach if no history available
-                if questionnaire_context:
-                    category = questionnaire_context['category']
-                    system_prompt = f"""You are an expert A&U (Attitudes & Usage) researcher conducting a {category} interview. 
-
-CONTEXT: The user has selected a {category} questionnaire and you are having an ongoing conversation about {category}.
-
-CRITICAL RULES:
-- This is a follow-up question in an ongoing {category} interview
-- ONLY ask about {category} topics - do not mention skincare, beauty, or other unrelated subjects
-- Ask ONE focused follow-up question based on their response
-- Show genuine curiosity about the {category} details they shared
-- Keep responses brief and conversational (1-2 sentences max)
-
-Remember: You are continuing a conversation about {category}. Stay focused on that topic only."""
-                else:
-                    system_prompt = """You are an expert A&U researcher conducting an interview about skincare. Ask focused follow-up questions about skincare topics only."""
-                
-                response = interviewer.client.messages.create(
-                    model="claude-3-5-sonnet-20241022",
-                    max_tokens=200,
-                    temperature=0.7,
-                    system=system_prompt,
-                    messages=[{"role": "user", "content": message}]
-                )
+                # If we haven't exhausted all questionnaire questions, use the next one
+                if ai_question_count < len(questions):
+                    next_question = questions[ai_question_count]
+                    ai_response = next_question.get('question_text', '')
+                    print(f"DEBUG: Using questionnaire question {ai_question_count + 1}: {ai_response}")
             
-            ai_response = response.content[0].text
+            # Only generate AI response if we don't have a specific questionnaire question
+            if not next_question:
+                # Use AI to generate follow-up questions after questionnaire is done
+                if conversation_history:
+                    # Add current message to history
+                    conversation_history.append({"role": "user", "content": message})
+                    
+                    response = interviewer.client.messages.create(
+                        model="claude-3-5-sonnet-20241022",
+                        max_tokens=200,
+                        temperature=0.7,
+                        system=interviewer.system_prompt,
+                        messages=conversation_history
+                    )
+                    ai_response = response.content[0].text
+                else:
+                    # Fallback
+                    ai_response = "Thank you for sharing that. Could you tell me more about your experience?"
+            
             print(f"DEBUG: Generated response for {questionnaire_context['category'] if questionnaire_context else 'default'} interview")
             
             # Clean up markdown formatting for plain text display

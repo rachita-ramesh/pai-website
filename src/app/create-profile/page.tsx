@@ -426,7 +426,7 @@ export default function CreateProfile() {
             </h1>
             <p style={{ fontSize: '18px', color: '#737373', maxWidth: '600px', margin: '0 auto' }}>
               {interviewPhase === 'setup' && 'Our AI will conduct a natural 15-20 minute conversation to understand your attitudes and behaviors.'}
-              {interviewPhase === 'interview' && `AI Interview in Progress - ${interviewData.exchangeCount} of ${interviewData.targetQuestions} questions`}
+              {interviewPhase === 'interview' && 'AI Interview in Progress'}
               {interviewPhase === 'complete' && 'Interview Complete! Your responses will be analyzed to create your digital twin.'}
             </p>
           </div>
@@ -499,7 +499,6 @@ export default function CreateProfile() {
               }}>
                 <div>
                   <h2 style={{ fontSize: '20px', fontWeight: '600', margin: '0' }}>Interview with {interviewData.name}</h2>
-                  <p style={{ fontSize: '14px', color: '#737373', margin: '0' }}>Question {interviewData.exchangeCount} of {interviewData.targetQuestions}</p>
                 </div>
                 <div style={{ fontSize: '14px', color: '#737373' }}>
                   Started {interviewData.startTime.toLocaleTimeString()}
