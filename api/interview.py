@@ -82,18 +82,9 @@ class handler(BaseHTTPRequestHandler):
                             'target_questions': target_questions
                         }
                         
-                        # Use the first question as the initial message
-                        first_question = questions[0]
-                        # Try both 'text' and 'question_text' properties
-                        question_text = first_question.get('text') or first_question.get('question_text', '')
-                        help_text = first_question.get('helpText') or first_question.get('help_text', '')
-                        
-                        if help_text:
-                            initial_message = f"{question_text}\n\n{help_text}"
-                        else:
-                            initial_message = question_text
-                            
-                        print(f"DEBUG: Using first question as initial message: {initial_message}")
+                        # Let the AI generate a natural conversational greeting
+                        # that introduces the topic and asks the first question naturally
+                        print(f"DEBUG: Using AI-generated natural greeting for {category} interview")
                     else:
                         # Fallback to category-based message if no questions
                         initial_message = f"Hi! Let's explore your thoughts about {category}. What role does {category} play in your life?"
@@ -128,19 +119,7 @@ class handler(BaseHTTPRequestHandler):
         messages = []
         initial_ai_message = None
         
-        if initial_message:
-            # Use custom questionnaire message
-            import uuid
-            from datetime import datetime
-            initial_ai_message = {
-                'id': str(uuid.uuid4()),
-                'type': 'ai',
-                'content': initial_message,
-                'timestamp': datetime.now().isoformat()
-            }
-            messages.append(initial_ai_message)
-            print(f"DEBUG: Using custom initial message: {initial_message}")
-        elif session.messages:
+        if session.messages:
             # Use session messages from interviewer
             for msg in session.messages:
                 message_data = {

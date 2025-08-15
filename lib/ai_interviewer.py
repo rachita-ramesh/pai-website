@@ -178,11 +178,22 @@ CRITICAL: Always ask ONE focused question per response. Keep responses conversat
         """Start a new interview session"""
         session_id = f"interview_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{participant_name}"
         
-        # Create welcome message
+        # Generate natural welcome message based on questionnaire context
+        if self.questionnaire_context:
+            category = self.questionnaire_context.get('category', 'general')
+            first_question = self.questionnaire_context.get('questions', [{}])[0] if self.questionnaire_context.get('questions') else {}
+            first_topic = first_question.get('text', '')
+            
+            # Generate natural greeting that introduces the topic conversationally
+            welcome_content = f"Hi {participant_name}! I'm really excited to learn about your thoughts and experiences with {category}. Let's start with something simple - {first_topic.lower()}"
+        else:
+            # Default skincare greeting
+            welcome_content = f"Hi {participant_name}! I'd love to understand your relationship with skincare. Tell me, is skincare something you think about a lot, or is it more just routine for you?"
+        
         welcome_message = InterviewMessage(
             id="1",
             type="ai",
-            content=f"Hi {participant_name}! I'd love to understand your relationship with skincare. Tell me, is skincare something you think about a lot, or is it more just routine for you?",
+            content=welcome_content,
             timestamp=datetime.now()
         )
         
