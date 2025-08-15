@@ -84,42 +84,44 @@ class handler(BaseHTTPRequestHandler):
             # Create AI interviewer with proper context
             interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
             
-            # SIMPLE: Just ask questions from questionnaire in order
-            ai_response = None
+            # Use AIInterviewer to handle the conversation properly
+            # Create a mock session to use with AIInterviewer
+            from lib.ai_interviewer import InterviewSession, InterviewMessage
+            from datetime import datetime
             
-            if questionnaire_context and 'questions' in questionnaire_context:
-                questions = questionnaire_context['questions']
-                
-                print(f"DEBUG: Found {len(questions)} questions in questionnaire")
-                for i, q in enumerate(questions):
-                    print(f"DEBUG: Question {i}: {q.get('question_text', '')}")
-                
-                # We're going to use exchange_count to track which question to ask
-                # exchange_count comes from frontend and represents how many user-AI exchanges have happened
-                # So if exchange_count = 1, we should ask question[1] (second question)
-                
-                if exchange_count < len(questions):
-                    next_question = questions[exchange_count]
-                    ai_response = next_question.get('question_text', '')
-                    print(f"DEBUG: Exchange count: {exchange_count}, asking question {exchange_count}: {ai_response}")
-                else:
-                    print(f"DEBUG: Exchange count {exchange_count} >= {len(questions)}, generating AI follow-up")
+            # Build session from conversation history
+            session_messages = []
+            for i, msg in enumerate(conversation_history):
+                session_messages.append(InterviewMessage(
+                    id=str(i),
+                    type="user" if msg.get('role') == 'user' else "ai",
+                    content=msg.get('content', ''),
+                    timestamp=datetime.now()
+                ))
             
-            # If we don't have a questionnaire question, generate AI response
-            if not ai_response:
-                if conversation_history:
-                    conversation_history.append({"role": "user", "content": message})
-                    
-                    response = interviewer.client.messages.create(
-                        model="claude-3-5-sonnet-20241022",
-                        max_tokens=200,
-                        temperature=0.7,
-                        system=interviewer.system_prompt,
-                        messages=conversation_history
-                    )
-                    ai_response = response.content[0].text
-                else:
-                    ai_response = "Thank you for sharing that. Could you tell me more?"
+            # Add current user message
+            user_msg = InterviewMessage(
+                id=str(len(session_messages)),
+                type="user", 
+                content=message,
+                timestamp=datetime.now()
+            )
+            session_messages.append(user_msg)
+            
+            # Create session object
+            session = InterviewSession(
+                session_id=session_id,
+                participant_name="User",
+                messages=session_messages,
+                start_time=datetime.now(),
+                current_topic="interview",
+                exchange_count=exchange_count,
+                is_complete=False
+            )
+            
+            # Use AIInterviewer to get the response
+            ai_response = interviewer.get_ai_response(session, message)
+            print(f"DEBUG: AIInterviewer generated response: {ai_response}")
             
             print(f"DEBUG: Generated response for {questionnaire_context['category'] if questionnaire_context else 'default'} interview")
             
