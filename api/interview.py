@@ -60,26 +60,30 @@ class handler(BaseHTTPRequestHandler):
                 questionnaire = supabase.get_custom_questionnaire(questionnaire_id)
                 
                 if questionnaire:
-                    # Create initial message based on questionnaire category
-                    category = questionnaire.get('category', 'general')
+                    # Load the actual questions from the questionnaire
+                    questions = supabase.get_questionnaire_questions(questionnaire_id)
                     title = questionnaire.get('title', 'Custom Questionnaire')
                     
                     print(f"DEBUG: Found questionnaire: {questionnaire}")
-                    print(f"DEBUG: Category: {category}")
+                    print(f"DEBUG: Loaded {len(questions)} questions")
                     
-                    category_prompts = {
-                        'fitness': f"Hi! I'd love to understand your relationship with fitness and exercise. Tell me, is staying active something you think about a lot, or is it more just routine for you?",
-                        'nutrition': f"Hi! I'd love to understand your relationship with nutrition and healthy eating. Tell me, is your diet something you think about a lot, or is it more just routine for you?",
-                        'career': f"Hi! I'd love to understand your career goals and professional development. Tell me, is your career something you actively plan and strategize about?",
-                        'relationships': f"Hi! I'd love to understand your approach to relationships and social connections. Tell me, how important are close relationships in your life?",
-                        'lifestyle': f"Hi! I'd love to understand your lifestyle choices and daily habits. Tell me, do you have specific routines or practices that are important to you?",
-                        'mental_health': f"Hi! I'd love to understand your approach to mental health and wellbeing. Tell me, what does taking care of your mental health look like for you?",
-                        'hobbies': f"Hi! I'd love to understand your interests and hobbies. Tell me, what activities do you find most fulfilling in your free time?",
-                        'travel': f"Hi! I'd love to understand your relationship with travel and exploration. Tell me, how important is travel and experiencing new places to you?"
-                    }
-                    
-                    initial_message = category_prompts.get(category, f"Hi! I'd love to understand your thoughts about {category}. Tell me, what role does {category} play in your life?")
-                    print(f"DEBUG: Generated initial message: {initial_message}")
+                    if questions:
+                        # Use the first question as the initial message
+                        first_question = questions[0]
+                        question_text = first_question.get('question_text', '')
+                        help_text = first_question.get('help_text', '')
+                        
+                        if help_text:
+                            initial_message = f"{question_text}\n\n{help_text}"
+                        else:
+                            initial_message = question_text
+                            
+                        print(f"DEBUG: Using first question as initial message: {initial_message}")
+                    else:
+                        # Fallback to category-based message if no questions
+                        category = questionnaire.get('category', 'general')
+                        initial_message = f"Hi! Let's explore your thoughts about {category}. What role does {category} play in your life?"
+                        print(f"DEBUG: No questions found, using category fallback: {initial_message}")
             except Exception as e:
                 print(f"Error loading questionnaire {questionnaire_id}: {e}")
                 # Fall back to default
