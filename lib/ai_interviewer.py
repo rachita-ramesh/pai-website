@@ -1,6 +1,6 @@
 """
 AI Interviewer System
-Conducts natural skincare A&U research interviews using Claude API
+Conducts A&U research interviews using Claude API
 """
 
 import os
@@ -82,7 +82,6 @@ INTERVIEW FLOW:
 - STAY FOCUSED ONLY ON {category} - do not bring up unrelated topics like skincare, beauty, or other categories
 
 FORBIDDEN TOPICS:
-- Do NOT mention skincare, beauty routines, or cosmetics unless directly related to {category}
 - Do NOT cross-contaminate with other interview categories
 - ONLY focus on the {category} topics and questions provided
 

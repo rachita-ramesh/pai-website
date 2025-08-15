@@ -4,10 +4,10 @@ import sys
 import os
 from urllib.parse import urlparse, parse_qs
 
-# Add the backend directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+# Add the lib directory to the path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from ai_interviewer import AIInterviewer
+from lib.ai_interviewer import AIInterviewer
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):

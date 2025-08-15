@@ -10,10 +10,10 @@ from typing import List, Optional
 from dotenv import load_dotenv
 
 # Import all our modules
-from ai_interviewer import AIInterviewer, InterviewSession
-from profile_extractor import ProfileExtractor, PaiProfile
-from response_predictor import ResponsePredictor, get_test_survey_questions
-from validation_tester import ValidationTester
+from .ai_interviewer import AIInterviewer, InterviewSession
+from .profile_extractor import ProfileExtractor, PaiProfile
+from .response_predictor import ResponsePredictor, get_test_survey_questions
+from .validation_tester import ValidationTester
 
 
 class PaiOrchestrator:
