@@ -85,8 +85,9 @@ class handler(BaseHTTPRequestHandler):
                         
                         # Use the first question as the initial message
                         first_question = questions[0]
-                        question_text = first_question.get('question_text', '')
-                        help_text = first_question.get('help_text', '')
+                        # Try both 'text' and 'question_text' properties
+                        question_text = first_question.get('text') or first_question.get('question_text', '')
+                        help_text = first_question.get('helpText') or first_question.get('help_text', '')
                         
                         if help_text:
                             initial_message = f"{question_text}\n\n{help_text}"
@@ -265,14 +266,15 @@ class handler(BaseHTTPRequestHandler):
                 
                 # Print all questions for debugging
                 for i, q in enumerate(questions):
-                    print(f"DEBUG: Question {i}: {q.get('question_text', 'NO TEXT')}")
+                    print(f"DEBUG: Question {i}: {q.get('text', 'NO TEXT')} (question_text: {q.get('question_text', 'NOT FOUND')})")
                 
                 # If we haven't asked all the questionnaire questions yet, ask the next one
                 # ai_count represents how many questions we've already asked
                 # So if ai_count = 1, we should ask question[1] (second question)
                 if ai_count < len(questions):
                     next_question = questions[ai_count]
-                    ai_response = next_question.get('question_text', 'Tell me more')
+                    # Try both 'text' and 'question_text' properties
+                    ai_response = next_question.get('text') or next_question.get('question_text', 'Tell me more')
                     print(f"DEBUG: We've asked {ai_count} questions, asking question {ai_count + 1} (index {ai_count}): {ai_response}")
                 else:
                     # All questionnaire questions asked, generate simple follow-up
