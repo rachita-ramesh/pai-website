@@ -257,3 +257,21 @@ class SupabaseClient:
     def record_questionnaire_usage(self, usage_data: Dict) -> Dict:
         """Record questionnaire usage tracking"""
         return self._make_request('POST', 'questionnaire_usage', usage_data)
+    
+    # ============================================================================
+    # CONVERSATION MESSAGE STORAGE
+    # ============================================================================
+    
+    def store_message(self, message_data: Dict) -> Dict:
+        """Store a conversation message"""
+        return self._make_request('POST', 'conversation_messages', message_data)
+    
+    def get_session_messages(self, session_id: str, limit: int = 20) -> List[Dict]:
+        """Get conversation messages for a session"""
+        try:
+            endpoint = f'conversation_messages?session_id=eq.{session_id}&order=timestamp.asc'
+            if limit:
+                endpoint += f'&limit={limit}'
+            return self._make_request('GET', endpoint)
+        except:
+            return []

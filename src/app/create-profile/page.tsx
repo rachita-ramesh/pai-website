@@ -495,7 +495,7 @@ export default function CreateProfile() {
               }}>
                 <div>
                   <h2 style={{ fontSize: '20px', fontWeight: '600', margin: '0' }}>Interview with {interviewData.name}</h2>
-                  <p style={{ fontSize: '14px', color: '#737373', margin: '0' }}>Exchange {interviewData.exchangeCount} of ~20</p>
+                  <p style={{ fontSize: '14px', color: '#737373', margin: '0' }}>Exchange {interviewData.exchangeCount} of ~15-20</p>
                 </div>
                 <div style={{ fontSize: '14px', color: '#737373' }}>
                   Started {interviewData.startTime.toLocaleTimeString()}

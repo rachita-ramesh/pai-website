@@ -53,25 +53,46 @@ class handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     print(f"DEBUG: Error loading questionnaire context: {e}")
             
-            # Since Vercel doesn't have persistent storage, we'll use a simpler approach
-            # TODO: In production, store sessions in Supabase instead of files
-            session = InterviewSession(
-                session_id=session_id,
-                participant_name="User", 
-                messages=[],  # We'll build conversation from context
-                start_time=datetime.now(),
-                current_topic="interview",
-                exchange_count=exchange_count,
-                is_complete=False
-            )
+            # Load conversation history from Supabase for context
+            conversation_history = []
+            try:
+                from lib.supabase import SupabaseClient
+                supabase = SupabaseClient()
+                # Get recent conversation messages for context (last 15 exchanges = 30 messages)
+                recent_messages = supabase.get_session_messages(session_id, limit=30)
+                
+                # Build conversation history for Claude
+                for msg in recent_messages:
+                    if msg.get('type') == 'user':
+                        conversation_history.append({"role": "user", "content": msg.get('content', '')})
+                    elif msg.get('type') == 'ai':
+                        conversation_history.append({"role": "assistant", "content": msg.get('content', '')})
+                
+                print(f"DEBUG: Loaded {len(conversation_history)} messages for context")
+            except Exception as e:
+                print(f"DEBUG: Could not load conversation history: {e}")
+                conversation_history = []
             
-            # Use questionnaire-aware prompt directly
-            import anthropic
-            client = anthropic.Anthropic(api_key=api_key)
+            # Create AI interviewer with proper context
+            interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
             
-            if questionnaire_context:
-                category = questionnaire_context['category']
-                system_prompt = f"""You are an expert A&U (Attitudes & Usage) researcher conducting a {category} interview. 
+            # If we have conversation history, use it; otherwise use simplified prompt
+            if conversation_history:
+                # Add current message to history
+                conversation_history.append({"role": "user", "content": message})
+                
+                response = interviewer.client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=200,
+                    temperature=0.7,
+                    system=interviewer.system_prompt,
+                    messages=conversation_history
+                )
+            else:
+                # Fallback to simple approach if no history available
+                if questionnaire_context:
+                    category = questionnaire_context['category']
+                    system_prompt = f"""You are an expert A&U (Attitudes & Usage) researcher conducting a {category} interview. 
 
 CONTEXT: The user has selected a {category} questionnaire and you are having an ongoing conversation about {category}.
 
@@ -83,16 +104,16 @@ CRITICAL RULES:
 - Keep responses brief and conversational (1-2 sentences max)
 
 Remember: You are continuing a conversation about {category}. Stay focused on that topic only."""
-            else:
-                system_prompt = """You are an expert A&U researcher conducting an interview about skincare. Ask focused follow-up questions about skincare topics only."""
-            
-            response = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=200,
-                temperature=0.7,
-                system=system_prompt,
-                messages=[{"role": "user", "content": message}]
-            )
+                else:
+                    system_prompt = """You are an expert A&U researcher conducting an interview about skincare. Ask focused follow-up questions about skincare topics only."""
+                
+                response = interviewer.client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=200,
+                    temperature=0.7,
+                    system=system_prompt,
+                    messages=[{"role": "user", "content": message}]
+                )
             
             ai_response = response.content[0].text
             print(f"DEBUG: Generated response for {questionnaire_context['category'] if questionnaire_context else 'default'} interview")
@@ -101,6 +122,35 @@ Remember: You are continuing a conversation about {category}. Stay focused on th
             ai_response = ai_response.replace('*', '').replace('**', '').replace('_', '')
             
             print(f"DEBUG: Generated AI response: {ai_response[:100]}...")
+            
+            # Store both user message and AI response in Supabase for conversation history
+            try:
+                from lib.supabase import SupabaseClient
+                supabase = SupabaseClient()
+                
+                # Store user message
+                user_message_data = {
+                    'session_id': session_id,
+                    'type': 'user',
+                    'content': message,
+                    'exchange_count': exchange_count,
+                    'timestamp': datetime.now().isoformat()
+                }
+                supabase.store_message(user_message_data)
+                
+                # Store AI response
+                ai_message_data = {
+                    'session_id': session_id,
+                    'type': 'ai',
+                    'content': ai_response,
+                    'exchange_count': exchange_count + 1,
+                    'timestamp': datetime.now().isoformat()
+                }
+                supabase.store_message(ai_message_data)
+                
+                print(f"DEBUG: Stored conversation messages for session {session_id}")
+            except Exception as e:
+                print(f"DEBUG: Error storing conversation messages: {e}")
             
             # Send response with explicit headers
             self.send_response(200)
