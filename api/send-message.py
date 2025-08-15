@@ -21,57 +21,81 @@ class handler(BaseHTTPRequestHandler):
             session_id = data.get('session_id')
             message = data.get('message', '')
             exchange_count = data.get('exchange_count', 0)
+            questionnaire_id = data.get('questionnaire_id', 'default')
             
             print(f"DEBUG: Processing message for session {session_id}")
             print(f"DEBUG: Message: {message}")
             print(f"DEBUG: Exchange count: {exchange_count}")
+            print(f"DEBUG: Questionnaire ID: {questionnaire_id}")
             
             # Get API key from environment
             api_key = os.getenv('ANTHROPIC_API_KEY')
             if not api_key:
                 raise Exception('ANTHROPIC_API_KEY environment variable is required')
             
-            # Load the session from temporary storage
-            session_file = f"/tmp/interview_session_{session_id}.pkl"
+            # Load questionnaire context if not default
             questionnaire_context = None
+            if questionnaire_id != 'default':
+                try:
+                    from lib.supabase import SupabaseClient
+                    supabase = SupabaseClient()
+                    questionnaire = supabase.get_custom_questionnaire(questionnaire_id)
+                    
+                    if questionnaire:
+                        questions = supabase.get_questionnaire_questions(questionnaire_id)
+                        questionnaire_context = {
+                            'title': questionnaire.get('title', 'Custom Questionnaire'),
+                            'category': questionnaire.get('category', 'general'),
+                            'description': questionnaire.get('description', ''),
+                            'questions': questions
+                        }
+                        print(f"DEBUG: Loaded questionnaire context for {questionnaire_context['category']}")
+                except Exception as e:
+                    print(f"DEBUG: Error loading questionnaire context: {e}")
             
-            try:
-                with open(session_file, 'rb') as f:
-                    session_data = pickle.load(f)
-                    session = session_data['session']
-                    questionnaire_context = session_data.get('questionnaire_context')
-                    print(f"DEBUG: Loaded session with {len(session.messages)} messages")
-            except FileNotFoundError:
-                print(f"DEBUG: Session file not found, creating new session")
-                # Create a minimal session if not found
-                session = InterviewSession(
-                    session_id=session_id,
-                    participant_name="User",
-                    messages=[],
-                    start_time=datetime.now(),
-                    current_topic="interview",
-                    exchange_count=0,
-                    is_complete=False
-                )
+            # Since Vercel doesn't have persistent storage, we'll use a simpler approach
+            # TODO: In production, store sessions in Supabase instead of files
+            session = InterviewSession(
+                session_id=session_id,
+                participant_name="User", 
+                messages=[],  # We'll build conversation from context
+                start_time=datetime.now(),
+                current_topic="interview",
+                exchange_count=exchange_count,
+                is_complete=False
+            )
             
-            # Initialize AI Interviewer with questionnaire context
-            interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
+            # Use questionnaire-aware prompt directly
+            import anthropic
+            client = anthropic.Anthropic(api_key=api_key)
             
-            # Get AI response with full conversation context
-            ai_response = interviewer.get_ai_response(session, message)
+            if questionnaire_context:
+                category = questionnaire_context['category']
+                system_prompt = f"""You are an expert A&U (Attitudes & Usage) researcher conducting a {category} interview. 
+
+CONTEXT: The user has selected a {category} questionnaire and you are having an ongoing conversation about {category}.
+
+CRITICAL RULES:
+- This is a follow-up question in an ongoing {category} interview
+- ONLY ask about {category} topics - do not mention skincare, beauty, or other unrelated subjects
+- Ask ONE focused follow-up question based on their response
+- Show genuine curiosity about the {category} details they shared
+- Keep responses brief and conversational (1-2 sentences max)
+
+Remember: You are continuing a conversation about {category}. Stay focused on that topic only."""
+            else:
+                system_prompt = """You are an expert A&U researcher conducting an interview about skincare. Ask focused follow-up questions about skincare topics only."""
             
-            # Update session with new exchange
-            updated_session = interviewer.update_session(session, message, ai_response)
+            response = client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=200,
+                temperature=0.7,
+                system=system_prompt,
+                messages=[{"role": "user", "content": message}]
+            )
             
-            # Save updated session
-            session_data = {
-                'session': updated_session,
-                'questionnaire_context': questionnaire_context
-            }
-            with open(session_file, 'wb') as f:
-                pickle.dump(session_data, f)
-                
-            print(f"DEBUG: Updated session, now has {len(updated_session.messages)} messages")
+            ai_response = response.content[0].text
+            print(f"DEBUG: Generated response for {questionnaire_context['category'] if questionnaire_context else 'default'} interview")
             
             # Clean up markdown formatting for plain text display
             ai_response = ai_response.replace('*', '').replace('**', '').replace('_', '')
@@ -90,8 +114,8 @@ class handler(BaseHTTPRequestHandler):
             response = {
                 'session_id': session_id,
                 'ai_response': ai_response,
-                'exchange_count': updated_session.exchange_count,
-                'is_complete': updated_session.is_complete
+                'exchange_count': exchange_count + 1,
+                'is_complete': False
             }
             
             response_json = json.dumps(response)

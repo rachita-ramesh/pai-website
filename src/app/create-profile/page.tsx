@@ -301,7 +301,8 @@ export default function CreateProfile() {
         body: JSON.stringify({
           session_id: updatedData.sessionId,
           message: currentMessage,
-          exchange_count: updatedData.exchangeCount
+          exchange_count: updatedData.exchangeCount,
+          questionnaire_id: selectedQuestionnaire
         })
       })
       
