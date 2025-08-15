@@ -83,11 +83,17 @@ class handler(BaseHTTPRequestHandler):
                 # Count how many AI questions have been asked so far
                 ai_question_count = sum(1 for msg in conversation_history if msg.get('role') == 'assistant')
                 
+                print(f"DEBUG: Found {len(questions)} questions in questionnaire")
+                print(f"DEBUG: AI messages in history: {ai_question_count}")
+                print(f"DEBUG: Questions so far: {[q.get('question_text', '') for q in questions[:ai_question_count+1]]}")
+                
                 # If we haven't exhausted all questionnaire questions, use the next one
                 if ai_question_count < len(questions):
                     next_question = questions[ai_question_count]
                     ai_response = next_question.get('question_text', '')
                     print(f"DEBUG: Using questionnaire question {ai_question_count + 1}: {ai_response}")
+                else:
+                    print(f"DEBUG: All questionnaire questions used, will generate AI follow-up")
             
             # Only generate AI response if we don't have a specific questionnaire question
             if not next_question:
