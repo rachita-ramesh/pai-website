@@ -68,12 +68,17 @@ class handler(BaseHTTPRequestHandler):
                     print(f"DEBUG: Loaded {len(questions)} questions")
                     
                     if questions:
+                        # Calculate target interview length (number of questions + 3 additional questions)
+                        target_questions = len(questions) + 3
+                        print(f"DEBUG: Target interview questions: {target_questions} (base questions: {len(questions)} + 3 additional)")
+                        
                         # Prepare questionnaire context for AI interviewer
                         questionnaire_context = {
                             'title': title,
                             'category': category,
                             'description': description,
-                            'questions': questions
+                            'questions': questions,
+                            'target_questions': target_questions
                         }
                         
                         # Use the first question as the initial message
@@ -176,6 +181,11 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 print(f"DEBUG: Error storing initial AI message: {e}")
         
+        # Get target questions from questionnaire context
+        target_questions = 20  # Default for skincare interviews
+        if questionnaire_context and 'target_questions' in questionnaire_context:
+            target_questions = questionnaire_context['target_questions']
+        
         response = {
             'session_id': session.session_id,
             'participant_name': session.participant_name,
@@ -183,7 +193,9 @@ class handler(BaseHTTPRequestHandler):
             'start_time': session.start_time.isoformat(),
             'exchange_count': session.exchange_count,
             'is_complete': session.is_complete,
-            'current_topic': session.current_topic
+            'current_topic': session.current_topic,
+            'target_questions': target_questions,
+            'questionnaire_id': questionnaire_id
         }
         
         # Send response

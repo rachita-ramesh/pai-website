@@ -251,8 +251,12 @@ CRITICAL: Always ask ONE focused question per response. Keep responses conversat
         # Update exchange count and completion status
         session.exchange_count += 1
         
-        # Check if interview should be completed (15+ exchanges)
-        if session.exchange_count >= 15:
+        # Check if interview should be completed based on questionnaire target
+        target_questions = 15  # Default
+        if self.questionnaire_context and 'target_questions' in self.questionnaire_context:
+            target_questions = self.questionnaire_context['target_questions']
+        
+        if session.exchange_count >= target_questions:
             session.is_complete = True
             # Add completion message if not already ending
             if "anything else about" not in ai_response.lower():

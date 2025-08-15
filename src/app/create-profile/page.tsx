@@ -50,6 +50,7 @@ interface InterviewData {
   currentTopic: string
   exchangeCount: number
   isComplete: boolean
+  targetQuestions?: number
 }
 
 interface Questionnaire {
@@ -84,7 +85,8 @@ export default function CreateProfile() {
     startTime: new Date(),
     currentTopic: 'category_relationship',
     exchangeCount: 0,
-    isComplete: false
+    isComplete: false,
+    targetQuestions: 20
   })
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -257,7 +259,8 @@ export default function CreateProfile() {
         startTime: new Date(sessionData.start_time),
         currentTopic: 'category_relationship',
         exchangeCount: sessionData.exchange_count,
-        isComplete: sessionData.is_complete
+        isComplete: sessionData.is_complete,
+        targetQuestions: sessionData.target_questions || 20
       })
       
       setInterviewPhase('interview')
@@ -324,7 +327,8 @@ export default function CreateProfile() {
         ...updatedData,
         messages: [...updatedData.messages, aiMessage],
         exchangeCount: data.exchange_count,
-        isComplete: data.is_complete
+        isComplete: data.is_complete,
+        targetQuestions: data.target_questions || updatedData.targetQuestions
       }
       
       setInterviewData(finalData)
@@ -422,7 +426,7 @@ export default function CreateProfile() {
             </h1>
             <p style={{ fontSize: '18px', color: '#737373', maxWidth: '600px', margin: '0 auto' }}>
               {interviewPhase === 'setup' && 'Our AI will conduct a natural 15-20 minute conversation to understand your attitudes and behaviors.'}
-              {interviewPhase === 'interview' && `AI Interview in Progress - ${interviewData.exchangeCount} exchanges so far`}
+              {interviewPhase === 'interview' && `AI Interview in Progress - ${interviewData.exchangeCount} of ${interviewData.targetQuestions} questions`}
               {interviewPhase === 'complete' && 'Interview Complete! Your responses will be analyzed to create your digital twin.'}
             </p>
           </div>
@@ -495,7 +499,7 @@ export default function CreateProfile() {
               }}>
                 <div>
                   <h2 style={{ fontSize: '20px', fontWeight: '600', margin: '0' }}>Interview with {interviewData.name}</h2>
-                  <p style={{ fontSize: '14px', color: '#737373', margin: '0' }}>Exchange {interviewData.exchangeCount} of ~15-20</p>
+                  <p style={{ fontSize: '14px', color: '#737373', margin: '0' }}>Question {interviewData.exchangeCount} of {interviewData.targetQuestions}</p>
                 </div>
                 <div style={{ fontSize: '14px', color: '#737373' }}>
                   Started {interviewData.startTime.toLocaleTimeString()}

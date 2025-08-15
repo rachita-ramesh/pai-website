@@ -161,11 +161,22 @@ Remember: You are continuing a conversation about {category}. Stay focused on th
             self.send_header('Cache-Control', 'no-cache')
             self.end_headers()
             
+            # Check if interview should be completed based on questionnaire target
+            target_questions = 15  # Default
+            if questionnaire_context and 'target_questions' in questionnaire_context:
+                target_questions = questionnaire_context['target_questions']
+            
+            new_exchange_count = exchange_count + 1
+            is_complete = new_exchange_count >= target_questions
+            
+            print(f"DEBUG: Question {new_exchange_count} of {target_questions}, Complete: {is_complete}")
+            
             response = {
                 'session_id': session_id,
                 'ai_response': ai_response,
-                'exchange_count': exchange_count + 1,
-                'is_complete': False
+                'exchange_count': new_exchange_count,
+                'is_complete': is_complete,
+                'target_questions': target_questions
             }
             
             response_json = json.dumps(response)
