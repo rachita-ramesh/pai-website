@@ -286,8 +286,8 @@ export default function CreateProfile() {
     
     const updatedData = {
       ...interviewData,
-      messages: [...interviewData.messages, userMessage],
-      exchangeCount: interviewData.exchangeCount + 1
+      messages: [...interviewData.messages, userMessage]
+      // Don't increment exchangeCount here - only count AI questions, not user messages
     }
     
     setInterviewData(updatedData)

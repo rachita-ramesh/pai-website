@@ -166,15 +166,16 @@ Remember: You are continuing a conversation about {category}. Stay focused on th
             if questionnaire_context and 'target_questions' in questionnaire_context:
                 target_questions = questionnaire_context['target_questions']
             
-            new_exchange_count = exchange_count + 1
-            is_complete = new_exchange_count >= target_questions
+            # Count AI questions by counting AI messages in conversation history + this new response
+            ai_question_count = sum(1 for msg in conversation_history if msg.get('role') == 'assistant') + 1
+            is_complete = ai_question_count >= target_questions
             
-            print(f"DEBUG: Question {new_exchange_count} of {target_questions}, Complete: {is_complete}")
+            print(f"DEBUG: AI Question {ai_question_count} of {target_questions}, Complete: {is_complete}")
             
             response = {
                 'session_id': session_id,
                 'ai_response': ai_response,
-                'exchange_count': new_exchange_count,
+                'exchange_count': ai_question_count,  # This now represents AI questions asked
                 'is_complete': is_complete,
                 'target_questions': target_questions
             }
