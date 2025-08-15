@@ -255,36 +255,26 @@ class handler(BaseHTTPRequestHandler):
         if questionnaire_context and 'questions' in questionnaire_context:
             questions = questionnaire_context['questions']
             
-            # Count how many AI responses we've already given
-            try:
-                from lib.supabase import SupabaseClient  
-                supabase = SupabaseClient()
-                ai_messages = [msg for msg in supabase.get_session_messages(session_id, limit=100) if msg.get('type') == 'ai']
-                ai_count = len(ai_messages)
-                
-                print(f"DEBUG: Found {ai_count} AI messages in history")
-                print(f"DEBUG: Available questions: {len(questions)}")
-                
-                # Print all questions for debugging
-                for i, q in enumerate(questions):
-                    print(f"DEBUG: Question {i}: {q.get('text', 'NO TEXT')} (question_text: {q.get('question_text', 'NOT FOUND')})")
-                
-                # If we haven't asked all the questionnaire questions yet, ask the next one
-                # ai_count represents how many questions we've already asked
-                # So if ai_count = 1, we should ask question[1] (second question)
-                if ai_count < len(questions):
-                    next_question = questions[ai_count]
-                    # Try both 'text' and 'question_text' properties
-                    ai_response = next_question.get('text') or next_question.get('question_text', 'Tell me more')
-                    print(f"DEBUG: We've asked {ai_count} questions, asking question {ai_count + 1} (index {ai_count}): {ai_response}")
-                else:
-                    # All questionnaire questions asked, generate simple follow-up
-                    ai_response = "Thank you for sharing all of that! Is there anything else you'd like to tell me about this topic?"
-                    print(f"DEBUG: All questionnaire questions asked, using generic follow-up")
-                    
-            except Exception as e:
-                print(f"DEBUG: Error counting messages: {e}")
-                ai_response = "Could you tell me more about that?"
+            # Use exchange_count to determine which question to ask
+            # exchange_count represents how many user-AI exchanges have happened
+            # If exchange_count = 1, we should ask question[1] (second question)
+            
+            print(f"DEBUG: Available questions: {len(questions)}")
+            print(f"DEBUG: Current exchange_count: {exchange_count}")
+            
+            # Print all questions for debugging
+            for i, q in enumerate(questions):
+                print(f"DEBUG: Question {i}: {q.get('text', 'NO TEXT')}")
+            
+            # If we haven't asked all the questionnaire questions yet, ask the next one
+            if exchange_count < len(questions):
+                next_question = questions[exchange_count]
+                ai_response = next_question.get('text') or next_question.get('question_text', 'Tell me more')
+                print(f"DEBUG: Exchange {exchange_count}, asking question {exchange_count + 1}: {ai_response}")
+            else:
+                # All questionnaire questions asked, generate simple follow-up
+                ai_response = "Thank you for sharing all of that! Is there anything else you'd like to tell me about this topic?"
+                print(f"DEBUG: All questionnaire questions asked, using generic follow-up")
         
         # Store the conversation messages in Supabase
         try:
