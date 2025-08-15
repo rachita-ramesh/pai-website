@@ -255,11 +255,16 @@ CRITICAL: Always ask ONE focused question per response. Keep responses conversat
         if session.exchange_count >= 15:
             session.is_complete = True
             # Add completion message if not already ending
-            if "anything else about your relationship with skincare" not in ai_response.lower():
+            if "anything else about" not in ai_response.lower():
+                # Determine topic based on questionnaire context
+                topic = "this topic"
+                if self.questionnaire_context:
+                    topic = self.questionnaire_context.get('category', 'this topic')
+                
                 completion_msg = InterviewMessage(
                     id=str(len(session.messages) + 1),
                     type="ai",
-                    content="This has been really insightful. Is there anything else about your relationship with skincare that feels important for me to understand?",
+                    content=f"This has been really insightful. Is there anything else about {topic} that feels important for me to understand?",
                     timestamp=datetime.now()
                 )
                 session.messages.append(completion_msg)
