@@ -60,8 +60,8 @@ class handler(BaseHTTPRequestHandler):
                 questionnaire = supabase.get_custom_questionnaire(questionnaire_id)
                 
                 if questionnaire:
-                    # Load the actual questions from the questionnaire
-                    questions = supabase.get_questionnaire_questions(questionnaire_id)
+                    # Questions are stored in the questionnaire JSONB field, not a separate table
+                    questions = questionnaire.get('questions', [])
                     title = questionnaire.get('title', 'Custom Questionnaire')
                     category = questionnaire.get('category', 'general')
                     description = questionnaire.get('description', '')
@@ -235,7 +235,8 @@ class handler(BaseHTTPRequestHandler):
                 questionnaire = supabase.get_custom_questionnaire(questionnaire_id)
                 
                 if questionnaire:
-                    questions = supabase.get_questionnaire_questions(questionnaire_id)
+                    # Questions are stored in the questionnaire JSONB field, not a separate table
+                    questions = questionnaire.get('questions', [])
                     questionnaire_context = {
                         'title': questionnaire.get('title', 'Custom Questionnaire'),
                         'category': questionnaire.get('category', 'general'),
@@ -287,6 +288,7 @@ class handler(BaseHTTPRequestHandler):
         
         # Store the conversation messages in Supabase
         try:
+            from datetime import datetime
             # Store user message
             user_message_data = {
                 'session_id': session_id,
