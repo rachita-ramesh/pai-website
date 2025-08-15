@@ -661,8 +661,6 @@ export default function CreateProfile() {
                 <ul style={{ fontSize: '14px', color: '#737373', paddingLeft: '20px', margin: '0' }}>
                   <li>Participant: {interviewData.name}</li>
                   <li>Total exchanges: {interviewData.exchangeCount}</li>
-                  <li>Duration: {Math.round((new Date().getTime() - interviewData.startTime.getTime()) / 1000 / 60)} minutes</li>
-                  <li>Messages recorded: {interviewData.messages.length}</li>
                 </ul>
               </div>
               <p style={{ fontSize: '16px', color: '#737373', marginBottom: '24px' }}>
