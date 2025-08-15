@@ -121,9 +121,12 @@ class SupabaseClient:
     def get_interview_session(self, session_id: str) -> Optional[Dict]:
         """Get interview session by session_id"""
         try:
+            print(f"DEBUG: Querying interview_sessions for session_id: {session_id}")
             result = self._make_request('GET', f'interview_sessions?session_id=eq.{session_id}')
+            print(f"DEBUG: Query result: {result}")
             return result[0] if result else None
-        except:
+        except Exception as e:
+            print(f"DEBUG: Error querying interview session: {e}")
             return None
     
     def complete_interview_session(self, session_id: str, profile_id: str) -> Dict:
@@ -299,19 +302,15 @@ class SupabaseClient:
     
     def create_interview_session(self, session_data: Dict) -> Dict:
         """Create a new interview session"""
-        return self._make_request('POST', 'interview_sessions', session_data)
+        print(f"DEBUG: Creating interview session with data: {session_data}")
+        result = self._make_request('POST', 'interview_sessions', session_data)
+        print(f"DEBUG: Created interview session result: {result}")
+        return result
     
     def update_interview_session(self, session_id: str, updates: Dict) -> Dict:
         """Update an existing interview session"""
         return self._make_request('PATCH', f'interview_sessions?session_id=eq.{session_id}', updates)
     
-    def get_interview_session(self, session_id: str) -> Optional[Dict]:
-        """Get interview session by ID"""
-        try:
-            result = self._make_request('GET', f'interview_sessions?session_id=eq.{session_id}')
-            return result[0] if result else None
-        except:
-            return None
     
     def create_profile_version(self, profile_data: Dict) -> Dict:
         """Create a new profile version"""

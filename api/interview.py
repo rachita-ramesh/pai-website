@@ -108,8 +108,11 @@ class handler(BaseHTTPRequestHandler):
         # Initialize AI Interviewer with questionnaire context
         interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
         
+        # Get participant name from request
+        participant_name = data.get('participant_name', 'User')
+        
         # Start interview
-        session = interviewer.start_interview(data.get('participant_name', 'User'))
+        session = interviewer.start_interview(participant_name)
         
         # Save session and questionnaire context for send-message.py to use
         import pickle
@@ -397,6 +400,9 @@ class handler(BaseHTTPRequestHandler):
             # Get session_id from the request data or query params  
             session_id = data.get('session_id') or self._get_session_from_url()
             
+            print(f"DEBUG: Completing interview for session: {session_id}")
+            print(f"DEBUG: Request data: {data}")
+            
             if not session_id:
                 raise Exception('Session ID is required for interview completion')
             
@@ -408,9 +414,20 @@ class handler(BaseHTTPRequestHandler):
             # Get interview session data
             from lib.supabase import SupabaseClient
             supabase = SupabaseClient()
+            
+            print(f"DEBUG: Looking for interview session with ID: {session_id}")
             interview_session = supabase.get_interview_session(session_id)
             
+            print(f"DEBUG: Interview session result: {interview_session}")
+            
             if not interview_session:
+                # Let's also try to list all sessions to debug
+                try:
+                    all_sessions = supabase._make_request('GET', 'interview_sessions')
+                    print(f"DEBUG: All interview sessions in database: {all_sessions}")
+                except Exception as list_error:
+                    print(f"DEBUG: Error listing sessions: {list_error}")
+                
                 raise Exception(f'Interview session {session_id} not found')
             
             print(f"DEBUG: Extracting profile for session {session_id}")
