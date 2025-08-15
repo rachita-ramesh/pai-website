@@ -426,9 +426,6 @@ class handler(BaseHTTPRequestHandler):
             
             print(f"DEBUG: Extracting profile for session {session_id}")
             
-            # Extract profile using AI
-            profile_data = self._extract_profile_from_interview(interview_session, api_key)
-            
             # Get latest version number for this person
             person_name = interview_session['person_name'].strip()  # Remove any trailing spaces
             print(f"DEBUG: Getting latest profile version for person: {person_name}")
@@ -448,9 +445,12 @@ class handler(BaseHTTPRequestHandler):
             next_version = (latest_profile['version_number'] + 1) if latest_profile else 1
             print(f"DEBUG: Next version will be: {next_version}")
             
-            # Create profile version
+            # Create profile version ID
             profile_id = f"{person_name}_v{next_version}"
             print(f"DEBUG: Creating profile with ID: {profile_id}")
+            
+            # Extract profile using AI with the profile_id
+            profile_data = self._extract_profile_from_interview(interview_session, api_key, profile_id)
             profile_version_data = {
                 'profile_id': profile_id,
                 'person_name': person_name,
@@ -514,7 +514,7 @@ class handler(BaseHTTPRequestHandler):
         except:
             return None
     
-    def _extract_profile_from_interview(self, interview_session, api_key):
+    def _extract_profile_from_interview(self, interview_session, api_key, profile_id):
         """Use AI to extract personality profile from interview transcript"""
         import anthropic
         
