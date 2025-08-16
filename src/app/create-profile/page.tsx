@@ -118,6 +118,8 @@ export default function CreateProfile() {
   const [availableQuestionnaires, setAvailableQuestionnaires] = useState<Questionnaire[]>([])
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<string>('default')
   const [extractedProfile, setExtractedProfile] = useState<ExtractedProfile | null>(null)
+  const [isExtractingProfile, setIsExtractingProfile] = useState(false)
+  const [profileExtractionError, setProfileExtractionError] = useState<string | null>(null)
   const [interviewData, setInterviewData] = useState<InterviewData>({
     name: '',
     sessionId: '',
@@ -375,36 +377,8 @@ export default function CreateProfile() {
       
       if (finalData.isComplete) {
         setInterviewPhase('complete')
-        // Automatically extract profile when interview completes
-        try {
-          const completeResponse = await fetch(`/api/interview?action=complete`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              session_id: finalData.sessionId
-            })
-          })
-          
-          if (completeResponse.ok) {
-            const completeResult = await completeResponse.json()
-            console.log('Profile automatically extracted:', completeResult)
-            console.log('Profile data:', completeResult.profile_data)
-            
-            // Only set extracted profile if we have valid profile data
-            if (completeResult.profile_data && !completeResult.error) {
-              setExtractedProfile(completeResult)
-              console.log('Successfully set extracted profile state')
-            } else {
-              console.error('Profile extraction failed or returned error:', completeResult)
-            }
-          } else {
-            console.error('Error in automatic profile extraction')
-          }
-        } catch (completeError) {
-          console.error('Error completing interview on backend:', completeError)
-        }
+        // Start profile extraction process asynchronously
+        startProfileExtraction(finalData.sessionId)
       }
     } catch (error) {
       console.error('Error generating AI response:', error)
@@ -433,38 +407,44 @@ export default function CreateProfile() {
     }
   }
   
-  const handleCompleteInterview = async () => {
+
+  const startProfileExtraction = async (sessionId: string) => {
+    console.log('Starting profile extraction for session:', sessionId)
+    setIsExtractingProfile(true)
+    setProfileExtractionError(null)
+    
     try {
-      // Call backend to extract profile
-      const response = await fetch(`/api/interview?action=complete`, {
+      const completeResponse = await fetch(`/api/interview?action=complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          session_id: interviewData.sessionId
+          session_id: sessionId
         })
       })
       
-      if (response.ok) {
-        const result = await response.json()
-        console.log('Profile extraction completed:', result)
-        setExtractedProfile(result)
+      if (completeResponse.ok) {
+        const completeResult = await completeResponse.json()
+        console.log('Profile extraction completed:', completeResult)
         
-        if (result.profile_data) {
-          alert(`🎉 Interview completed! Profile "${result.profile_id}" has been created successfully.`)
+        // Only set extracted profile if we have valid profile data
+        if (completeResult.profile_data && !completeResult.error) {
+          setExtractedProfile(completeResult)
+          console.log('Successfully set extracted profile state')
         } else {
-          alert(`Interview completed! Profile extraction started. Profile ID: ${result.profile_id || 'Processing...'}`)
+          console.error('Profile extraction failed or returned error:', completeResult)
+          setProfileExtractionError(completeResult.error || 'Profile extraction failed')
         }
       } else {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to complete interview')
+        const errorData = await completeResponse.json()
+        setProfileExtractionError(errorData.error || 'Failed to extract profile')
       }
-      
     } catch (error) {
-      console.error('Error completing interview:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      alert(`Interview completed but profile extraction failed: ${errorMessage}`)
+      console.error('Error in profile extraction:', error)
+      setProfileExtractionError('Network error during profile extraction')
+    } finally {
+      setIsExtractingProfile(false)
     }
   }
 
@@ -484,6 +464,12 @@ export default function CreateProfile() {
 
   return (
     <div>
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
       {/* Header */}
       <header className="header">
         <div className="container">
@@ -751,6 +737,45 @@ export default function CreateProfile() {
                   )}
                 </ul>
               </div>
+              
+              {/* Profile Extraction Loading */}
+              {isExtractingProfile && (
+                <div style={{ padding: '24px', backgroundColor: '#fef3c7', borderRadius: '8px', marginBottom: '24px', textAlign: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{ 
+                      width: '20px', 
+                      height: '20px', 
+                      border: '2px solid #f59e0b', 
+                      borderTop: '2px solid transparent', 
+                      borderRadius: '50%', 
+                      animation: 'spin 1s linear infinite' 
+                    }}></div>
+                    <span style={{ fontSize: '16px', fontWeight: '600', color: '#92400e' }}>
+                      Extracting Your Digital Twin Profile...
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '14px', color: '#78350f', margin: '0' }}>
+                    Analyzing your responses and creating your personality profile. This may take a few moments.
+                  </p>
+                </div>
+              )}
+              
+              {/* Profile Extraction Error */}
+              {profileExtractionError && !isExtractingProfile && (
+                <div style={{ padding: '16px', backgroundColor: '#fef2f2', borderRadius: '8px', marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#dc2626' }}>Profile Extraction Failed</h3>
+                  <p style={{ fontSize: '14px', color: '#991b1b', margin: '0 0 12px 0' }}>
+                    {profileExtractionError}
+                  </p>
+                  <button 
+                    onClick={() => startProfileExtraction(interviewData.sessionId)}
+                    className="btn-primary"
+                    style={{ fontSize: '14px' }}
+                  >
+                    🔄 Retry Profile Extraction
+                  </button>
+                </div>
+              )}
               
               {extractedProfile?.profile_data && (
                 <div style={{ marginBottom: '24px' }}>

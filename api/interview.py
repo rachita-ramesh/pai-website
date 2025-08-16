@@ -442,14 +442,26 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 print(f"DEBUG: Error ensuring person exists: {e}")
             
+            # Generate a unique profile ID using timestamp to avoid conflicts
+            from datetime import datetime
+            import uuid
+            
+            # Try to get latest profile version
             latest_profile = supabase.get_latest_profile_version(person_name)
             print(f"DEBUG: Latest profile found: {latest_profile}")
             next_version = (latest_profile['version_number'] + 1) if latest_profile else 1
-            print(f"DEBUG: Next version will be: {next_version}")
             
-            # Create profile version ID
-            profile_id = f"{person_name}_v{next_version}"
-            print(f"DEBUG: Creating profile with ID: {profile_id}")
+            # Create a unique profile version ID with timestamp to avoid duplicates
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            profile_id = f"{person_name}_v{next_version}_{timestamp}"
+            print(f"DEBUG: Creating profile with unique ID: {profile_id}")
+            
+            # Double-check this profile_id doesn't exist
+            existing_check = supabase.get_profile_version(profile_id)
+            if existing_check:
+                # If it somehow exists, add a UUID suffix
+                profile_id = f"{person_name}_v{next_version}_{uuid.uuid4().hex[:8]}"
+                print(f"DEBUG: Profile ID conflict detected, using UUID suffix: {profile_id}")
             
             # Extract profile using AI with the profile_id
             profile_data = self._extract_profile_from_interview(interview_session, api_key, profile_id)
