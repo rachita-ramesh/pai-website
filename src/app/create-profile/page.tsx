@@ -69,6 +69,45 @@ interface Questionnaire {
   }[]
 }
 
+interface ExtractedProfile {
+  profile_id: string
+  profile_data: {
+    profile_id: string
+    demographics?: {
+      age_range?: string
+      lifestyle?: string
+      context?: string
+    }
+    core_attitudes?: {
+      [key: string]: string
+    }
+    decision_psychology?: {
+      research_style?: string
+      influence_hierarchy?: string[]
+      purchase_triggers?: string[]
+      regret_patterns?: string[]
+    }
+    usage_patterns?: {
+      routine_adherence?: string
+      context_sensitivity?: string
+      emotional_drivers?: string[]
+      change_catalysts?: string[]
+    }
+    value_system?: {
+      priority_hierarchy?: string[]
+      non_negotiables?: string[]
+      ideal_outcome?: string
+      core_motivation?: string
+    }
+    behavioral_quotes?: string[]
+    prediction_weights?: {
+      [key: string]: number
+    }
+  }
+  questionnaire_id: string
+  person_name: string
+}
+
 export default function CreateProfile() {
   const [interviewPhase, setInterviewPhase] = useState<'setup' | 'interview' | 'complete'>('setup')
   const [userName, setUserName] = useState('')
@@ -78,7 +117,7 @@ export default function CreateProfile() {
   const [isListening, setIsListening] = useState(false)
   const [availableQuestionnaires, setAvailableQuestionnaires] = useState<Questionnaire[]>([])
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<string>('default')
-  const [extractedProfile, setExtractedProfile] = useState<any>(null)
+  const [extractedProfile, setExtractedProfile] = useState<ExtractedProfile | null>(null)
   const [interviewData, setInterviewData] = useState<InterviewData>({
     name: '',
     sessionId: '',
