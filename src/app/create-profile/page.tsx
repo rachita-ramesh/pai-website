@@ -78,6 +78,7 @@ export default function CreateProfile() {
   const [isListening, setIsListening] = useState(false)
   const [availableQuestionnaires, setAvailableQuestionnaires] = useState<Questionnaire[]>([])
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<string>('default')
+  const [extractedProfile, setExtractedProfile] = useState<any>(null)
   const [interviewData, setInterviewData] = useState<InterviewData>({
     name: '',
     sessionId: '',
@@ -350,6 +351,7 @@ export default function CreateProfile() {
           if (completeResponse.ok) {
             const completeResult = await completeResponse.json()
             console.log('Profile automatically extracted:', completeResult)
+            setExtractedProfile(completeResult)
             // Profile extraction happened automatically - user will see completion screen
           } else {
             console.error('Error in automatic profile extraction')
@@ -401,6 +403,7 @@ export default function CreateProfile() {
       if (response.ok) {
         const result = await response.json()
         console.log('Profile extraction completed:', result)
+        setExtractedProfile(result)
         
         if (result.profile_data) {
           alert(`🎉 Interview completed! Profile "${result.profile_id}" has been created successfully.`)
@@ -417,6 +420,20 @@ export default function CreateProfile() {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       alert(`Interview completed but profile extraction failed: ${errorMessage}`)
     }
+  }
+
+  const downloadProfile = () => {
+    if (!extractedProfile?.profile_data) return
+    
+    const filename = `${extractedProfile.person_name}_${extractedProfile.profile_id}_${extractedProfile.questionnaire_id}_profile.json`
+    const dataStr = JSON.stringify(extractedProfile.profile_data, null, 2)
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+    
+    const exportFileDefaultName = filename
+    const linkElement = document.createElement('a')
+    linkElement.setAttribute('href', dataUri)
+    linkElement.setAttribute('download', exportFileDefaultName)
+    linkElement.click()
   }
 
   return (
@@ -683,12 +700,161 @@ export default function CreateProfile() {
                 <ul style={{ fontSize: '14px', color: '#737373', paddingLeft: '20px', margin: '0' }}>
                   <li>Participant: {interviewData.name}</li>
                   <li>Total exchanges: {interviewData.exchangeCount}</li>
+                  {extractedProfile && (
+                    <li>Profile ID: {extractedProfile.profile_id}</li>
+                  )}
                 </ul>
               </div>
-              <p style={{ fontSize: '16px', color: '#737373', marginBottom: '24px' }}>
-                Your interview has been recorded and will be processed to create your digital twin profile. 
-                This involves extracting psychological patterns, behavioral preferences, and decision-making styles.
-              </p>
+              
+              {extractedProfile?.profile_data && (
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: '600', margin: '0' }}>Your Digital Twin Profile</h3>
+                    <button 
+                      onClick={downloadProfile}
+                      className="btn-secondary"
+                      style={{ fontSize: '14px' }}
+                    >
+                      📥 Download JSON
+                    </button>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    {/* Demographics Section */}
+                    {extractedProfile.profile_data.demographics && (
+                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Demographics</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', fontSize: '14px' }}>
+                          {extractedProfile.profile_data.demographics.age_range && (
+                            <div><strong>Age Range:</strong> {extractedProfile.profile_data.demographics.age_range}</div>
+                          )}
+                          {extractedProfile.profile_data.demographics.lifestyle && (
+                            <div><strong>Lifestyle:</strong> {extractedProfile.profile_data.demographics.lifestyle}</div>
+                          )}
+                          {extractedProfile.profile_data.demographics.context && (
+                            <div><strong>Context:</strong> {extractedProfile.profile_data.demographics.context}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Core Attitudes Section */}
+                    {extractedProfile.profile_data.core_attitudes && (
+                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Core Attitudes</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', fontSize: '14px' }}>
+                          {Object.entries(extractedProfile.profile_data.core_attitudes).map(([key, value]) => (
+                            <div key={key}><strong>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong> {value}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Decision Psychology Section */}
+                    {extractedProfile.profile_data.decision_psychology && (
+                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Decision Psychology</h4>
+                        <div style={{ fontSize: '14px' }}>
+                          {extractedProfile.profile_data.decision_psychology.research_style && (
+                            <div style={{ marginBottom: '8px' }}><strong>Research Style:</strong> {extractedProfile.profile_data.decision_psychology.research_style}</div>
+                          )}
+                          {extractedProfile.profile_data.decision_psychology.influence_hierarchy && (
+                            <div style={{ marginBottom: '8px' }}>
+                              <strong>Influence Hierarchy:</strong>
+                              <ul style={{ marginLeft: '16px', marginTop: '4px' }}>
+                                {extractedProfile.profile_data.decision_psychology.influence_hierarchy.map((item, idx) => (
+                                  <li key={idx}>{item.replace(/_/g, ' ')}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {extractedProfile.profile_data.decision_psychology.purchase_triggers && (
+                            <div style={{ marginBottom: '8px' }}>
+                              <strong>Purchase Triggers:</strong>
+                              <ul style={{ marginLeft: '16px', marginTop: '4px' }}>
+                                {extractedProfile.profile_data.decision_psychology.purchase_triggers.map((item, idx) => (
+                                  <li key={idx}>{item.replace(/_/g, ' ')}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Usage Patterns Section */}
+                    {extractedProfile.profile_data.usage_patterns && (
+                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Usage Patterns</h4>
+                        <div style={{ fontSize: '14px' }}>
+                          {extractedProfile.profile_data.usage_patterns.routine_adherence && (
+                            <div style={{ marginBottom: '8px' }}><strong>Routine Adherence:</strong> {extractedProfile.profile_data.usage_patterns.routine_adherence}</div>
+                          )}
+                          {extractedProfile.profile_data.usage_patterns.context_sensitivity && (
+                            <div style={{ marginBottom: '8px' }}><strong>Context Sensitivity:</strong> {extractedProfile.profile_data.usage_patterns.context_sensitivity}</div>
+                          )}
+                          {extractedProfile.profile_data.usage_patterns.emotional_drivers && (
+                            <div style={{ marginBottom: '8px' }}>
+                              <strong>Emotional Drivers:</strong>
+                              <ul style={{ marginLeft: '16px', marginTop: '4px' }}>
+                                {extractedProfile.profile_data.usage_patterns.emotional_drivers.map((item, idx) => (
+                                  <li key={idx}>{item.replace(/_/g, ' ')}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Value System Section */}
+                    {extractedProfile.profile_data.value_system && (
+                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Value System</h4>
+                        <div style={{ fontSize: '14px' }}>
+                          {extractedProfile.profile_data.value_system.priority_hierarchy && (
+                            <div style={{ marginBottom: '8px' }}>
+                              <strong>Priority Hierarchy:</strong>
+                              <ol style={{ marginLeft: '16px', marginTop: '4px' }}>
+                                {extractedProfile.profile_data.value_system.priority_hierarchy.map((item, idx) => (
+                                  <li key={idx}>{item.replace(/_/g, ' ')}</li>
+                                ))}
+                              </ol>
+                            </div>
+                          )}
+                          {extractedProfile.profile_data.value_system.ideal_outcome && (
+                            <div style={{ marginBottom: '8px' }}><strong>Ideal Outcome:</strong> {extractedProfile.profile_data.value_system.ideal_outcome}</div>
+                          )}
+                          {extractedProfile.profile_data.value_system.core_motivation && (
+                            <div style={{ marginBottom: '8px' }}><strong>Core Motivation:</strong> {extractedProfile.profile_data.value_system.core_motivation}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Behavioral Quotes Section */}
+                    {extractedProfile.profile_data.behavioral_quotes && extractedProfile.profile_data.behavioral_quotes.length > 0 && (
+                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Key Insights</h4>
+                        <div style={{ fontSize: '14px' }}>
+                          {extractedProfile.profile_data.behavioral_quotes.map((quote, idx) => (
+                            <div key={idx} style={{ marginBottom: '8px', fontStyle: 'italic', padding: '8px', backgroundColor: '#ffffff', borderRadius: '4px', borderLeft: '3px solid #00d924' }}>
+                              "{quote}"
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {!extractedProfile?.profile_data && (
+                <p style={{ fontSize: '16px', color: '#737373', marginBottom: '24px' }}>
+                  Your interview has been recorded and will be processed to create your digital twin profile. 
+                  This involves extracting psychological patterns, behavioral preferences, and decision-making styles.
+                </p>
+              )}
             </div>
           )}
 
