@@ -327,6 +327,8 @@ class handler(BaseHTTPRequestHandler):
                 new_exchange_count = exchange_count + 1
                 is_complete = new_exchange_count >= target_questions
                 
+                print(f"DEBUG: Completion check - exchange_count: {exchange_count}, new_exchange_count: {new_exchange_count}, target_questions: {target_questions}, is_complete: {is_complete}")
+                
                 # Update interview session
                 session_updates = {
                     'transcript': transcript,
@@ -485,7 +487,9 @@ class handler(BaseHTTPRequestHandler):
                 'status': 'success',
                 'message': 'Interview completed successfully. Profile has been extracted.',
                 'profile_id': profile_id,
-                'profile_data': profile_data
+                'profile_data': profile_data,
+                'questionnaire_id': interview_session.get('questionnaire_id', 'unknown'),
+                'person_name': person_name
             }
             
             self.send_response(200)
@@ -622,7 +626,29 @@ Important guidelines:
             
             # Parse the JSON response
             profile_text = response.content[0].text
-            profile_data = json.loads(profile_text)
+            print(f"DEBUG: Raw AI response: {profile_text}")
+            
+            # Try to extract JSON from the response (sometimes Claude wraps it in markdown)
+            try:
+                # First try direct JSON parsing
+                profile_data = json.loads(profile_text)
+            except json.JSONDecodeError:
+                # If that fails, try to extract JSON from markdown code blocks
+                import re
+                json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', profile_text, re.DOTALL)
+                if json_match:
+                    json_content = json_match.group(1)
+                    print(f"DEBUG: Extracted JSON from markdown: {json_content}")
+                    profile_data = json.loads(json_content)
+                else:
+                    # Try to find JSON object in the text
+                    json_match = re.search(r'(\{.*\})', profile_text, re.DOTALL)
+                    if json_match:
+                        json_content = json_match.group(1)
+                        print(f"DEBUG: Extracted JSON from text: {json_content}")
+                        profile_data = json.loads(json_content)
+                    else:
+                        raise ValueError("No valid JSON found in AI response")
             
             print(f"DEBUG: Successfully extracted profile for {person_name}")
             return profile_data

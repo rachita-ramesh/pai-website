@@ -390,8 +390,15 @@ export default function CreateProfile() {
           if (completeResponse.ok) {
             const completeResult = await completeResponse.json()
             console.log('Profile automatically extracted:', completeResult)
-            setExtractedProfile(completeResult)
-            // Profile extraction happened automatically - user will see completion screen
+            console.log('Profile data:', completeResult.profile_data)
+            
+            // Only set extracted profile if we have valid profile data
+            if (completeResult.profile_data && !completeResult.error) {
+              setExtractedProfile(completeResult)
+              console.log('Successfully set extracted profile state')
+            } else {
+              console.error('Profile extraction failed or returned error:', completeResult)
+            }
           } else {
             console.error('Error in automatic profile extraction')
           }
@@ -911,14 +918,9 @@ export default function CreateProfile() {
               </button>
             )}
             {interviewPhase === 'complete' && (
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button onClick={handleCompleteInterview} className="btn-primary">
-                  📊 Extract Profile & Continue
-                </button>
-                <button onClick={() => window.open('/profile', '_blank')} className="btn-secondary">
-                  👤 View My Digital Twin
-                </button>
-              </div>
+              <Link href="/create-profile" className="btn-primary">
+                🎤 Create Another Profile
+              </Link>
             )}
           </div>
         </div>

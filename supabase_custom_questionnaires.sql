@@ -33,21 +33,6 @@ CREATE TABLE IF NOT EXISTS questionnaire_questions (
   UNIQUE(questionnaire_id, question_id)
 );
 
--- Questionnaire usage tracking - Track which profiles used which questionnaires
-CREATE TABLE IF NOT EXISTS questionnaire_usage (
-  id SERIAL PRIMARY KEY,
-  questionnaire_id VARCHAR(100) NOT NULL,
-  profile_id VARCHAR(100) NOT NULL,
-  interview_session_id VARCHAR(100),
-  usage_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  completion_status VARCHAR(50) DEFAULT 'completed', -- completed, abandoned
-  feedback_rating INTEGER, -- 1-5 star rating of questionnaire quality
-  feedback_comments TEXT,
-  FOREIGN KEY (questionnaire_id) REFERENCES custom_questionnaires(questionnaire_id),
-  FOREIGN KEY (profile_id) REFERENCES profile_versions(profile_id),
-  FOREIGN KEY (interview_session_id) REFERENCES interview_sessions(session_id)
-);
-
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_custom_questionnaires_id ON custom_questionnaires(questionnaire_id);
 CREATE INDEX IF NOT EXISTS idx_custom_questionnaires_category ON custom_questionnaires(category);
@@ -61,12 +46,9 @@ CREATE INDEX IF NOT EXISTS idx_questionnaire_usage_profile ON questionnaire_usag
 -- Row Level Security
 ALTER TABLE custom_questionnaires ENABLE ROW LEVEL SECURITY;
 ALTER TABLE questionnaire_questions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE questionnaire_usage ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow all operations on custom_questionnaires" ON custom_questionnaires FOR ALL USING (true);
 CREATE POLICY "Allow all operations on questionnaire_questions" ON questionnaire_questions FOR ALL USING (true);
-CREATE POLICY "Allow all operations on questionnaire_usage" ON questionnaire_usage FOR ALL USING (true);
-
 -- Sample custom questionnaire
 INSERT INTO custom_questionnaires (
   questionnaire_id,
