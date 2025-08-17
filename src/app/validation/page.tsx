@@ -26,21 +26,31 @@ interface Comparison {
   reasoning: string
 }
 
+interface ProfileVersion {
+  profile_id: string
+  version_number: number
+  created_at: string
+  is_active: boolean
+}
+
 export default function ValidationTest() {
   const [survey, setSurvey] = useState<Survey | null>(null)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [humanAnswers, setHumanAnswers] = useState<{[key: string]: string}>({})
   const [comparisons, setComparisons] = useState<Comparison[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [testPhase, setTestPhase] = useState<'person_selection' | 'loading' | 'questions' | 'results'>('person_selection')
+  const [testPhase, setTestPhase] = useState<'person_selection' | 'profile_selection' | 'loading' | 'questions' | 'results'>('person_selection')
   const [accuracy, setAccuracy] = useState(0)
   const [selectedPerson, setSelectedPerson] = useState('')
+  const [selectedPersonName, setSelectedPersonName] = useState('')
   const [profileId, setProfileId] = useState('')
+  const [availableVersions, setAvailableVersions] = useState<ProfileVersion[]>([])
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false)
 
   const people = [
-    { id: 'rachita', name: 'Rachita', profileId: 'rachita_v1', hasProfile: true },
-    { id: 'everhett', name: 'Everhett', profileId: 'everhett_v1', hasProfile: false },
-    { id: 'gigi', name: 'Gigi', profileId: 'gigi_v1', hasProfile: false },
+    { id: 'rachita', name: 'Rachita' },
+    { id: 'everhett', name: 'Everhett' },
+    { id: 'gigi', name: 'Gigi' },
   ]
 
   useEffect(() => {
@@ -61,13 +71,42 @@ export default function ValidationTest() {
     }
   }
 
-  const selectPerson = (person: { id: string; name: string; profileId: string; hasProfile: boolean }) => {
-    if (!person.hasProfile) {
-      alert(`${person.name}'s profile hasn't been created yet. Please complete their profile first.`)
-      return
+  const loadProfileVersions = async (personName: string) => {
+    setIsLoadingVersions(true)
+    try {
+      const response = await fetch(`/api/chat?person=${encodeURIComponent(personName)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableVersions(data.profiles || [])
+        
+        // Auto-select the latest active version or first version
+        if (data.profiles && data.profiles.length > 0) {
+          const activeVersion = data.profiles.find((p: ProfileVersion) => p.is_active)
+          const latestVersion = data.profiles[0] // Assuming sorted by latest first
+          const defaultVersion = activeVersion || latestVersion
+          setProfileId(defaultVersion.profile_id)
+        }
+      } else {
+        console.error('Failed to load profile versions')
+        setAvailableVersions([])
+      }
+    } catch (error) {
+      console.error('Error loading profile versions:', error)
+      setAvailableVersions([])
+    } finally {
+      setIsLoadingVersions(false)
     }
+  }
+
+  const selectPerson = (person: { id: string; name: string }) => {
     setSelectedPerson(person.id)
-    setProfileId(person.profileId)
+    setSelectedPersonName(person.name)
+    loadProfileVersions(person.name)
+    setTestPhase('profile_selection')
+  }
+
+  const selectProfile = (profileId: string) => {
+    setProfileId(profileId)
     setTestPhase('questions')
   }
 
@@ -180,7 +219,9 @@ export default function ValidationTest() {
     setComparisons([])
     setAccuracy(0)
     setSelectedPerson('')
+    setSelectedPersonName('')
     setProfileId('')
+    setAvailableVersions([])
     setTestPhase('person_selection')
   }
 
@@ -220,16 +261,13 @@ export default function ValidationTest() {
                   key={person.id} 
                   className="card"
                   style={{ 
-                    opacity: person.hasProfile ? 1 : 0.5,
-                    cursor: person.hasProfile ? 'pointer' : 'not-allowed',
+                    cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
                   onClick={() => selectPerson(person)}
                   onMouseEnter={(e) => {
-                    if (person.hasProfile) {
-                      e.currentTarget.style.transform = 'translateY(-4px)'
-                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)'
-                    }
+                    e.currentTarget.style.transform = 'translateY(-4px)'
+                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)'
@@ -255,25 +293,119 @@ export default function ValidationTest() {
                     <div>
                       <h3 style={{ fontSize: '20px', fontWeight: '600', margin: '0' }}>{person.name}</h3>
                       <p style={{ fontSize: '14px', color: '#737373', margin: '0' }}>
-                        {person.hasProfile ? 'Profile Complete - Ready for Testing' : 'Profile Incomplete'}
+                        Digital Twin Testing Available
                       </p>
                     </div>
                   </div>
                   
                   <div style={{ 
                     padding: '12px 16px', 
-                    backgroundColor: person.hasProfile ? '#f0fdf0' : '#f8f9fa',
+                    backgroundColor: '#f0fdf0',
                     borderRadius: '8px',
                     textAlign: 'center'
                   }}>
-                    {person.hasProfile ? (
-                      <span style={{ color: '#00d924', fontWeight: '600' }}>✓ Test This Digital Twin</span>
-                    ) : (
-                      <span style={{ color: '#737373' }}>Complete Profile First</span>
-                    )}
+                    <span style={{ color: '#00d924', fontWeight: '600' }}>✓ Select for Testing</span>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (testPhase === 'profile_selection') {
+    return (
+      <div>
+        <header className="header">
+          <div className="container">
+            <nav className="nav">
+              <Link href="/" className="logo">
+                <div className="logo-icon">
+                  <div style={{ width: '16px', height: '16px', backgroundColor: 'white', borderRadius: '2px' }}></div>
+                </div>
+                <div className="logo-text">
+                  <h1>PAI</h1>
+                  <p>Validation Test</p>
+                </div>
+              </Link>
+              <div className="badge">Select Profile Version</div>
+            </nav>
+          </div>
+        </header>
+        <main className="main">
+          <div className="container">
+            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+              <h1 style={{ fontSize: '48px', fontWeight: '600', lineHeight: '1.1', marginBottom: '24px' }}>
+                Choose <span className="highlight">{selectedPersonName}'s</span> Profile Version
+              </h1>
+              <p style={{ fontSize: '18px', color: '#737373', maxWidth: '600px', margin: '0 auto' }}>
+                Select which version of {selectedPersonName}'s digital twin you want to test for accuracy.
+              </p>
+            </div>
+
+            <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Available Profile Versions</h3>
+              {isLoadingVersions ? (
+                <div style={{ textAlign: 'center', padding: '32px', color: '#737373' }}>
+                  Loading available versions...
+                </div>
+              ) : availableVersions.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {availableVersions.map(version => (
+                    <button
+                      key={version.profile_id}
+                      onClick={() => selectProfile(version.profile_id)}
+                      style={{
+                        width: '100%',
+                        padding: '16px',
+                        border: '1px solid #e5e5e5',
+                        borderRadius: '12px',
+                        backgroundColor: 'white',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#00d924'
+                        e.currentTarget.style.backgroundColor = '#f0fdf0'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e5e5'
+                        e.currentTarget.style.backgroundColor = 'white'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+                            {version.profile_id} {version.is_active ? '(Active)' : ''}
+                          </div>
+                          <div style={{ fontSize: '14px', color: '#737373' }}>
+                            Created: {new Date(version.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '24px' }}>→</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '32px' }}>
+                  <div style={{ color: '#dc2626', marginBottom: '8px', fontSize: '16px' }}>
+                    No profiles found for {selectedPersonName}
+                  </div>
+                  <div style={{ color: '#737373', fontSize: '14px', marginBottom: '16px' }}>
+                    {selectedPersonName} needs to complete their profile interview first.
+                  </div>
+                  <button
+                    onClick={() => setTestPhase('person_selection')}
+                    className="btn-secondary"
+                  >
+                    ← Choose Different Person
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </main>

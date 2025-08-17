@@ -11,8 +11,33 @@ from lib.response_predictor import ResponsePredictor, SurveyQuestion
 from lib.profile_extractor import ProfileExtractor
 import glob
 
-# Define survey data for reference
 def get_validation_survey_data():
+    """Load survey data from Supabase survey_templates table"""
+    try:
+        from lib.supabase import SupabaseClient
+        supabase = SupabaseClient()
+        
+        # Try to get the default validation survey
+        survey_template = supabase.get_survey_template('validation_survey_1')
+        if survey_template:
+            return {
+                'survey_name': survey_template['survey_name'],
+                'survey_title': survey_template['title'],
+                'description': survey_template['description'],
+                'target_accuracy': survey_template['target_accuracy'],
+                'questions': survey_template['questions']
+            }
+        else:
+            print("DEBUG: No survey template found in database, using fallback")
+            # Fallback to embedded survey if none in database
+            return _get_fallback_survey_data()
+            
+    except Exception as e:
+        print(f"DEBUG: Error loading survey from database: {e}, using fallback")
+        return _get_fallback_survey_data()
+
+def _get_fallback_survey_data():
+    """Fallback survey data if database is unavailable"""
     return {
         "survey_name": "validation_survey_1",
         "survey_title": "Skincare Attitudes & Usage Validation Study", 
@@ -270,15 +295,16 @@ class handler(BaseHTTPRequestHandler):
                     raise Exception('ANTHROPIC_API_KEY environment variable is required')
                 
                 try:
-                    # Load the profile
-                    extractor = ProfileExtractor(api_key)
-                    profile_path = os.path.join(os.path.dirname(__file__), '..', 'backend', 'data', 'profiles', f'{profile_id}_profile.json')
+                    # Load the profile from Supabase
+                    from lib.supabase import SupabaseClient
+                    supabase = SupabaseClient()
                     
-                    if not os.path.exists(profile_path):
-                        # If specific profile doesn't exist, create a basic one or use default predictions
-                        raise Exception(f'Profile not found: {profile_id}')
+                    profile_data = supabase.get_profile_version(profile_id)
+                    if not profile_data:
+                        raise Exception(f'Profile not found in database: {profile_id}')
                     
-                    profile = extractor.load_profile(profile_path)
+                    # Extract the profile JSON data
+                    profile = profile_data.get('profile_data', {})
                     
                     # Create the survey question objects - matching the embedded survey
                     survey_questions = {
