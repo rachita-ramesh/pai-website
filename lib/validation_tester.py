@@ -8,8 +8,8 @@ import json
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from pydantic import BaseModel
-from response_predictor import ResponsePredictor, SurveyQuestion, PredictionResult, get_test_survey_questions
-from profile_extractor import PaiProfile, ProfileExtractor
+from .response_predictor import ResponsePredictor, SurveyQuestion, PredictionResult, get_test_survey_questions
+from .profile_extractor import PaiProfile, ProfileExtractor
 
 
 class ValidationResult(BaseModel):

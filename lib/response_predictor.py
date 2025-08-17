@@ -8,7 +8,7 @@ import json
 from typing import Dict, List, Any, Optional, Tuple
 import anthropic
 from pydantic import BaseModel
-from profile_extractor import PaiProfile
+from .profile_extractor import PaiProfile
 
 
 class SurveyQuestion(BaseModel):

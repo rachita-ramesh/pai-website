@@ -13,10 +13,10 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 # Import our modules
-from ai_interviewer import AIInterviewer, InterviewSession, InterviewMessage
-from profile_extractor import ProfileExtractor, PaiProfile
-from response_predictor import ResponsePredictor, SurveyQuestion, get_test_survey_questions
-from validation_tester import ValidationTester
+from .ai_interviewer import AIInterviewer, InterviewSession, InterviewMessage
+from .profile_extractor import ProfileExtractor, PaiProfile
+from .response_predictor import ResponsePredictor, SurveyQuestion, get_test_survey_questions
+from .validation_tester import ValidationTester
 
 # Load environment variables
 load_dotenv()
