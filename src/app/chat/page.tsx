@@ -314,8 +314,13 @@ export default function Chat() {
                       ))}
                     </select>
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '16px', color: '#737373', fontSize: '14px' }}>
-                      No profiles found for {selectedPersonData?.name}
+                    <div style={{ textAlign: 'center', padding: '16px', fontSize: '14px' }}>
+                      <div style={{ color: '#dc2626', marginBottom: '8px' }}>
+                        No profiles found for {selectedPersonData?.name}
+                      </div>
+                      <div style={{ color: '#737373', fontSize: '12px' }}>
+                        Check browser console for error details
+                      </div>
                     </div>
                   )}
                 </div>

@@ -453,7 +453,7 @@ class handler(BaseHTTPRequestHandler):
             
             # Create a unique profile version ID with timestamp to avoid duplicates
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            profile_id = f"{person_name}_v{next_version}_{timestamp}"
+            profile_id = f"{person_name}_v{next_version}"
             print(f"DEBUG: Creating profile with unique ID: {profile_id}")
             
             # Double-check this profile_id doesn't exist
