@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from "next/link"
 
 interface Message {
@@ -49,9 +49,9 @@ export default function Chat() {
     if (selectedPersonData) {
       loadProfileVersions(selectedPersonData.name)
     }
-  }, [selectedPersonData]) // Load when person changes
+  }, [selectedPerson, loadProfileVersions]) // Only trigger when selectedPerson changes
 
-  const loadProfileVersions = async (personName: string) => {
+  const loadProfileVersions = useCallback(async (personName: string) => {
     console.log('Loading profile versions for:', personName)
     setIsLoadingVersions(true)
     try {
@@ -82,7 +82,7 @@ export default function Chat() {
     } finally {
       setIsLoadingVersions(false)
     }
-  }
+  }, []) // Empty dependency array since this function doesn't depend on any state
 
   const handleSendMessage = async () => {
     if (!query.trim()) return
