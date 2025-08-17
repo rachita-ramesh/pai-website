@@ -81,12 +81,14 @@ export default function Chat() {
     }
   }, []) // Empty dependency array since this function doesn't depend on any state
 
-  // Load versions for default selected person on mount
+  // Load versions only when selectedPerson changes
   useEffect(() => {
-    if (selectedPersonData) {
-      loadProfileVersions(selectedPersonData.name)
+    const personData = people.find(p => p.id === selectedPerson)
+    if (personData) {
+      console.log('Loading profiles for person change:', selectedPerson)
+      loadProfileVersions(personData.name)
     }
-  }, [selectedPerson, selectedPersonData, loadProfileVersions]) // Include all dependencies
+  }, [selectedPerson]) // Only depend on selectedPerson string
 
   const handleSendMessage = async () => {
     if (!query.trim()) return
@@ -266,7 +268,6 @@ export default function Chat() {
                       key={person.id}
                       onClick={() => {
                         setSelectedPerson(person.id)
-                        loadProfileVersions(person.name)
                         clearChat(person.id)
                       }}
                       style={{
