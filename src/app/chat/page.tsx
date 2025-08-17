@@ -49,9 +49,12 @@ export default function Chat() {
     setIsLoadingVersions(true)
     try {
       const response = await fetch(`/api/chat?person=${encodeURIComponent(personName)}`)
+      console.log('API response status:', response.status)
       if (response.ok) {
         const data = await response.json()
         console.log('Profile versions loaded:', data)
+        console.log('Number of profiles:', data.profiles?.length || 0)
+        console.log('Setting available versions:', data.profiles)
         setAvailableVersions(data.profiles || [])
         
         // Auto-select the latest active version or first version
@@ -73,6 +76,7 @@ export default function Chat() {
       console.error('Error loading profile versions:', error)
       setAvailableVersions([])
     } finally {
+      console.log('Setting loading to false')
       setIsLoadingVersions(false)
     }
   }, []) // Empty dependency array since this function doesn't depend on any state
