@@ -668,6 +668,17 @@ class handler(BaseHTTPRequestHandler):
                                 'response_order': survey_data['questions'].index(question_data) + 1
                             }
                             supabase._make_request('POST', 'survey_responses', response_data)
+                            
+                            # Also save to ai_predictions table for AI analytics
+                            prediction_data = {
+                                'profile_id': profile_id,
+                                'question_id': question_id,
+                                'predicted_response': comparison.get('predicted_answer'),
+                                'confidence_score': comparison.get('confidence', 0.5),
+                                'reasoning': comparison.get('reasoning', ''),
+                                'model_version': model_version
+                            }
+                            supabase._make_request('POST', 'ai_predictions', prediction_data)
                     
                     # Save overall test results
                     test_results = {
@@ -689,6 +700,38 @@ class handler(BaseHTTPRequestHandler):
                         }
                     }
                     supabase.insert_validation_result(test_results)
+                    
+                    # Update test history summary for this profile
+                    try:
+                        # Get existing summary or create new one
+                        existing_summary = supabase.get_test_history_summary(profile_id)
+                        if existing_summary:
+                            # Update existing summary
+                            new_total_tests = existing_summary['total_tests_taken'] + 1
+                            new_avg_accuracy = ((existing_summary['average_accuracy'] * existing_summary['total_tests_taken']) + accuracy_percentage) / new_total_tests
+                            new_best_accuracy = max(existing_summary['best_accuracy'], accuracy_percentage)
+                            
+                            summary_update = {
+                                'total_tests_taken': new_total_tests,
+                                'average_accuracy': round(new_avg_accuracy, 2),
+                                'best_accuracy': new_best_accuracy,
+                                'latest_test_date': 'NOW()',
+                                'improvement_trend': 'improving' if accuracy_percentage > existing_summary['average_accuracy'] else 'stable'
+                            }
+                            supabase.update_test_history_summary(profile_id, summary_update)
+                        else:
+                            # Create new summary
+                            summary_data = {
+                                'profile_id': profile_id,
+                                'total_tests_taken': 1,
+                                'average_accuracy': accuracy_percentage,
+                                'best_accuracy': accuracy_percentage,
+                                'latest_test_date': 'NOW()',
+                                'improvement_trend': 'new'
+                            }
+                            supabase._make_request('POST', 'test_history_summary', summary_data)
+                    except Exception as summary_error:
+                        print(f"DEBUG: Failed to update test history summary: {summary_error}")
                     
                     result = {
                         'status': 'success',
