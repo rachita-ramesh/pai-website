@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from "next/link"
 
 interface Message {
@@ -13,8 +13,18 @@ interface Message {
   isPlaying?: boolean
 }
 
+interface ProfileVersion {
+  profile_id: string
+  version_number: number
+  created_at: string
+  is_active: boolean
+}
+
 export default function Chat() {
   const [selectedPerson, setSelectedPerson] = useState<string>('rachita')
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('')
+  const [availableVersions, setAvailableVersions] = useState<ProfileVersion[]>([])
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false)
   const [query, setQuery] = useState('')
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -34,6 +44,42 @@ export default function Chat() {
 
   const selectedPersonData = people.find(f => f.id === selectedPerson)
 
+  // Load versions for default selected person on mount
+  useEffect(() => {
+    if (selectedPersonData) {
+      loadProfileVersions(selectedPersonData.name)
+    }
+  }, [selectedPersonData]) // Load when person changes
+
+  const loadProfileVersions = async (personName: string) => {
+    console.log('Loading profile versions for:', personName)
+    setIsLoadingVersions(true)
+    try {
+      const response = await fetch(`/api/chat?person=${personName}`)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Profile versions loaded:', data)
+        setAvailableVersions(data.profiles || [])
+        
+        // Auto-select the latest active version or first version
+        if (data.profiles && data.profiles.length > 0) {
+          const activeVersion = data.profiles.find((p: ProfileVersion) => p.is_active)
+          const latestVersion = data.profiles[0] // Assuming sorted by latest first
+          const defaultVersion = activeVersion || latestVersion
+          setSelectedProfileId(defaultVersion.profile_id)
+        }
+      } else {
+        console.error('Failed to load profile versions')
+        setAvailableVersions([])
+      }
+    } catch (error) {
+      console.error('Error loading profile versions:', error)
+      setAvailableVersions([])
+    } finally {
+      setIsLoadingVersions(false)
+    }
+  }
+
   const handleSendMessage = async () => {
     if (!query.trim()) return
 
@@ -49,8 +95,8 @@ export default function Chat() {
     setIsLoading(true)
 
     try {
-      // Use real digital twin if it's Rachita, otherwise use mock responses
-      if (selectedPerson === 'rachita') {
+      // Use real digital twin if we have a selected profile ID, otherwise use mock responses
+      if (selectedProfileId) {
         // Call backend to get digital twin response
         const response = await fetch('/api/chat', {
           method: 'POST',
@@ -58,7 +104,7 @@ export default function Chat() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            profile_id: 'rachita_v1',
+            profile_id: selectedProfileId,
             message: query
           })
         })
@@ -212,6 +258,7 @@ export default function Chat() {
                       key={person.id}
                       onClick={() => {
                         setSelectedPerson(person.id)
+                        loadProfileVersions(person.name)
                         clearChat(person.id)
                       }}
                       style={{
@@ -234,6 +281,41 @@ export default function Chat() {
                   ))}
                 </div>
               </div>
+
+              {/* Version Selection */}
+              {selectedPerson && (
+                <div className="card" style={{ marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Select Version</h3>
+                  {isLoadingVersions ? (
+                    <div style={{ textAlign: 'center', padding: '16px', color: '#737373' }}>
+                      Loading versions...
+                    </div>
+                  ) : availableVersions.length > 0 ? (
+                    <select
+                      value={selectedProfileId}
+                      onChange={(e) => setSelectedProfileId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #e5e5e5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        outline: 'none'
+                      }}
+                    >
+                      {availableVersions.map(version => (
+                        <option key={version.profile_id} value={version.profile_id}>
+                          {version.profile_id} {version.is_active ? '(Active)' : ''} - {new Date(version.created_at).toLocaleDateString()}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '16px', color: '#737373', fontSize: '14px' }}>
+                      No profiles found for {selectedPersonData?.name}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="card">
                 <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Quick Questions</h3>
