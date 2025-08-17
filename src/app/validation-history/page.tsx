@@ -34,7 +34,7 @@ export default function ValidationHistory() {
 
   const loadValidationHistory = async () => {
     try {
-      const response = await fetch('/api/validation')
+      const response = await fetch('/api/validation?history=true')
       if (response.ok) {
         const data = await response.json()
         setHistory(data)

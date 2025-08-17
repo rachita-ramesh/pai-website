@@ -201,6 +201,10 @@ class handler(BaseHTTPRequestHandler):
             if 'download' in query_params or 'filename' in query_params or 'session_id' in query_params:
                 return self._handle_download(query_params)
             
+            # Check if this is a history request
+            if 'history' in query_params or 'test_session_id' in query_params:
+                return self._handle_validation_history(query_params)
+            
             # Default: Return the validation survey
             survey_data = get_validation_survey_data()
             
@@ -275,6 +279,105 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
+    
+    def _handle_validation_history(self, query_params):
+        """Handle validation history requests"""
+        try:
+            from lib.supabase import SupabaseClient
+            supabase = SupabaseClient()
+            
+            # Check if requesting specific test session details
+            test_session_id = query_params.get('test_session_id', [None])[0]
+            if test_session_id:
+                # Get detailed results for specific test session
+                result = supabase.get_test_session_results(test_session_id)
+                if result:
+                    # Also get question responses for this session
+                    question_responses = supabase._make_request('GET', f'question_responses?test_session_id=eq.{test_session_id}')
+                    
+                    # Format response
+                    response_data = {
+                        'profile_id': result['profile_id'],
+                        'accuracy_percentage': result['accuracy_score'],
+                        'total_questions': result['total_questions'],
+                        'correct_answers': result['correct_responses'],
+                        'timestamp': result.get('created_at', ''),
+                        'digital_twin_version': result['profile_id'],
+                        'model_version': 'claude-3-5-sonnet-20241022',
+                        'comparisons': []
+                    }
+                    
+                    # Add question comparisons
+                    for qr in question_responses:
+                        response_data['comparisons'].append({
+                            'question_id': qr['question_id'],
+                            'human_answer': qr['human_response'],
+                            'predicted_answer': qr['ai_response'],
+                            'is_match': qr['is_correct'],
+                            'confidence': 0.8,  # Default confidence
+                            'reasoning': qr.get('ai_reasoning', '')
+                        })
+                    
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(response_data).encode('utf-8'))
+                    return
+                else:
+                    self.send_response(404)
+                    self.send_header('Content-type', 'application/json')
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'error': 'Test session not found'}).encode('utf-8'))
+                    return
+            
+            # Get all validation results (history)
+            all_results = supabase._make_request('GET', 'validation_test_results?order=created_at.desc')
+            
+            if not all_results:
+                response_data = {
+                    'status': 'no_tests_completed',
+                    'total_tests': 0,
+                    'results': [],
+                    'message': 'No validation tests have been completed yet.'
+                }
+            else:
+                # Format results for history display
+                formatted_results = []
+                for result in all_results:
+                    formatted_results.append({
+                        'filename': f"{result['survey_name']}_{result['profile_id']}.json",
+                        'profile_id': result['profile_id'],
+                        'digital_twin_version': result['profile_id'],
+                        'model_version': 'claude-3-5-sonnet-20241022',
+                        'accuracy_percentage': result['accuracy_score'],
+                        'total_questions': result['total_questions'],
+                        'correct_answers': result['correct_responses'],
+                        'timestamp': result.get('created_at', ''),
+                        'test_session_id': result['test_session_id']
+                    })
+                
+                response_data = {
+                    'status': 'success',
+                    'total_tests': len(formatted_results),
+                    'results': formatted_results
+                }
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            
+        except Exception as e:
+            print(f"DEBUG: Error getting validation history: {e}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
+    
     def do_POST(self):
         try:
             content_length = int(self.headers['Content-Length'])
@@ -527,28 +630,76 @@ class handler(BaseHTTPRequestHandler):
                         'category': question_data['category'] if question_data else 'unknown'
                     })
                 
-                # Save to file with proper naming
+                # Save to Supabase database
                 try:
-                    filename = generate_validation_filename(survey_name, profile_id, test_counter)
-                    filepath = os.path.join(results_dir, filename)
+                    from lib.supabase import SupabaseClient
+                    supabase = SupabaseClient()
                     
-                    with open(filepath, 'w', encoding='utf-8') as f:
-                        json.dump(validation_result, f, indent=2, ensure_ascii=False)
+                    # Create validation test session
+                    session_data = {
+                        'test_session_id': test_session_id,
+                        'profile_id': profile_id,
+                        'survey_name': survey_name,
+                        'status': 'completed',
+                        'started_at': 'NOW()',
+                        'completed_at': 'NOW()'
+                    }
+                    supabase.create_validation_test_session(session_data)
+                    
+                    # Save individual question responses
+                    for comparison in comparisons:
+                        question_id = comparison.get('question_id')
+                        question_data = None
+                        for q in survey_data['questions']:
+                            if q['id'] == question_id:
+                                question_data = q
+                                break
+                        
+                        if question_data:
+                            response_data = {
+                                'test_session_id': test_session_id,
+                                'question_id': question_id,
+                                'question_text': question_data['question'],
+                                'question_category': question_data['category'],
+                                'human_response': comparison.get('human_answer'),
+                                'ai_response': comparison.get('predicted_answer'),
+                                'ai_reasoning': comparison.get('reasoning', ''),
+                                'is_correct': comparison.get('is_match', False),
+                                'response_order': survey_data['questions'].index(question_data) + 1
+                            }
+                            supabase.insert_question_response(response_data)
+                    
+                    # Save overall test results
+                    test_results = {
+                        'test_session_id': test_session_id,
+                        'profile_id': profile_id,
+                        'survey_name': survey_name,
+                        'total_questions': total_questions,
+                        'correct_responses': correct_answers,
+                        'accuracy_score': accuracy_percentage,
+                        'detailed_results': {
+                            'test_metadata': validation_result['test_metadata'],
+                            'accuracy_metrics': validation_result['accuracy_metrics'],
+                            'detailed_results': validation_result['detailed_results']
+                        },
+                        'test_metadata': {
+                            'model_version': model_version,
+                            'survey_version': survey_data.get('version', 1),
+                            'test_type': 'digital_twin_validation'
+                        }
+                    }
+                    supabase.insert_validation_result(test_results)
                     
                     result = {
                         'status': 'success',
-                        'message': 'Validation results saved successfully',
+                        'message': 'Validation results saved to database successfully',
                         'test_session_id': test_session_id,
-                        'filename': filename,
-                        'filepath': filepath,
-                        'test_counter': test_counter,
                         'summary': {
                             'accuracy': f"{accuracy_percentage}%",
                             'correct': f"{correct_answers}/{total_questions}",
                             'survey_name': survey_name,
                             'profile_tested': profile_id,
-                            'model_used': model_version,
-                            'test_number': test_counter
+                            'model_used': model_version
                         }
                     }
                     
