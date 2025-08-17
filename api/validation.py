@@ -293,7 +293,7 @@ class handler(BaseHTTPRequestHandler):
                 result = supabase.get_test_session_results(test_session_id)
                 if result:
                     # Also get question responses for this session
-                    question_responses = supabase._make_request('GET', f'question_responses?test_session_id=eq.{test_session_id}')
+                    question_responses = supabase._make_request('GET', f'survey_responses?test_session_id=eq.{test_session_id}')
                     
                     # Format response
                     response_data = {
@@ -667,7 +667,7 @@ class handler(BaseHTTPRequestHandler):
                                 'is_correct': comparison.get('is_match', False),
                                 'response_order': survey_data['questions'].index(question_data) + 1
                             }
-                            supabase.insert_question_response(response_data)
+                            supabase._make_request('POST', 'survey_responses', response_data)
                     
                     # Save overall test results
                     test_results = {
