@@ -136,26 +136,33 @@ class handler(BaseHTTPRequestHandler):
             if not person_name:
                 raise Exception('person parameter is required')
             
+            print(f"DEBUG: Loading profiles for person: '{person_name}'")
+            
             # Get all profile versions for this person
             from lib.supabase import SupabaseClient
             supabase = SupabaseClient()
             
             profiles = supabase.get_person_profiles(person_name)
+            print(f"DEBUG: Found {len(profiles)} profiles for '{person_name}'")
             
             # Format response
             profile_versions = []
             for profile in profiles:
-                profile_versions.append({
+                profile_version = {
                     'profile_id': profile.get('profile_id'),
                     'version_number': profile.get('version_number'),
                     'created_at': profile.get('created_at'),
                     'is_active': profile.get('is_active', False)
-                })
+                }
+                profile_versions.append(profile_version)
+                print(f"DEBUG: Profile: {profile_version}")
             
             response = {
                 'person_name': person_name,
                 'profiles': profile_versions
             }
+            
+            print(f"DEBUG: Sending response: {response}")
             
             # Send response
             self.send_response(200)

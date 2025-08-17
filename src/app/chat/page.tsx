@@ -55,7 +55,7 @@ export default function Chat() {
     console.log('Loading profile versions for:', personName)
     setIsLoadingVersions(true)
     try {
-      const response = await fetch(`/api/chat?person=${personName}`)
+      const response = await fetch(`/api/chat?person=${encodeURIComponent(personName)}`)
       if (response.ok) {
         const data = await response.json()
         console.log('Profile versions loaded:', data)
@@ -67,9 +67,13 @@ export default function Chat() {
           const latestVersion = data.profiles[0] // Assuming sorted by latest first
           const defaultVersion = activeVersion || latestVersion
           setSelectedProfileId(defaultVersion.profile_id)
+          console.log('Auto-selected profile:', defaultVersion.profile_id)
+        } else {
+          console.log('No profiles found in response')
         }
       } else {
-        console.error('Failed to load profile versions')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('Failed to load profile versions:', response.status, errorData)
         setAvailableVersions([])
       }
     } catch (error) {
