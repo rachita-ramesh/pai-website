@@ -451,7 +451,7 @@ export default function CreateProfile() {
   const downloadProfile = () => {
     if (!extractedProfile?.profile_data) return
     
-    const filename = `${extractedProfile.person_name}_${extractedProfile.profile_id}_${extractedProfile.questionnaire_id}_profile.json`
+    const filename = `${extractedProfile.person_name}_${extractedProfile.profile_id}_${extractedProfile.questionnaire_id}.json`
     const dataStr = JSON.stringify(extractedProfile.profile_data, null, 2)
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
     
