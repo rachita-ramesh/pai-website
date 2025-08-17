@@ -44,13 +44,6 @@ export default function Chat() {
 
   const selectedPersonData = people.find(f => f.id === selectedPerson)
 
-  // Load versions for default selected person on mount
-  useEffect(() => {
-    if (selectedPersonData) {
-      loadProfileVersions(selectedPersonData.name)
-    }
-  }, [selectedPerson, loadProfileVersions]) // Only trigger when selectedPerson changes
-
   const loadProfileVersions = useCallback(async (personName: string) => {
     console.log('Loading profile versions for:', personName)
     setIsLoadingVersions(true)
@@ -83,6 +76,13 @@ export default function Chat() {
       setIsLoadingVersions(false)
     }
   }, []) // Empty dependency array since this function doesn't depend on any state
+
+  // Load versions for default selected person on mount
+  useEffect(() => {
+    if (selectedPersonData) {
+      loadProfileVersions(selectedPersonData.name)
+    }
+  }, [selectedPerson, selectedPersonData, loadProfileVersions]) // Include all dependencies
 
   const handleSendMessage = async () => {
     if (!query.trim()) return
