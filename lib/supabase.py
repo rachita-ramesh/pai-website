@@ -262,6 +262,39 @@ class SupabaseClient:
         return self._make_request('POST', 'questionnaire_usage', usage_data)
     
     # ============================================================================
+    # QUESTIONNAIRE COMPLETIONS (modular profile building)
+    # ============================================================================
+    
+    def insert_questionnaire_completion(self, completion_data: Dict) -> Dict:
+        """Save a completed questionnaire module"""
+        return self._make_request('POST', 'questionnaire_completions', completion_data)
+    
+    def get_questionnaire_completions(self, profile_id: str) -> List[Dict]:
+        """Get all questionnaire completions for a profile"""
+        try:
+            return self._make_request('GET', f'questionnaire_completions?profile_id=eq.{profile_id}&order=completed_at.asc')
+        except:
+            return []
+    
+    def get_completion_by_type(self, profile_id: str, questionnaire_type: str, questionnaire_name: str = None) -> Optional[Dict]:
+        """Get specific questionnaire completion"""
+        try:
+            query = f'questionnaire_completions?profile_id=eq.{profile_id}&questionnaire_type=eq.{questionnaire_type}'
+            if questionnaire_name:
+                query += f'&questionnaire_name=eq.{questionnaire_name}'
+            result = self._make_request('GET', query)
+            return result[0] if result else None
+        except:
+            return None
+    
+    def update_profile_completeness(self, profile_id: str, completeness_metadata: Dict) -> Dict:
+        """Update profile version with completeness tracking"""
+        return self._make_request('PATCH', f'profile_versions?profile_id=eq.{profile_id}', {
+            'completeness_metadata': completeness_metadata,
+            'updated_at': 'NOW()'
+        })
+    
+    # ============================================================================
     # CONVERSATION MESSAGE STORAGE (stored in interview_sessions.messages JSONB)
     # ============================================================================
     
