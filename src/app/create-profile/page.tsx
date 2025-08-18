@@ -108,8 +108,18 @@ interface ExtractedProfile {
   person_name: string
 }
 
+interface ModularQuestionnaire {
+  type: 'centrepiece' | 'category' | 'product'
+  name: string
+  display_name: string
+  required: boolean
+  estimated_time: number
+  completed: boolean
+  skipped: boolean
+}
+
 export default function CreateProfile() {
-  const [interviewPhase, setInterviewPhase] = useState<'setup' | 'interview' | 'complete'>('setup')
+  const [interviewPhase, setInterviewPhase] = useState<'questionnaire_selection' | 'setup' | 'interview' | 'complete'>('questionnaire_selection')
   const [userName, setUserName] = useState('')
   const [currentMessage, setCurrentMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -120,6 +130,19 @@ export default function CreateProfile() {
   const [extractedProfile, setExtractedProfile] = useState<ExtractedProfile | null>(null)
   const [isExtractingProfile, setIsExtractingProfile] = useState(false)
   const [profileExtractionError, setProfileExtractionError] = useState<string | null>(null)
+  
+  // Modular questionnaire state
+  const [profileAction, setProfileAction] = useState<'new' | 'existing' | ''>('')
+  const [existingProfiles, setExistingProfiles] = useState<any[]>([])
+  const [selectedExistingProfile, setSelectedExistingProfile] = useState<string>('')
+  const [modularQuestionnaires, setModularQuestionnaires] = useState<ModularQuestionnaire[]>([
+    { type: 'centrepiece', name: 'centrepiece', display_name: 'Centrepiece (General Life)', required: true, estimated_time: 15, completed: false, skipped: false },
+    { type: 'category', name: 'beauty', display_name: 'Beauty & Skincare', required: false, estimated_time: 10, completed: false, skipped: false },
+    { type: 'category', name: 'fitness', display_name: 'Fitness & Health', required: false, estimated_time: 10, completed: false, skipped: false },
+    { type: 'product', name: 'moisturizer', display_name: 'Moisturizer Products', required: false, estimated_time: 5, completed: false, skipped: false },
+    { type: 'product', name: 'sunscreen', display_name: 'Sunscreen Products', required: false, estimated_time: 5, completed: false, skipped: false }
+  ])
+  const [selectedQuestionnaires, setSelectedQuestionnaires] = useState<string[]>(['centrepiece'])
   const [interviewData, setInterviewData] = useState<InterviewData>({
     name: '',
     sessionId: '',
@@ -315,6 +338,86 @@ export default function CreateProfile() {
     }
   }
   
+  // Load existing profiles for a person
+  const loadExistingProfiles = async (personName: string) => {
+    try {
+      const response = await fetch(`/api/chat?person=${encodeURIComponent(personName)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setExistingProfiles(data.profiles || [])
+        
+        // If existing profiles found, check completions
+        if (data.profiles && data.profiles.length > 0) {
+          await checkExistingCompletions(data.profiles[0].profile_id)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading existing profiles:', error)
+    }
+  }
+  
+  // Check what questionnaires are already completed for existing profile
+  const checkExistingCompletions = async (profileId: string) => {
+    try {
+      // This would call a new API to get questionnaire completions
+      // For now, we'll simulate this
+      setModularQuestionnaires(prev => prev.map(q => ({
+        ...q,
+        completed: q.name === 'centrepiece', // Simulate centrepiece already completed
+        skipped: false
+      })))
+    } catch (error) {
+      console.error('Error checking completions:', error)
+    }
+  }
+  
+  // Handle questionnaire selection changes
+  const toggleQuestionnaireSelection = (questionnaireName: string, action: 'select' | 'skip') => {
+    setModularQuestionnaires(prev => prev.map(q => {
+      if (q.name === questionnaireName) {
+        if (action === 'select') {
+          // Add to selected if not already there
+          if (!selectedQuestionnaires.includes(questionnaireName)) {
+            setSelectedQuestionnaires(curr => [...curr, questionnaireName])
+          }
+          return { ...q, skipped: false }
+        } else {
+          // Remove from selected and mark as skipped
+          setSelectedQuestionnaires(curr => curr.filter(name => name !== questionnaireName))
+          return { ...q, skipped: true }
+        }
+      }
+      return q
+    }))
+  }
+  
+  // Handle profile action selection
+  const handleProfileActionChange = (action: 'new' | 'existing') => {
+    setProfileAction(action)
+    if (action === 'existing') {
+      // Load existing profiles for the current user
+      const urlParams = new URLSearchParams(window.location.search)
+      const personName = urlParams.get('name') || 'rachita'
+      loadExistingProfiles(personName)
+    } else {
+      // Reset questionnaires for new profile
+      setModularQuestionnaires(prev => prev.map(q => ({
+        ...q,
+        completed: false,
+        skipped: false
+      })))
+      setSelectedQuestionnaires(['centrepiece'])
+    }
+  }
+  
+  // Proceed to setup phase
+  const proceedToSetup = () => {
+    if (selectedQuestionnaires.length === 0) {
+      alert('Please select at least one questionnaire')
+      return
+    }
+    setInterviewPhase('setup')
+  }
   
   const handleSendMessage = async () => {
     if (!currentMessage.trim() || isLoading) return
@@ -496,11 +599,196 @@ export default function CreateProfile() {
               Build Your <span className="highlight">Digital Twin</span>
             </h1>
             <p style={{ fontSize: '18px', color: '#737373', maxWidth: '600px', margin: '0 auto' }}>
+              {interviewPhase === 'questionnaire_selection' && 'Choose which questionnaires to complete for your digital twin profile.'}
               {interviewPhase === 'setup' && 'Our AI will conduct a natural 15-20 minute conversation to understand your attitudes and behaviors.'}
               {interviewPhase === 'interview' && 'AI Interview in Progress'}
               {interviewPhase === 'complete' && 'Interview Complete! Your responses will be analyzed to create your digital twin.'}
             </p>
           </div>
+
+          {interviewPhase === 'questionnaire_selection' && (
+            <div>
+              {/* Profile Action Selection */}
+              <div className="card" style={{ marginBottom: '32px' }}>
+                <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '16px' }}>Choose Profile Action</h2>
+                <div style={{ display: 'flex', gap: '16px' }}>
+                  <label style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    padding: '16px',
+                    border: profileAction === 'new' ? '2px solid #00d924' : '1px solid #e5e5e5',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    flex: 1
+                  }}>
+                    <input
+                      type="radio"
+                      name="profileAction"
+                      value="new"
+                      checked={profileAction === 'new'}
+                      onChange={() => handleProfileActionChange('new')}
+                      style={{ margin: 0 }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>Create New Profile</div>
+                      <div style={{ fontSize: '14px', color: '#737373' }}>Start fresh with a new version</div>
+                    </div>
+                  </label>
+                  <label style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    padding: '16px',
+                    border: profileAction === 'existing' ? '2px solid #00d924' : '1px solid #e5e5e5',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    flex: 1
+                  }}>
+                    <input
+                      type="radio"
+                      name="profileAction"
+                      value="existing"
+                      checked={profileAction === 'existing'}
+                      onChange={() => handleProfileActionChange('existing')}
+                      style={{ margin: 0 }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>Add to Existing Profile</div>
+                      <div style={{ fontSize: '14px', color: '#737373' }}>Enhance an existing version</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Existing Profile Selection */}
+              {profileAction === 'existing' && existingProfiles.length > 0 && (
+                <div className="card" style={{ marginBottom: '32px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Select Existing Profile</h3>
+                  <select
+                    value={selectedExistingProfile}
+                    onChange={(e) => setSelectedExistingProfile(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: '1px solid #e5e5e5',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="">Choose a profile to enhance...</option>
+                    {existingProfiles.map(profile => (
+                      <option key={profile.profile_id} value={profile.profile_id}>
+                        {profile.profile_id} {profile.is_active ? '(Active)' : ''} - {new Date(profile.created_at).toLocaleDateString()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Questionnaire Selection */}
+              {profileAction && (
+                <div className="card" style={{ marginBottom: '32px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Select Questionnaires</h3>
+                  <p style={{ fontSize: '14px', color: '#737373', marginBottom: '24px' }}>
+                    Choose which questionnaires to complete. You can always add more later.
+                  </p>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {modularQuestionnaires.map(questionnaire => (
+                      <div 
+                        key={questionnaire.name}
+                        style={{ 
+                          padding: '16px',
+                          border: '1px solid #e5e5e5',
+                          borderRadius: '8px',
+                          backgroundColor: questionnaire.completed ? '#f0fdf0' : 'white'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>
+                                {questionnaire.display_name}
+                              </h4>
+                              {questionnaire.required && (
+                                <span style={{ 
+                                  fontSize: '12px', 
+                                  color: '#dc2626', 
+                                  backgroundColor: '#fef2f2',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px'
+                                }}>
+                                  Required
+                                </span>
+                              )}
+                              {questionnaire.completed && (
+                                <span style={{ 
+                                  fontSize: '12px', 
+                                  color: '#16a34a', 
+                                  backgroundColor: '#f0fdf0',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px'
+                                }}>
+                                  ✓ Completed
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '14px', color: '#737373' }}>
+                              ~{questionnaire.estimated_time} minutes • {questionnaire.type}
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            {!questionnaire.completed && (
+                              <>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedQuestionnaires.includes(questionnaire.name)}
+                                    onChange={() => toggleQuestionnaireSelection(questionnaire.name, 'select')}
+                                    disabled={questionnaire.required}
+                                  />
+                                  <span style={{ fontSize: '14px' }}>Include</span>
+                                </label>
+                                {!questionnaire.required && (
+                                  <button
+                                    onClick={() => toggleQuestionnaireSelection(questionnaire.name, 'skip')}
+                                    style={{
+                                      padding: '4px 8px',
+                                      fontSize: '12px',
+                                      border: '1px solid #e5e5e5',
+                                      borderRadius: '4px',
+                                      backgroundColor: questionnaire.skipped ? '#fef2f2' : 'white',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    {questionnaire.skipped ? 'Skipped' : 'Skip'}
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                      Selected: {selectedQuestionnaires.length} questionnaires
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#737373' }}>
+                      Estimated time: {modularQuestionnaires
+                        .filter(q => selectedQuestionnaires.includes(q.name))
+                        .reduce((total, q) => total + q.estimated_time, 0)} minutes
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {interviewPhase === 'setup' && (
             <div className="card" style={{ marginBottom: '32px' }}>
@@ -933,14 +1221,33 @@ export default function CreateProfile() {
             <Link href="/" className="btn-secondary">
               ← Back to Home
             </Link>
-            {interviewPhase === 'setup' && (
+            
+            {interviewPhase === 'questionnaire_selection' && (
               <button 
-                onClick={startInterview} 
-                disabled={!userName.trim() || isLoading}
+                onClick={proceedToSetup} 
+                disabled={!profileAction || selectedQuestionnaires.length === 0}
                 className="btn-primary"
               >
-                {isLoading ? '🔄 Connecting...' : '🎤 Start Interview'}
+                Continue to Interview Setup →
               </button>
+            )}
+            
+            {interviewPhase === 'setup' && (
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button 
+                  onClick={() => setInterviewPhase('questionnaire_selection')} 
+                  className="btn-secondary"
+                >
+                  ← Back to Selection
+                </button>
+                <button 
+                  onClick={startInterview} 
+                  disabled={!userName.trim() || isLoading}
+                  className="btn-primary"
+                >
+                  {isLoading ? '🔄 Connecting...' : '🎤 Start Interview'}
+                </button>
+              </div>
             )}
             {interviewPhase === 'complete' && (
               <Link href="/create-profile" className="btn-primary">
