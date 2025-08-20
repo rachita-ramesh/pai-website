@@ -340,15 +340,15 @@ export default function CreateProfile() {
       // Note: Many profiles had errors/failed extraction based on profile_data column
       const mockProfiles = {
         'rachita': [
-          { profile_id: 'Rachita_v1', is_active: false, created_at: '2025-08-15T15:13:08.244627', completeness_metadata: {} }, // Failed extraction
-          { profile_id: 'Rachita_v2', is_active: false, created_at: '2025-08-15T15:13:12.073769', completeness_metadata: {} }, // Failed extraction
+          { profile_id: 'Rachita_v1', is_active: false, created_at: '2025-08-15T15:13:08.244627', completeness_metadata: undefined }, // Failed extraction
+          { profile_id: 'Rachita_v2', is_active: false, created_at: '2025-08-15T15:13:12.073769', completeness_metadata: undefined }, // Failed extraction
           { profile_id: 'Rachita_v3', is_active: false, created_at: '2025-08-15T15:13:19.189163', completeness_metadata: { centrepiece: true } }, // Some completion
           { profile_id: 'Rachita_v5', is_active: false, created_at: '2025-08-15T15:27:31.600409', completeness_metadata: { centrepiece: true } }, // Some completion
           { profile_id: 'Rachita_v7', is_active: false, created_at: '2025-08-15T15:37:14.375349', completeness_metadata: { centrepiece: true } }, // Some completion
           { profile_id: 'Rachita_v8', is_active: false, created_at: '2025-08-15T15:44:59.339835', completeness_metadata: { centrepiece: true } }, // Some completion
           { profile_id: 'Rachita_v9', is_active: true, created_at: '2025-08-15T15:57:14.423447', completeness_metadata: { centrepiece: true, beauty: true } }, // More complete
-          { profile_id: 'Rachita_v10', is_active: false, created_at: '2025-08-16T22:20:54.316476', completeness_metadata: {} }, // Failed extraction  
-          { profile_id: 'Rachita_v11', is_active: false, created_at: '2025-08-16T22:31:47.805901', completeness_metadata: {} }, // Failed extraction
+          { profile_id: 'Rachita_v10', is_active: false, created_at: '2025-08-16T22:20:54.316476', completeness_metadata: undefined }, // Failed extraction  
+          { profile_id: 'Rachita_v11', is_active: false, created_at: '2025-08-16T22:31:47.805901', completeness_metadata: undefined }, // Failed extraction
           { profile_id: 'Rachita_v12_20250817_000655', is_active: true, created_at: '2025-08-17T00:07:04.176858', completeness_metadata: { centrepiece: true, beauty: true, fitness: true } } // Most complete
         ],
         'everhett': [
