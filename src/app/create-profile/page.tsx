@@ -323,18 +323,24 @@ export default function CreateProfile() {
   // Load existing profiles for a person
   const loadExistingProfiles = async (personName: string) => {
     try {
+      console.log('Loading existing profiles for:', personName)
       const response = await fetch(`/api/chat?person=${encodeURIComponent(personName)}`)
       if (response.ok) {
         const data = await response.json()
+        console.log('Existing profiles response:', data)
         setExistingProfiles(data.profiles || [])
         
         // If existing profiles found, check completions
         if (data.profiles && data.profiles.length > 0) {
           await checkExistingCompletions(data.profiles[0].profile_id)
         }
+      } else {
+        console.log('Failed to load existing profiles, status:', response.status)
+        setExistingProfiles([])
       }
     } catch (error) {
       console.error('Error loading existing profiles:', error)
+      setExistingProfiles([])
     }
   }
   
@@ -689,40 +695,72 @@ export default function CreateProfile() {
               </div>
 
               {/* Existing Profile Selection */}
-              {profileAction === 'existing' && existingProfiles.length > 0 && (
+              {profileAction === 'existing' && (
                 <div className="card" style={{ marginBottom: '32px' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Select Existing Profile</h3>
-                  <select
-                    value={selectedExistingProfile}
-                    onChange={(e) => {
-                      const profileId = e.target.value
-                      setSelectedExistingProfile(profileId)
-                      if (profileId) {
-                        checkExistingCompletions(profileId)
-                      }
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #e5e5e5',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="">Choose a profile to enhance...</option>
-                    {existingProfiles.map(profile => {
-                      // Extract completeness data if available
-                      const completeness = profile.completeness_metadata || {}
-                      const completedQuests = Object.keys(completeness).filter(key => completeness[key] === true).join(', ') || 'No data'
-                      
-                      return (
-                        <option key={profile.profile_id} value={profile.profile_id}>
-                          {profile.profile_id} {profile.is_active ? '(Active)' : ''} - Completed: {completedQuests} - {new Date(profile.created_at).toLocaleDateString()}
-                        </option>
-                      )
-                    })}
-                  </select>
+                  
+                  {existingProfiles.length > 0 ? (
+                    <select
+                      value={selectedExistingProfile}
+                      onChange={(e) => {
+                        const profileId = e.target.value
+                        setSelectedExistingProfile(profileId)
+                        if (profileId) {
+                          checkExistingCompletions(profileId)
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #e5e5e5',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="">Choose a profile to enhance...</option>
+                      {existingProfiles.map(profile => {
+                        // Extract completeness data if available
+                        const completeness = profile.completeness_metadata || {}
+                        const completedQuests = Object.keys(completeness).filter(key => completeness[key] === true).join(', ') || 'No data'
+                        
+                        return (
+                          <option key={profile.profile_id} value={profile.profile_id}>
+                            {profile.profile_id} {profile.is_active ? '(Active)' : ''} - Completed: {completedQuests} - {new Date(profile.created_at).toLocaleDateString()}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  ) : (
+                    <div style={{ 
+                      padding: '16px', 
+                      backgroundColor: '#fef3c7', 
+                      borderRadius: '8px', 
+                      border: '1px solid #f59e0b',
+                      textAlign: 'center'
+                    }}>
+                      <p style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px', color: '#92400e' }}>
+                        No existing profiles found for {userName}
+                      </p>
+                      <p style={{ fontSize: '14px', color: '#78350f', marginBottom: '16px' }}>
+                        You need to create a profile first before you can enhance an existing one.
+                      </p>
+                      <button 
+                        onClick={() => handleProfileActionChange('new')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#f59e0b',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Create New Profile Instead
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
