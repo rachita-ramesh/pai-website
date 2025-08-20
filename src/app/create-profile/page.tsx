@@ -136,14 +136,8 @@ export default function CreateProfile() {
     completeness_metadata?: Record<string, boolean> | CompletenessMetadata
   }>>([])
   const [selectedExistingProfile, setSelectedExistingProfile] = useState<string>('')
-  const [modularQuestionnaires, setModularQuestionnaires] = useState<ModularQuestionnaire[]>([
-    { type: 'centrepiece', name: 'centrepiece', display_name: 'Centrepiece (General Life)', required: true, estimated_time: 15, completed: false, skipped: false },
-    { type: 'category', name: 'beauty', display_name: 'Beauty & Skincare', required: false, estimated_time: 10, completed: false, skipped: false },
-    { type: 'category', name: 'fitness', display_name: 'Fitness & Health', required: false, estimated_time: 10, completed: false, skipped: false },
-    { type: 'product', name: 'moisturizer', display_name: 'Moisturizer Products', required: false, estimated_time: 5, completed: false, skipped: false },
-    { type: 'product', name: 'sunscreen', display_name: 'Sunscreen Products', required: false, estimated_time: 5, completed: false, skipped: false }
-  ])
-  const [selectedQuestionnaires, setSelectedQuestionnaires] = useState<string[]>(['centrepiece'])
+  const [modularQuestionnaires, setModularQuestionnaires] = useState<ModularQuestionnaire[]>([])
+  const [selectedQuestionnaires, setSelectedQuestionnaires] = useState<string[]>([])
   const [interviewData, setInterviewData] = useState<InterviewData>({
     name: '',
     sessionId: '',
@@ -173,7 +167,62 @@ export default function CreateProfile() {
     setUserName(personName)
   }, [])
   
-  // Remove unused questionnaire loading - now using hardcoded modular questionnaires
+  // Load available questionnaires from database
+  useEffect(() => {
+    const loadQuestionnaires = async () => {
+      try {
+        const response = await fetch('/api/questionnaires')
+        if (response.ok) {
+          const data = await response.json()
+          const questionnaires = data.questionnaires || []
+          
+          // Convert database questionnaires to ModularQuestionnaire format
+          const converted: ModularQuestionnaire[] = questionnaires.map((q: any) => ({
+            type: q.questionnaire_type || 'category',
+            name: q.questionnaire_id,
+            display_name: q.title,
+            required: q.questionnaire_type === 'centrepiece',
+            estimated_time: q.estimated_duration || 15,
+            completed: false,
+            skipped: false
+          }))
+          
+          setModularQuestionnaires(converted)
+          
+          // Auto-select centrepiece questionnaires for new profiles
+          const centrepieceQuests = converted
+            .filter(q => q.type === 'centrepiece')
+            .map(q => q.name)
+          setSelectedQuestionnaires(centrepieceQuests)
+          
+        } else {
+          console.error('Failed to load questionnaires')
+          // Fallback to hardcoded questionnaires
+          setModularQuestionnaires([
+            { type: 'centrepiece', name: 'centrepiece', display_name: 'Centrepiece (General Life)', required: true, estimated_time: 15, completed: false, skipped: false },
+            { type: 'category', name: 'beauty', display_name: 'Beauty & Skincare', required: false, estimated_time: 10, completed: false, skipped: false },
+            { type: 'category', name: 'fitness', display_name: 'Fitness & Health', required: false, estimated_time: 10, completed: false, skipped: false },
+            { type: 'product', name: 'moisturizer', display_name: 'Moisturizer Products', required: false, estimated_time: 5, completed: false, skipped: false },
+            { type: 'product', name: 'sunscreen', display_name: 'Sunscreen Products', required: false, estimated_time: 5, completed: false, skipped: false }
+          ])
+          setSelectedQuestionnaires(['centrepiece'])
+        }
+      } catch (error) {
+        console.error('Error loading questionnaires:', error)
+        // Fallback to hardcoded questionnaires
+        setModularQuestionnaires([
+          { type: 'centrepiece', name: 'centrepiece', display_name: 'Centrepiece (General Life)', required: true, estimated_time: 15, completed: false, skipped: false },
+          { type: 'category', name: 'beauty', display_name: 'Beauty & Skincare', required: false, estimated_time: 10, completed: false, skipped: false },
+          { type: 'category', name: 'fitness', display_name: 'Fitness & Health', required: false, estimated_time: 10, completed: false, skipped: false },
+          { type: 'product', name: 'moisturizer', display_name: 'Moisturizer Products', required: false, estimated_time: 5, completed: false, skipped: false },
+          { type: 'product', name: 'sunscreen', display_name: 'Sunscreen Products', required: false, estimated_time: 5, completed: false, skipped: false }
+        ])
+        setSelectedQuestionnaires(['centrepiece'])
+      }
+    }
+    
+    loadQuestionnaires()
+  }, [])
   
   // Initialize speech recognition
   useEffect(() => {
@@ -524,7 +573,11 @@ export default function CreateProfile() {
         completed: false,
         skipped: false
       })))
-      setSelectedQuestionnaires(['centrepiece']) // New profiles must include centrepiece
+      // Auto-select all centrepiece questionnaires for new profiles
+      const centrepieceQuests = modularQuestionnaires
+        .filter(q => q.type === 'centrepiece')
+        .map(q => q.name)
+      setSelectedQuestionnaires(centrepieceQuests)
     }
   }
   
@@ -544,10 +597,16 @@ export default function CreateProfile() {
       return
     }
     
-    // For new profiles, centrepiece is required
-    if (profileAction === 'new' && !selectedQuestionnaires.includes('centrepiece')) {
-      alert('Centrepiece questionnaire is required for new profiles')
-      return
+    // For new profiles, at least one centrepiece questionnaire is required
+    if (profileAction === 'new') {
+      const hasCentrepiece = selectedQuestionnaires.some(qName => {
+        const q = modularQuestionnaires.find(mq => mq.name === qName)
+        return q?.type === 'centrepiece'
+      })
+      if (!hasCentrepiece) {
+        alert('At least one centrepiece questionnaire is required for new profiles')
+        return
+      }
     }
     
     // Skip setup and go directly to interview
