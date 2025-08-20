@@ -365,7 +365,7 @@ export default function CreateProfile() {
       
       const profiles = mockProfiles[personName.toLowerCase() as keyof typeof mockProfiles] || []
       console.log('Mock profiles for', personName, ':', profiles)
-      setExistingProfiles(profiles)
+      setExistingProfiles(profiles as any) // Type assertion to handle mock data
       
     } catch (error) {
       console.error('Error loading existing profiles:', error)
