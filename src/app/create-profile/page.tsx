@@ -689,20 +689,20 @@ export default function CreateProfile() {
                         switch (questionnaire.type) {
                           case 'centrepiece':
                             return {
-                              bg: questionnaire.completed ? '#f0fdf0' : '#fef7ff',
-                              border: '#e879f9',
+                              bg: questionnaire.completed ? '#f0fdf0' : 'white',
+                              border: '#e5e5e5',
                               badge: { bg: '#fae8ff', color: '#a21caf' }
                             }
                           case 'category':
                             return {
-                              bg: questionnaire.completed ? '#f0fdf0' : '#eff6ff',
-                              border: '#3b82f6',
+                              bg: questionnaire.completed ? '#f0fdf0' : 'white',
+                              border: '#e5e5e5',
                               badge: { bg: '#dbeafe', color: '#1d4ed8' }
                             }
                           case 'product':
                             return {
-                              bg: questionnaire.completed ? '#f0fdf0' : '#f0fdf4',
-                              border: '#10b981',
+                              bg: questionnaire.completed ? '#f0fdf0' : 'white',
+                              border: '#e5e5e5',
                               badge: { bg: '#d1fae5', color: '#059669' }
                             }
                           default:
@@ -721,7 +721,7 @@ export default function CreateProfile() {
                         key={questionnaire.name}
                         style={{ 
                           padding: '16px',
-                          border: `2px solid ${colors.border}`,
+                          border: `1px solid ${colors.border}`,
                           borderRadius: '8px',
                           backgroundColor: colors.bg
                         }}
@@ -788,8 +788,7 @@ export default function CreateProfile() {
                                   disabled={questionnaire.required}
                                   style={{ 
                                     width: '16px', 
-                                    height: '16px',
-                                    accentColor: colors.border
+                                    height: '16px'
                                   }}
                                 />
                                 <span style={{ fontSize: '14px', fontWeight: '500' }}>Include</span>
