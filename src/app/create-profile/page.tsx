@@ -53,21 +53,7 @@ interface InterviewData {
   targetQuestions?: number
 }
 
-interface Questionnaire {
-  questionnaire_id: string
-  title: string
-  description: string
-  category: string
-  estimated_duration: number
-  questions: {
-    id: string
-    text: string
-    type: string
-    options?: string[]
-    required: boolean
-    helpText?: string
-  }[]
-}
+// Remove unused Questionnaire interface - now using modular questionnaire system
 
 interface ExtractedProfile {
   profile_id: string
@@ -125,8 +111,7 @@ export default function CreateProfile() {
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isListening, setIsListening] = useState(false)
-  const [availableQuestionnaires, setAvailableQuestionnaires] = useState<Questionnaire[]>([])
-  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<string>('default')
+  // Remove unused state - questionnaire selection now handled by selectedQuestionnaires array
   const [extractedProfile, setExtractedProfile] = useState<ExtractedProfile | null>(null)
   const [isExtractingProfile, setIsExtractingProfile] = useState(false)
   const [profileExtractionError, setProfileExtractionError] = useState<string | null>(null)
@@ -169,22 +154,7 @@ export default function CreateProfile() {
     scrollToBottom()
   }, [interviewData.messages])
   
-  // Load available questionnaires
-  useEffect(() => {
-    const loadQuestionnaires = async () => {
-      try {
-        const response = await fetch('/api/questionnaires')
-        if (response.ok) {
-          const data = await response.json()
-          setAvailableQuestionnaires(data.questionnaires || [])
-        }
-      } catch (error) {
-        console.error('Error loading questionnaires:', error)
-      }
-    }
-    
-    loadQuestionnaires()
-  }, [])
+  // Remove unused questionnaire loading - now using hardcoded modular questionnaires
   
   // Initialize speech recognition
   useEffect(() => {
@@ -284,7 +254,7 @@ export default function CreateProfile() {
   const startInterview = async () => {
     if (!userName.trim()) return
     
-    console.log('DEBUG: Starting interview with:', { userName, selectedQuestionnaire })
+    console.log('DEBUG: Starting interview with:', { userName, selectedQuestionnaires })
     setIsLoading(true)
     
     try {
@@ -297,7 +267,7 @@ export default function CreateProfile() {
         },
         body: JSON.stringify({
           participant_name: userName,
-          questionnaire_id: selectedQuestionnaire
+          questionnaire_id: selectedQuestionnaires.join(',') // Pass all selected questionnaires
         })
       })
       
@@ -363,16 +333,53 @@ export default function CreateProfile() {
   // Check what questionnaires are already completed for existing profile
   const checkExistingCompletions = async (profileId: string) => {
     try {
-      // This would call a new API to get questionnaire completions
-      // For now, we'll simulate this
       console.log('Checking completions for profile:', profileId)
-      setModularQuestionnaires(prev => prev.map(q => ({
-        ...q,
-        completed: q.name === 'centrepiece', // Simulate centrepiece already completed
-        skipped: false
-      })))
+      
+      // Call API to get questionnaire completions for this profile
+      const response = await fetch(`/api/questionnaire-completions?profile_id=${encodeURIComponent(profileId)}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        const completions = data.completions || []
+        
+        // Update questionnaires based on actual completions
+        setModularQuestionnaires(prev => prev.map(q => {
+          const isCompleted = completions.some((comp: { questionnaire_name: string; completed_at: string | null; skipped: boolean }) => 
+            comp.questionnaire_name === q.name && comp.completed_at && !comp.skipped
+          )
+          return {
+            ...q,
+            completed: isCompleted,
+            skipped: false
+          }
+        }))
+        
+        // Filter out already completed questionnaires from selection
+        setSelectedQuestionnaires(prev => 
+          prev.filter(qName => !completions.some((comp: { questionnaire_name: string; completed_at: string | null; skipped: boolean }) => 
+            comp.questionnaire_name === qName && comp.completed_at && !comp.skipped
+          ))
+        )
+      } else {
+        // If API doesn't exist yet, simulate realistic completions
+        setModularQuestionnaires(prev => prev.map(q => ({
+          ...q,
+          completed: q.name === 'centrepiece', // Simulate centrepiece already completed for existing profiles
+          skipped: false
+        })))
+        
+        // Remove centrepiece from selection since it's already completed
+        setSelectedQuestionnaires(prev => prev.filter(name => name !== 'centrepiece'))
+      }
     } catch (error) {
       console.error('Error checking completions:', error)
+      // Fallback simulation
+      setModularQuestionnaires(prev => prev.map(q => ({
+        ...q,
+        completed: q.name === 'centrepiece',
+        skipped: false
+      })))
+      setSelectedQuestionnaires(prev => prev.filter(name => name !== 'centrepiece'))
     }
   }
   
@@ -385,24 +392,54 @@ export default function CreateProfile() {
       // Load existing profiles for the current user
       const urlParams = new URLSearchParams(window.location.search)
       const personName = urlParams.get('name') || 'rachita'
+      
+      // Set the username from URL parameter for existing profiles
+      setUserName(personName)
+      
       loadExistingProfiles(personName)
-    } else {
-      // Reset questionnaires for new profile
+      
+      // For existing profiles, reset questionnaires to show none completed initially
+      // They will be updated when a specific profile is selected
       setModularQuestionnaires(prev => prev.map(q => ({
         ...q,
         completed: false,
         skipped: false
       })))
-      setSelectedQuestionnaires(['centrepiece'])
+      setSelectedQuestionnaires([]) // Start with no selections for existing profiles
+    } else {
+      // Reset questionnaires for new profile - all available, centrepiece required
+      setUserName('') // Clear username for new profiles
+      setModularQuestionnaires(prev => prev.map(q => ({
+        ...q,
+        completed: false,
+        skipped: false
+      })))
+      setSelectedQuestionnaires(['centrepiece']) // New profiles must include centrepiece
     }
   }
   
   // Proceed to setup phase
   const proceedToSetup = () => {
-    if (selectedQuestionnaires.length === 0) {
-      alert('Please select at least one questionnaire')
+    if (profileAction === 'existing' && !selectedExistingProfile) {
+      alert('Please select an existing profile to enhance')
       return
     }
+    
+    if (selectedQuestionnaires.length === 0) {
+      if (profileAction === 'existing') {
+        alert('Please select at least one questionnaire to add to your existing profile')
+      } else {
+        alert('Please select at least one questionnaire')
+      }
+      return
+    }
+    
+    // For new profiles, centrepiece is required
+    if (profileAction === 'new' && !selectedQuestionnaires.includes('centrepiece')) {
+      alert('Centrepiece questionnaire is required for new profiles')
+      return
+    }
+    
     setInterviewPhase('setup')
   }
   
@@ -437,7 +474,7 @@ export default function CreateProfile() {
           session_id: updatedData.sessionId,
           message: currentMessage,
           exchange_count: updatedData.exchangeCount, // This should increment with each user message
-          questionnaire_id: selectedQuestionnaire
+          questionnaire_id: selectedQuestionnaires.join(',') // Pass all selected questionnaires
         })
       })
       
@@ -654,7 +691,13 @@ export default function CreateProfile() {
                   <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Select Existing Profile</h3>
                   <select
                     value={selectedExistingProfile}
-                    onChange={(e) => setSelectedExistingProfile(e.target.value)}
+                    onChange={(e) => {
+                      const profileId = e.target.value
+                      setSelectedExistingProfile(profileId)
+                      if (profileId) {
+                        checkExistingCompletions(profileId)
+                      }
+                    }}
                     style={{
                       width: '100%',
                       padding: '12px 16px',
@@ -845,29 +888,27 @@ export default function CreateProfile() {
                   onKeyPress={(e) => e.key === 'Enter' && startInterview()}
                 />
                 
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Choose Interview Type
-                </label>
-                <select
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    marginBottom: '24px'
-                  }}
-                  value={selectedQuestionnaire}
-                  onChange={(e) => setSelectedQuestionnaire(e.target.value)}
-                >
-                  <option value="default">Default AI Skincare Interview (~20 min)</option>
-                  {availableQuestionnaires.map((q) => (
-                    <option key={q.questionnaire_id} value={q.questionnaire_id}>
-                      {q.title} (~{q.estimated_duration} min) - {q.category}
-                    </option>
-                  ))}
-                </select>
+                <div style={{ padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+                    Selected Questionnaires:
+                  </h4>
+                  <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                    {selectedQuestionnaires.map((qName, idx) => {
+                      const q = modularQuestionnaires.find(mq => mq.name === qName)
+                      return q ? (
+                        <span key={qName}>
+                          {q.display_name}
+                          {idx < selectedQuestionnaires.length - 1 ? ', ' : ''}
+                        </span>
+                      ) : null
+                    })}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
+                    Estimated time: {modularQuestionnaires
+                      .filter(q => selectedQuestionnaires.includes(q.name))
+                      .reduce((total, q) => total + q.estimated_time, 0)} minutes
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1251,7 +1292,11 @@ export default function CreateProfile() {
             {interviewPhase === 'questionnaire_selection' && (
               <button 
                 onClick={proceedToSetup} 
-                disabled={!profileAction || selectedQuestionnaires.length === 0}
+                disabled={
+                  !profileAction || 
+                  selectedQuestionnaires.length === 0 ||
+                  (profileAction === 'existing' && !selectedExistingProfile)
+                }
                 className="btn-primary"
               >
                 Continue to Interview Setup →
