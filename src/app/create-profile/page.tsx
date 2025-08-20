@@ -133,7 +133,11 @@ export default function CreateProfile() {
   
   // Modular questionnaire state
   const [profileAction, setProfileAction] = useState<'new' | 'existing' | ''>('')
-  const [existingProfiles, setExistingProfiles] = useState<any[]>([])
+  const [existingProfiles, setExistingProfiles] = useState<Array<{
+    profile_id: string
+    is_active: boolean
+    created_at: string
+  }>>([])
   const [selectedExistingProfile, setSelectedExistingProfile] = useState<string>('')
   const [modularQuestionnaires, setModularQuestionnaires] = useState<ModularQuestionnaire[]>([
     { type: 'centrepiece', name: 'centrepiece', display_name: 'Centrepiece (General Life)', required: true, estimated_time: 15, completed: false, skipped: false },
@@ -361,6 +365,7 @@ export default function CreateProfile() {
     try {
       // This would call a new API to get questionnaire completions
       // For now, we'll simulate this
+      console.log('Checking completions for profile:', profileId)
       setModularQuestionnaires(prev => prev.map(q => ({
         ...q,
         completed: q.name === 'centrepiece', // Simulate centrepiece already completed

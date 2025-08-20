@@ -16,7 +16,9 @@ export default function CreateQuestionnaire() {
   const [questionnaire, setQuestionnaire] = useState({
     title: '',
     description: '',
+    questionnaire_type: '', // centrepiece, category, product
     category: '',
+    subcategory: '',
     estimatedDuration: 15,
     isPublic: false
   })
@@ -39,10 +41,22 @@ export default function CreateQuestionnaire() {
     { value: 'scale', label: 'Rating Scale (1-10)' }
   ]
 
-  const categories = [
-    'skincare', 'fitness', 'nutrition', 'career', 'relationships', 
-    'lifestyle', 'mental_health', 'hobbies', 'travel', 'other'
+  const questionnaireTypes = [
+    { value: 'centrepiece', label: 'Centrepiece (General Life)', description: 'Core personality and general life attitudes' },
+    { value: 'category', label: 'Category Specific', description: 'Focused on specific life areas (beauty, fitness, etc.)' },
+    { value: 'product', label: 'Product Specific', description: 'Specific products or sub-categories' }
   ]
+
+  const categories = {
+    category: [
+      'beauty', 'fitness', 'nutrition', 'career', 'relationships', 
+      'lifestyle', 'mental_health', 'hobbies', 'travel', 'finance', 'other'
+    ],
+    product: [
+      'moisturizer', 'sunscreen', 'cleanser', 'serum', 'supplements',
+      'workout_equipment', 'skincare_tools', 'makeup', 'haircare', 'other'
+    ]
+  }
 
   const addQuestion = () => {
     if (!currentQuestion.text.trim()) return
@@ -92,8 +106,14 @@ export default function CreateQuestionnaire() {
   }
 
   const saveQuestionnaire = async () => {
-    if (!questionnaire.title.trim() || questions.length === 0) {
-      alert('Please provide a title and at least one question')
+    if (!questionnaire.title.trim() || !questionnaire.questionnaire_type || questions.length === 0) {
+      alert('Please provide a title, questionnaire type, and at least one question')
+      return
+    }
+    
+    // Additional validation for category and product types
+    if (questionnaire.questionnaire_type !== 'centrepiece' && !questionnaire.category) {
+      alert(`Please select a ${questionnaire.questionnaire_type} for this questionnaire type`)
       return
     }
 
@@ -114,7 +134,9 @@ export default function CreateQuestionnaire() {
           questionnaire_id: questionnaireId,
           title: questionnaire.title,
           description: questionnaire.description,
+          questionnaire_type: questionnaire.questionnaire_type,
           category: questionnaire.category,
+          subcategory: questionnaire.subcategory,
           questions: questions.map((q, index) => ({
             ...q,
             question_order: index + 1
@@ -130,7 +152,9 @@ export default function CreateQuestionnaire() {
         setQuestionnaire({
           title: '',
           description: '',
+          questionnaire_type: '',
           category: '',
+          subcategory: '',
           estimatedDuration: 15,
           isPublic: false
         })
@@ -174,7 +198,7 @@ export default function CreateQuestionnaire() {
               Create Custom <span className="highlight">Questionnaire</span>
             </h1>
             <p style={{ fontSize: '18px', color: '#737373', maxWidth: '600px', margin: '0 auto' }}>
-              Build a custom questionnaire to gather specific insights about any category or topic.
+              Create modular questionnaires for digital twin profiles: centrepiece (general life), category-specific, or product-specific.
             </p>
           </div>
 
@@ -182,6 +206,48 @@ export default function CreateQuestionnaire() {
           <div className="card" style={{ marginBottom: '32px' }}>
             <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '24px' }}>Questionnaire Details</h2>
             
+            {/* Questionnaire Type Selection */}
+            <div style={{ marginBottom: '32px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                Questionnaire Type *
+              </label>
+              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+                {questionnaireTypes.map((type) => (
+                  <label
+                    key={type.value}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px',
+                      padding: '16px',
+                      border: questionnaire.questionnaire_type === type.value ? '2px solid #00d924' : '1px solid #e5e5e5',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      backgroundColor: questionnaire.questionnaire_type === type.value ? '#f0fdf0' : 'white'
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="questionnaire_type"
+                      value={type.value}
+                      checked={questionnaire.questionnaire_type === type.value}
+                      onChange={(e) => setQuestionnaire({
+                        ...questionnaire, 
+                        questionnaire_type: e.target.value,
+                        category: '', // Reset category when type changes
+                        subcategory: ''
+                      })}
+                      style={{ marginTop: '2px' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>{type.label}</div>
+                      <div style={{ fontSize: '14px', color: '#737373' }}>{type.description}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gap: '24px', gridTemplateColumns: '1fr 1fr' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
@@ -203,28 +269,58 @@ export default function CreateQuestionnaire() {
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  Category *
-                </label>
-                <select
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none'
-                  }}
-                  value={questionnaire.category}
-                  onChange={(e) => setQuestionnaire({...questionnaire, category: e.target.value})}
-                >
-                  <option value="">Select category</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Category Selection - only show for category and product types */}
+              {(questionnaire.questionnaire_type === 'category' || questionnaire.questionnaire_type === 'product') && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    {questionnaire.questionnaire_type === 'category' ? 'Category' : 'Product/Sub-category'} *
+                  </label>
+                  <select
+                    style={{ 
+                      width: '100%', 
+                      padding: '12px 16px', 
+                      border: '1px solid #e5e5e5', 
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      outline: 'none'
+                    }}
+                    value={questionnaire.category}
+                    onChange={(e) => setQuestionnaire({...questionnaire, category: e.target.value})}
+                  >
+                    <option value="">
+                      {questionnaire.questionnaire_type === 'category' ? 'Select category' : 'Select product/sub-category'}
+                    </option>
+                    {questionnaire.questionnaire_type && categories[questionnaire.questionnaire_type]?.map(cat => (
+                      <option key={cat} value={cat}>
+                        {cat.charAt(0).toUpperCase() + cat.slice(1).replace('_', ' ')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {/* For centrepiece type, show different fields */}
+              {questionnaire.questionnaire_type === 'centrepiece' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    Focus Area (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., General personality, Life values, Decision-making"
+                    style={{ 
+                      width: '100%', 
+                      padding: '12px 16px', 
+                      border: '1px solid #e5e5e5', 
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      outline: 'none'
+                    }}
+                    value={questionnaire.subcategory}
+                    onChange={(e) => setQuestionnaire({...questionnaire, subcategory: e.target.value})}
+                  />
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: '24px' }}>

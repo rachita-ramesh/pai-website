@@ -15,7 +15,7 @@ export default function Home() {
     const checkProfileCompletion = async () => {
       try {
         const people = ['rachita', 'everhett', 'gigi']
-        const progress = {}
+        const progress: Record<string, number> = {}
         
         for (const person of people) {
           try {
@@ -34,7 +34,7 @@ export default function Home() {
           }
         }
         
-        setProfileProgress(progress)
+        setProfileProgress(progress as { rachita: number; everhett: number; gigi: number; })
       } catch (error) {
         console.error('Error checking profiles:', error)
         setProfileProgress({ rachita: 0, everhett: 0, gigi: 0 })

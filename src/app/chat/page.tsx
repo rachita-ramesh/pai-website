@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from "next/link"
 
 interface Message {
@@ -36,11 +36,11 @@ export default function Chat() {
   ])
   const [isLoading, setIsLoading] = useState(false)
 
-  const people = [
+  const people = useMemo(() => [
     { id: 'rachita', name: 'Rachita', initial: 'R' },
     { id: 'everhett', name: 'Everhett', initial: 'E' },
     { id: 'gigi', name: 'Gigi', initial: 'G' },
-  ]
+  ], [])
 
   const selectedPersonData = people.find(f => f.id === selectedPerson)
 
@@ -88,7 +88,7 @@ export default function Chat() {
       console.log('Loading profiles for person change:', selectedPerson)
       loadProfileVersions(personData.name)
     }
-  }, [selectedPerson]) // Only depend on selectedPerson string
+  }, [selectedPerson, people, loadProfileVersions])
 
   const handleSendMessage = async () => {
     if (!query.trim()) return
