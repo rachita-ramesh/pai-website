@@ -415,7 +415,79 @@ export default function CreateProfile() {
     }
   }
   
-  // Remove unused function - questionnaire selection now handled inline
+  // Build completeness metadata from selected questionnaires
+  const buildCompletenessMetadata = (completedQuestionnaires: string[]) => {
+    const metadata = {
+      centrepiece: null as any,
+      categories: [] as any[],
+      products: [] as any[]
+    }
+
+    completedQuestionnaires.forEach(qName => {
+      const questionnaire = modularQuestionnaires.find(q => q.name === qName)
+      if (!questionnaire) return
+
+      const item = {
+        name: questionnaire.name,
+        display_name: questionnaire.display_name
+      }
+
+      switch (questionnaire.type) {
+        case 'centrepiece':
+          metadata.centrepiece = item
+          break
+        case 'category':
+          metadata.categories.push(item)
+          break
+        case 'product':
+          metadata.products.push(item)
+          break
+      }
+    })
+
+    return metadata
+  }
+
+  // Save individual questionnaire completion records to database
+  const saveQuestionnaireCompletions = async (profileId: string, completedQuestionnaires: string[]) => {
+    try {
+      console.log('Saving questionnaire completions for profile:', profileId)
+      
+      for (const qName of completedQuestionnaires) {
+        const questionnaire = modularQuestionnaires.find(q => q.name === qName)
+        if (!questionnaire) continue
+
+        // Save each questionnaire completion record
+        const response = await fetch('/api/questionnaire-completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            profile_id: profileId,
+            questionnaire_type: questionnaire.type,
+            questionnaire_name: questionnaire.name,
+            completion_data: {
+              display_name: questionnaire.display_name,
+              estimated_time: questionnaire.estimated_time,
+              completed_at: new Date().toISOString()
+            },
+            completed_at: new Date().toISOString(),
+            skipped: false,
+            estimated_duration: questionnaire.estimated_time
+          })
+        })
+
+        if (response.ok) {
+          console.log(`Saved completion record for ${qName}`)
+        } else {
+          console.error(`Failed to save completion record for ${qName}`, await response.text())
+        }
+      }
+    } catch (error) {
+      console.error('Error saving questionnaire completions:', error)
+    }
+  }
   
   // Handle profile action selection
   const handleProfileActionChange = (action: 'new' | 'existing') => {
@@ -568,13 +640,21 @@ export default function CreateProfile() {
     setProfileExtractionError(null)
     
     try {
+      // Build completeness metadata for this profile
+      const completenessMetadata = buildCompletenessMetadata(selectedQuestionnaires)
+      console.log('Built completeness metadata:', completenessMetadata)
+
       const completeResponse = await fetch(`/api/interview?action=complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          session_id: sessionId
+          session_id: sessionId,
+          completeness_metadata: completenessMetadata,
+          questionnaires_completed: selectedQuestionnaires,
+          profile_action: profileAction,
+          existing_profile_id: profileAction === 'existing' ? selectedExistingProfile : null
         })
       })
       
@@ -586,6 +666,9 @@ export default function CreateProfile() {
         if (completeResult.profile_data && !completeResult.error) {
           setExtractedProfile(completeResult)
           console.log('Successfully set extracted profile state')
+          
+          // Save individual questionnaire completion records
+          await saveQuestionnaireCompletions(completeResult.profile_id, selectedQuestionnaires)
         } else {
           console.error('Profile extraction failed or returned error:', completeResult)
           setProfileExtractionError(completeResult.error || 'Profile extraction failed')
