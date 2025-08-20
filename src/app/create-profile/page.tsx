@@ -55,6 +55,17 @@ interface InterviewData {
 
 // Remove unused Questionnaire interface - now using modular questionnaire system
 
+interface QuestionnaireItem {
+  name: string
+  display_name: string
+}
+
+interface CompletenessMetadata {
+  centrepiece: QuestionnaireItem | null
+  categories: QuestionnaireItem[]
+  products: QuestionnaireItem[]
+}
+
 interface ExtractedProfile {
   profile_id: string
   profile_data: {
@@ -416,11 +427,11 @@ export default function CreateProfile() {
   }
   
   // Build completeness metadata from selected questionnaires
-  const buildCompletenessMetadata = (completedQuestionnaires: string[]) => {
-    const metadata = {
-      centrepiece: null as any,
-      categories: [] as any[],
-      products: [] as any[]
+  const buildCompletenessMetadata = (completedQuestionnaires: string[]): CompletenessMetadata => {
+    const metadata: CompletenessMetadata = {
+      centrepiece: null,
+      categories: [],
+      products: []
     }
 
     completedQuestionnaires.forEach(qName => {
