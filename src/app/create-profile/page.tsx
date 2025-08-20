@@ -365,6 +365,7 @@ export default function CreateProfile() {
       
       const profiles = mockProfiles[personName.toLowerCase() as keyof typeof mockProfiles] || []
       console.log('Mock profiles for', personName, ':', profiles)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setExistingProfiles(profiles as any) // Type assertion to handle mock data
       
     } catch (error) {
