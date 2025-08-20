@@ -376,25 +376,7 @@ export default function CreateProfile() {
     }
   }
   
-  // Handle questionnaire selection changes
-  const toggleQuestionnaireSelection = (questionnaireName: string, action: 'select' | 'skip') => {
-    setModularQuestionnaires(prev => prev.map(q => {
-      if (q.name === questionnaireName) {
-        if (action === 'select') {
-          // Add to selected if not already there
-          if (!selectedQuestionnaires.includes(questionnaireName)) {
-            setSelectedQuestionnaires(curr => [...curr, questionnaireName])
-          }
-          return { ...q, skipped: false }
-        } else {
-          // Remove from selected and mark as skipped
-          setSelectedQuestionnaires(curr => curr.filter(name => name !== questionnaireName))
-          return { ...q, skipped: true }
-        }
-      }
-      return q
-    }))
-  }
+  // Remove unused function - questionnaire selection now handled inline
   
   // Handle profile action selection
   const handleProfileActionChange = (action: 'new' | 'existing') => {
@@ -701,14 +683,47 @@ export default function CreateProfile() {
                   </p>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {modularQuestionnaires.map(questionnaire => (
+                    {modularQuestionnaires.map(questionnaire => {
+                      // Define colors for different questionnaire types
+                      const getTypeColors = () => {
+                        switch (questionnaire.type) {
+                          case 'centrepiece':
+                            return {
+                              bg: questionnaire.completed ? '#f0fdf0' : '#fef7ff',
+                              border: '#e879f9',
+                              badge: { bg: '#fae8ff', color: '#a21caf' }
+                            }
+                          case 'category':
+                            return {
+                              bg: questionnaire.completed ? '#f0fdf0' : '#eff6ff',
+                              border: '#3b82f6',
+                              badge: { bg: '#dbeafe', color: '#1d4ed8' }
+                            }
+                          case 'product':
+                            return {
+                              bg: questionnaire.completed ? '#f0fdf0' : '#f0fdf4',
+                              border: '#10b981',
+                              badge: { bg: '#d1fae5', color: '#059669' }
+                            }
+                          default:
+                            return {
+                              bg: 'white',
+                              border: '#e5e5e5',
+                              badge: { bg: '#f3f4f6', color: '#374151' }
+                            }
+                        }
+                      }
+                      
+                      const colors = getTypeColors()
+                      
+                      return (
                       <div 
                         key={questionnaire.name}
                         style={{ 
                           padding: '16px',
-                          border: '1px solid #e5e5e5',
+                          border: `2px solid ${colors.border}`,
                           borderRadius: '8px',
-                          backgroundColor: questionnaire.completed ? '#f0fdf0' : 'white'
+                          backgroundColor: colors.bg
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -717,6 +732,18 @@ export default function CreateProfile() {
                               <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>
                                 {questionnaire.display_name}
                               </h4>
+                              <span style={{ 
+                                fontSize: '11px', 
+                                color: colors.badge.color,
+                                backgroundColor: colors.badge.bg,
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontWeight: '500',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px'
+                              }}>
+                                {questionnaire.type}
+                              </span>
                               {questionnaire.required && (
                                 <span style={{ 
                                   fontSize: '12px', 
@@ -741,43 +768,38 @@ export default function CreateProfile() {
                               )}
                             </div>
                             <div style={{ fontSize: '14px', color: '#737373' }}>
-                              ~{questionnaire.estimated_time} minutes • {questionnaire.type}
+                              ~{questionnaire.estimated_time} minutes
                             </div>
                           </div>
                           
                           <div style={{ display: 'flex', gap: '8px' }}>
                             {!questionnaire.completed && (
-                              <>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedQuestionnaires.includes(questionnaire.name)}
-                                    onChange={() => toggleQuestionnaireSelection(questionnaire.name, 'select')}
-                                    disabled={questionnaire.required}
-                                  />
-                                  <span style={{ fontSize: '14px' }}>Include</span>
-                                </label>
-                                {!questionnaire.required && (
-                                  <button
-                                    onClick={() => toggleQuestionnaireSelection(questionnaire.name, 'skip')}
-                                    style={{
-                                      padding: '4px 8px',
-                                      fontSize: '12px',
-                                      border: '1px solid #e5e5e5',
-                                      borderRadius: '4px',
-                                      backgroundColor: questionnaire.skipped ? '#fef2f2' : 'white',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    {questionnaire.skipped ? 'Skipped' : 'Skip'}
-                                  </button>
-                                )}
-                              </>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedQuestionnaires.includes(questionnaire.name)}
+                                  onChange={() => {
+                                    if (selectedQuestionnaires.includes(questionnaire.name)) {
+                                      setSelectedQuestionnaires(curr => curr.filter(name => name !== questionnaire.name))
+                                    } else {
+                                      setSelectedQuestionnaires(curr => [...curr, questionnaire.name])
+                                    }
+                                  }}
+                                  disabled={questionnaire.required}
+                                  style={{ 
+                                    width: '16px', 
+                                    height: '16px',
+                                    accentColor: colors.border
+                                  }}
+                                />
+                                <span style={{ fontSize: '14px', fontWeight: '500' }}>Include</span>
+                              </label>
                             )}
                           </div>
                         </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                   
                   <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
