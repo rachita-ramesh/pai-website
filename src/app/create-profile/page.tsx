@@ -133,7 +133,7 @@ export default function CreateProfile() {
     profile_id: string
     is_active: boolean
     created_at: string
-    completeness_metadata?: Record<string, boolean>
+    completeness_metadata?: Record<string, boolean> | CompletenessMetadata
   }>>([])
   const [selectedExistingProfile, setSelectedExistingProfile] = useState<string>('')
   const [modularQuestionnaires, setModularQuestionnaires] = useState<ModularQuestionnaire[]>([
@@ -832,9 +832,25 @@ export default function CreateProfile() {
                     >
                       <option value="">Choose a profile to enhance...</option>
                       {existingProfiles.map(profile => {
-                        // Extract completeness data if available
-                        const completeness = profile.completeness_metadata || {}
-                        const completedQuests = Object.keys(completeness).filter(key => completeness[key] === true).join(', ') || 'No data'
+                        // Extract completeness data and handle both old and new formats
+                        const completeness = profile.completeness_metadata
+                        let completedQuests = 'No data'
+                        
+                        if (completeness) {
+                          // Check if it's the new format (CompletenessMetadata)
+                          if ('centrepiece' in completeness && typeof completeness.centrepiece === 'object') {
+                            const newFormat = completeness as CompletenessMetadata
+                            const completed = []
+                            if (newFormat.centrepiece) completed.push(newFormat.centrepiece.display_name)
+                            if (newFormat.categories) completed.push(...newFormat.categories.map(c => c.display_name))
+                            if (newFormat.products) completed.push(...newFormat.products.map(p => p.display_name))
+                            completedQuests = completed.join(', ') || 'No data'
+                          } else {
+                            // Old format (Record<string, boolean>)
+                            const oldFormat = completeness as Record<string, boolean>
+                            completedQuests = Object.keys(oldFormat).filter(key => oldFormat[key] === true).join(', ') || 'No data'
+                          }
+                        }
                         
                         return (
                           <option key={profile.profile_id} value={profile.profile_id}>
