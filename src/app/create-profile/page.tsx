@@ -122,6 +122,7 @@ export default function CreateProfile() {
     profile_id: string
     is_active: boolean
     created_at: string
+    completeness_metadata?: Record<string, boolean>
   }>>([])
   const [selectedExistingProfile, setSelectedExistingProfile] = useState<string>('')
   const [modularQuestionnaires, setModularQuestionnaires] = useState<ModularQuestionnaire[]>([
@@ -153,6 +154,13 @@ export default function CreateProfile() {
   useEffect(() => {
     scrollToBottom()
   }, [interviewData.messages])
+
+  // Initialize username from URL params on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const personName = urlParams.get('name') || 'rachita'
+    setUserName(personName)
+  }, [])
   
   // Remove unused questionnaire loading - now using hardcoded modular questionnaires
   
@@ -389,14 +397,8 @@ export default function CreateProfile() {
   const handleProfileActionChange = (action: 'new' | 'existing') => {
     setProfileAction(action)
     if (action === 'existing') {
-      // Load existing profiles for the current user
-      const urlParams = new URLSearchParams(window.location.search)
-      const personName = urlParams.get('name') || 'rachita'
-      
-      // Set the username from URL parameter for existing profiles
-      setUserName(personName)
-      
-      loadExistingProfiles(personName)
+      // Load existing profiles for the current user (username already set from URL)
+      loadExistingProfiles(userName)
       
       // For existing profiles, reset questionnaires to show none completed initially
       // They will be updated when a specific profile is selected
@@ -406,9 +408,9 @@ export default function CreateProfile() {
         skipped: false
       })))
       setSelectedQuestionnaires([]) // Start with no selections for existing profiles
+      setSelectedExistingProfile('') // Reset profile selection
     } else {
       // Reset questionnaires for new profile - all available, centrepiece required
-      setUserName('') // Clear username for new profiles
       setModularQuestionnaires(prev => prev.map(q => ({
         ...q,
         completed: false,
@@ -418,8 +420,8 @@ export default function CreateProfile() {
     }
   }
   
-  // Proceed to setup phase
-  const proceedToSetup = () => {
+  // Start interview directly (skip setup phase)
+  const startInterviewDirectly = () => {
     if (profileAction === 'existing' && !selectedExistingProfile) {
       alert('Please select an existing profile to enhance')
       return
@@ -440,7 +442,8 @@ export default function CreateProfile() {
       return
     }
     
-    setInterviewPhase('setup')
+    // Skip setup and go directly to interview
+    startInterview()
   }
   
   const handleSendMessage = async () => {
@@ -708,21 +711,30 @@ export default function CreateProfile() {
                     }}
                   >
                     <option value="">Choose a profile to enhance...</option>
-                    {existingProfiles.map(profile => (
-                      <option key={profile.profile_id} value={profile.profile_id}>
-                        {profile.profile_id} {profile.is_active ? '(Active)' : ''} - {new Date(profile.created_at).toLocaleDateString()}
-                      </option>
-                    ))}
+                    {existingProfiles.map(profile => {
+                      // Extract completeness data if available
+                      const completeness = profile.completeness_metadata || {}
+                      const completedQuests = Object.keys(completeness).filter(key => completeness[key] === true).join(', ') || 'No data'
+                      
+                      return (
+                        <option key={profile.profile_id} value={profile.profile_id}>
+                          {profile.profile_id} {profile.is_active ? '(Active)' : ''} - Completed: {completedQuests} - {new Date(profile.created_at).toLocaleDateString()}
+                        </option>
+                      )
+                    })}
                   </select>
                 </div>
               )}
 
               {/* Questionnaire Selection */}
-              {profileAction && (
+              {((profileAction === 'new') || (profileAction === 'existing' && selectedExistingProfile)) && (
                 <div className="card" style={{ marginBottom: '32px' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Select Questionnaires</h3>
                   <p style={{ fontSize: '14px', color: '#737373', marginBottom: '24px' }}>
-                    Choose which questionnaires to complete. You can always add more later.
+                    {profileAction === 'existing' 
+                      ? 'Choose additional questionnaires to complete for your existing profile.'
+                      : 'Choose which questionnaires to complete. You can always add more later.'
+                    }
                   </p>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -859,59 +871,7 @@ export default function CreateProfile() {
             </div>
           )}
 
-          {interviewPhase === 'setup' && (
-            <div className="card" style={{ marginBottom: '32px' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>AI Interview</h2>
-              <p style={{ fontSize: '16px', color: '#737373', marginBottom: '32px' }}>
-                Our AI researcher will conduct a natural conversation to understand your attitudes and behaviors. 
-                This typically takes 15-20 minutes and helps us create a detailed psychological profile.
-              </p>
-              
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                  What should we call you?
-                </label>
-                <input
-                  type="text"
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px', 
-                    border: '1px solid #e5e5e5', 
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    marginBottom: '24px'
-                  }}
-                  placeholder="Your first name"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && startInterview()}
-                />
-                
-                <div style={{ padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
-                    Selected Questionnaires:
-                  </h4>
-                  <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                    {selectedQuestionnaires.map((qName, idx) => {
-                      const q = modularQuestionnaires.find(mq => mq.name === qName)
-                      return q ? (
-                        <span key={qName}>
-                          {q.display_name}
-                          {idx < selectedQuestionnaires.length - 1 ? ', ' : ''}
-                        </span>
-                      ) : null
-                    })}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
-                    Estimated time: {modularQuestionnaires
-                      .filter(q => selectedQuestionnaires.includes(q.name))
-                      .reduce((total, q) => total + q.estimated_time, 0)} minutes
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Remove setup screen - go directly from questionnaire selection to interview */}
           
           {interviewPhase === 'interview' && (
             <div className="card" style={{ marginBottom: '32px', height: '600px', display: 'flex', flexDirection: 'column' }}>
@@ -1291,34 +1251,17 @@ export default function CreateProfile() {
             
             {interviewPhase === 'questionnaire_selection' && (
               <button 
-                onClick={proceedToSetup} 
+                onClick={startInterviewDirectly} 
                 disabled={
                   !profileAction || 
                   selectedQuestionnaires.length === 0 ||
-                  (profileAction === 'existing' && !selectedExistingProfile)
+                  (profileAction === 'existing' && !selectedExistingProfile) ||
+                  isLoading
                 }
                 className="btn-primary"
               >
-                Continue to Interview Setup →
+                {isLoading ? '🔄 Starting Interview...' : '🎤 Start Interview →'}
               </button>
-            )}
-            
-            {interviewPhase === 'setup' && (
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
-                  onClick={() => setInterviewPhase('questionnaire_selection')} 
-                  className="btn-secondary"
-                >
-                  ← Back to Selection
-                </button>
-                <button 
-                  onClick={startInterview} 
-                  disabled={!userName.trim() || isLoading}
-                  className="btn-primary"
-                >
-                  {isLoading ? '🔄 Connecting...' : '🎤 Start Interview'}
-                </button>
-              </div>
             )}
             {interviewPhase === 'complete' && (
               <Link href="/create-profile" className="btn-primary">
