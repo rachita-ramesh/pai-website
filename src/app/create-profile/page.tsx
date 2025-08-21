@@ -909,20 +909,30 @@ export default function CreateProfile() {
                           if ('centrepiece' in completeness && typeof completeness.centrepiece === 'object') {
                             const newFormat = completeness as CompletenessMetadata
                             const completed = []
-                            if (newFormat.centrepiece) completed.push(newFormat.centrepiece.display_name)
-                            if (newFormat.categories) completed.push(...newFormat.categories.map(c => c.display_name))
-                            if (newFormat.products) completed.push(...newFormat.products.map(p => p.display_name))
-                            completedQuests = completed.join(', ') || 'No data'
+                            if (newFormat.centrepiece) completed.push('🔮 Core')
+                            if (newFormat.categories?.length) completed.push(`📂 ${newFormat.categories.length} cat`)
+                            if (newFormat.products?.length) completed.push(`📦 ${newFormat.products.length} prod`)
+                            completedQuests = completed.join(' ') || 'No data'
                           } else {
-                            // Old format (Record<string, boolean>)
+                            // Old format (Record<string, boolean>) - use short names
                             const oldFormat = completeness as Record<string, boolean>
-                            completedQuests = Object.keys(oldFormat).filter(key => oldFormat[key] === true).join(', ') || 'No data'
+                            const completed = []
+                            if (oldFormat.centrepiece) completed.push('🔮 Core')
+                            const otherTypes = Object.keys(oldFormat).filter(key => oldFormat[key] === true && key !== 'centrepiece')
+                            if (otherTypes.length) completed.push(`📂 ${otherTypes.length} more`)
+                            completedQuests = completed.join(' ') || 'No data'
                           }
                         }
                         
+                        // Extract just the version number for cleaner display
+                        const versionMatch = profile.profile_id.match(/v(\d+)/)
+                        const versionNumber = versionMatch ? `v${versionMatch[1]}` : profile.profile_id
+                        const isActive = profile.is_active ? ' (Active)' : ''
+                        const date = new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        
                         return (
                           <option key={profile.profile_id} value={profile.profile_id}>
-                            {profile.profile_id} {profile.is_active ? '(Active)' : ''} - Completed: {completedQuests} - {new Date(profile.created_at).toLocaleDateString()}
+                            {versionNumber}{isActive} • {completedQuests} • {date}
                           </option>
                         )
                       })}
@@ -1018,8 +1028,14 @@ export default function CreateProfile() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                              <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>
-                                {questionnaire.display_name}
+                              <h4 style={{ 
+                                margin: 0, 
+                                fontSize: '16px', 
+                                fontWeight: '600',
+                                color: questionnaire.completed ? '#16a34a' : 'inherit',
+                                textDecoration: questionnaire.completed ? 'none' : 'none'
+                              }}>
+                                {questionnaire.completed ? '✅ ' : ''}{questionnaire.display_name}
                               </h4>
                               <span style={{ 
                                 fontSize: '11px', 
@@ -1048,11 +1064,13 @@ export default function CreateProfile() {
                                 <span style={{ 
                                   fontSize: '12px', 
                                   color: '#16a34a', 
-                                  backgroundColor: '#f0fdf0',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px'
+                                  backgroundColor: '#dcfce7',
+                                  border: '1px solid #16a34a',
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  fontWeight: '600'
                                 }}>
-                                  ✓ Completed
+                                  ✅ Completed
                                 </span>
                               )}
                             </div>
@@ -1062,7 +1080,22 @@ export default function CreateProfile() {
                           </div>
                           
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            {!questionnaire.completed && (
+                            {questionnaire.completed ? (
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '6px',
+                                padding: '8px 12px',
+                                backgroundColor: '#dcfce7',
+                                border: '1px solid #16a34a',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: '#16a34a'
+                              }}>
+                                ✅ Already Completed
+                              </div>
+                            ) : (
                               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                                 <input
                                   type="checkbox"
