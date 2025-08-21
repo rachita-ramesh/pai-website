@@ -1,0 +1,32 @@
+# Cursor Rules for PAI Digital Twins Project
+
+## Git Branch Rules
+- ALWAYS push to 'main' branch, NEVER 'master'
+- Use: `git push origin HEAD:main` or `git push origin main`
+- NEVER use: `git push origin HEAD:master` or `git push origin master`
+
+## Git Commands
+- Default branch is 'main'
+- When pushing commits, always verify you're pushing to 'main'
+- If you see 'master' in any git command, STOP and correct it to 'main'
+
+## Commit Standards
+- Always include the Claude Code footer in commit messages
+- Use descriptive commit messages that explain the "why" not just the "what"
+- Follow conventional commit format when possible
+
+## Code Standards
+- Use TypeScript interfaces consistently
+- Maintain backward compatibility when updating APIs
+- Always test API endpoints after making changes
+- Follow existing code patterns and conventions
+
+## Database
+- Use Supabase for all database operations
+- Follow the established schema in DATABASE_SCHEMA.md
+- Always validate data before database operations
+
+## Important Reminders
+🚨 MAIN BRANCH ONLY - Never push to master!
+🔍 Always verify git push commands before executing
+📝 Keep commit messages descriptive and professional
