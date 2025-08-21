@@ -146,6 +146,7 @@ export default function CreateProfile() {
   const [selectedExistingProfile, setSelectedExistingProfile] = useState<string>('')
   const [modularQuestionnaires, setModularQuestionnaires] = useState<ModularQuestionnaire[]>([])
   const [selectedQuestionnaires, setSelectedQuestionnaires] = useState<string[]>([])
+  const [currentQuestionnaireIndex, setCurrentQuestionnaireIndex] = useState(0)
   const [interviewData, setInterviewData] = useState<InterviewData>({
     name: '',
     sessionId: '',
@@ -344,7 +345,7 @@ export default function CreateProfile() {
         },
         body: JSON.stringify({
           participant_name: userName,
-          questionnaire_id: selectedQuestionnaires.join(',') // Pass all selected questionnaires
+          questionnaire_id: selectedQuestionnaires[currentQuestionnaireIndex] || 'default' // Use current questionnaire
         })
       })
       
@@ -606,6 +607,9 @@ export default function CreateProfile() {
       return
     }
     
+    // Reset questionnaire index when starting fresh
+    setCurrentQuestionnaireIndex(0)
+    
     // For new profiles, at least one centrepiece questionnaire is required
     if (profileAction === 'new') {
       const hasCentrepiece = selectedQuestionnaires.some(qName => {
@@ -682,9 +686,31 @@ export default function CreateProfile() {
       setInterviewData(finalData)
       
       if (finalData.isComplete) {
-        setInterviewPhase('complete')
-        // Start profile extraction process asynchronously
-        startProfileExtraction(finalData.sessionId)
+        // Check if there are more questionnaires to process
+        if (currentQuestionnaireIndex < selectedQuestionnaires.length - 1) {
+          // Move to next questionnaire
+          setCurrentQuestionnaireIndex(prev => prev + 1)
+          console.log(`Moving to next questionnaire: ${selectedQuestionnaires[currentQuestionnaireIndex + 1]}`)
+          
+          // Start new interview for next questionnaire
+          setInterviewData({
+            name: userName,
+            sessionId: '',
+            messages: [],
+            startTime: new Date(),
+            currentTopic: 'category_relationship',
+            exchangeCount: 0,
+            isComplete: false,
+            targetQuestions: 20
+          })
+          
+          // Auto-start next questionnaire
+          setTimeout(() => startInterview(), 1000)
+        } else {
+          // All questionnaires completed, extract profile
+          setInterviewPhase('complete')
+          startProfileExtraction(finalData.sessionId)
+        }
       }
     } catch (error) {
       console.error('Error generating AI response:', error)
@@ -815,7 +841,11 @@ export default function CreateProfile() {
             <p style={{ fontSize: '18px', color: '#737373', maxWidth: '600px', margin: '0 auto' }}>
               {interviewPhase === 'questionnaire_selection' && 'Choose which questionnaires to complete for your digital twin profile.'}
               {interviewPhase === 'setup' && 'Our AI will conduct a natural 15-20 minute conversation to understand your attitudes and behaviors.'}
-              {interviewPhase === 'interview' && 'AI Interview in Progress'}
+              {interviewPhase === 'interview' && (
+                selectedQuestionnaires.length > 1 
+                  ? `AI Interview in Progress - ${modularQuestionnaires.find(q => q.name === selectedQuestionnaires[currentQuestionnaireIndex])?.display_name || 'Current Questionnaire'} (${currentQuestionnaireIndex + 1}/${selectedQuestionnaires.length})`
+                  : 'AI Interview in Progress'
+              )}
               {interviewPhase === 'complete' && 'Interview Complete! Your responses will be analyzed to create your digital twin.'}
             </p>
           </div>
