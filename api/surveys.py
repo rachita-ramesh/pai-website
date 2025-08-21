@@ -21,8 +21,20 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             
+            # Map database fields to expected frontend format
+            formatted_surveys = []
+            for survey in surveys:
+                formatted_survey = {
+                    'survey_name': survey.get('survey_name'),
+                    'survey_title': survey.get('title'),  # Map 'title' to 'survey_title'
+                    'description': survey.get('description'),
+                    'target_accuracy': survey.get('target_accuracy'),
+                    'questions': survey.get('questions', [])
+                }
+                formatted_surveys.append(formatted_survey)
+            
             self.wfile.write(json.dumps({
-                'surveys': surveys
+                'surveys': formatted_surveys
             }).encode())
             
         except Exception as e:
