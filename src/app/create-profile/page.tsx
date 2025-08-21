@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
+import { ProfileDataDisplay } from '../../components/ProfileDataDisplay'
 
 // Add TypeScript declarations for speech recognition
 interface SpeechRecognitionConstructor {
@@ -1372,133 +1373,10 @@ export default function CreateProfile() {
                     </button>
                   </div>
                   
-                  <div style={{ display: 'grid', gap: '16px' }}>
-                    {/* Demographics Section */}
-                    {extractedProfile.profile_data.demographics && (
-                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Demographics</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', fontSize: '14px' }}>
-                          {extractedProfile.profile_data.demographics.age_range && (
-                            <div><strong>Age Range:</strong> {extractedProfile.profile_data.demographics.age_range}</div>
-                          )}
-                          {extractedProfile.profile_data.demographics.lifestyle && (
-                            <div><strong>Lifestyle:</strong> {extractedProfile.profile_data.demographics.lifestyle}</div>
-                          )}
-                          {extractedProfile.profile_data.demographics.context && (
-                            <div><strong>Context:</strong> {extractedProfile.profile_data.demographics.context}</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Core Attitudes Section */}
-                    {extractedProfile.profile_data.core_attitudes && (
-                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Core Attitudes</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', fontSize: '14px' }}>
-                          {Object.entries(extractedProfile.profile_data.core_attitudes).map(([key, value]) => (
-                            <div key={key}><strong>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong> {value}</div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Decision Psychology Section */}
-                    {extractedProfile.profile_data.decision_psychology && (
-                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Decision Psychology</h4>
-                        <div style={{ fontSize: '14px' }}>
-                          {extractedProfile.profile_data.decision_psychology.research_style && (
-                            <div style={{ marginBottom: '8px' }}><strong>Research Style:</strong> {extractedProfile.profile_data.decision_psychology.research_style}</div>
-                          )}
-                          {extractedProfile.profile_data.decision_psychology.influence_hierarchy && (
-                            <div style={{ marginBottom: '8px' }}>
-                              <strong>Influence Hierarchy:</strong>
-                              <ul style={{ marginLeft: '16px', marginTop: '4px' }}>
-                                {extractedProfile.profile_data.decision_psychology.influence_hierarchy.map((item, idx) => (
-                                  <li key={idx}>{item.replace(/_/g, ' ')}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {extractedProfile.profile_data.decision_psychology.purchase_triggers && (
-                            <div style={{ marginBottom: '8px' }}>
-                              <strong>Purchase Triggers:</strong>
-                              <ul style={{ marginLeft: '16px', marginTop: '4px' }}>
-                                {extractedProfile.profile_data.decision_psychology.purchase_triggers.map((item, idx) => (
-                                  <li key={idx}>{item.replace(/_/g, ' ')}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Usage Patterns Section */}
-                    {extractedProfile.profile_data.usage_patterns && (
-                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Usage Patterns</h4>
-                        <div style={{ fontSize: '14px' }}>
-                          {extractedProfile.profile_data.usage_patterns.routine_adherence && (
-                            <div style={{ marginBottom: '8px' }}><strong>Routine Adherence:</strong> {extractedProfile.profile_data.usage_patterns.routine_adherence}</div>
-                          )}
-                          {extractedProfile.profile_data.usage_patterns.context_sensitivity && (
-                            <div style={{ marginBottom: '8px' }}><strong>Context Sensitivity:</strong> {extractedProfile.profile_data.usage_patterns.context_sensitivity}</div>
-                          )}
-                          {extractedProfile.profile_data.usage_patterns.emotional_drivers && (
-                            <div style={{ marginBottom: '8px' }}>
-                              <strong>Emotional Drivers:</strong>
-                              <ul style={{ marginLeft: '16px', marginTop: '4px' }}>
-                                {extractedProfile.profile_data.usage_patterns.emotional_drivers.map((item, idx) => (
-                                  <li key={idx}>{item.replace(/_/g, ' ')}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Value System Section */}
-                    {extractedProfile.profile_data.value_system && (
-                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Value System</h4>
-                        <div style={{ fontSize: '14px' }}>
-                          {extractedProfile.profile_data.value_system.priority_hierarchy && (
-                            <div style={{ marginBottom: '8px' }}>
-                              <strong>Priority Hierarchy:</strong>
-                              <ol style={{ marginLeft: '16px', marginTop: '4px' }}>
-                                {extractedProfile.profile_data.value_system.priority_hierarchy.map((item, idx) => (
-                                  <li key={idx}>{item.replace(/_/g, ' ')}</li>
-                                ))}
-                              </ol>
-                            </div>
-                          )}
-                          {extractedProfile.profile_data.value_system.ideal_outcome && (
-                            <div style={{ marginBottom: '8px' }}><strong>Ideal Outcome:</strong> {extractedProfile.profile_data.value_system.ideal_outcome}</div>
-                          )}
-                          {extractedProfile.profile_data.value_system.core_motivation && (
-                            <div style={{ marginBottom: '8px' }}><strong>Core Motivation:</strong> {extractedProfile.profile_data.value_system.core_motivation}</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Behavioral Quotes Section */}
-                    {extractedProfile.profile_data.behavioral_quotes && extractedProfile.profile_data.behavioral_quotes.length > 0 && (
-                      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>Key Insights</h4>
-                        <div style={{ fontSize: '14px' }}>
-                          {extractedProfile.profile_data.behavioral_quotes.map((quote, idx) => (
-                            <div key={idx} style={{ marginBottom: '8px', fontStyle: 'italic', padding: '8px', backgroundColor: '#ffffff', borderRadius: '4px', borderLeft: '3px solid #00d924' }}>
-                              "{quote}"
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <ProfileDataDisplay 
+                    profileData={extractedProfile.profile_data} 
+                    profileId={extractedProfile.profile_id}
+                  />
                 </div>
               )}
               
