@@ -23,6 +23,7 @@ class handler(BaseHTTPRequestHandler):
                 'questionnaire_id': data['questionnaire_id'],
                 'title': data['title'],
                 'description': data.get('description', ''),
+                'questionnaire_type': data.get('questionnaire_type', 'category'),  # Add missing questionnaire_type
                 'category': data['category'],
                 'questions': data['questions'],  # Store as JSONB
                 'estimated_duration': data.get('estimated_duration', 15),
