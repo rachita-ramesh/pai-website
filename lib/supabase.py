@@ -149,6 +149,25 @@ class SupabaseClient:
         except:
             return None
     
+    def get_all_survey_templates(self) -> List[Dict]:
+        """Get all available survey templates"""
+        try:
+            return self._make_request('GET', 'survey_templates?is_active=eq.true&order=created_at.desc')
+        except:
+            return []
+    
+    def create_survey_template(self, survey_data: Dict) -> Dict:
+        """Create a new survey template"""
+        return self._make_request('POST', 'survey_templates', survey_data)
+    
+    def delete_survey_template(self, survey_name: str) -> bool:
+        """Delete a survey template"""
+        try:
+            self._make_request('DELETE', f'survey_templates?survey_name=eq.{survey_name}')
+            return True
+        except:
+            return False
+    
     def create_validation_test_session(self, test_data: Dict) -> Dict:
         """Create a new validation test session"""
         return self._make_request('POST', 'validation_test_sessions', test_data)

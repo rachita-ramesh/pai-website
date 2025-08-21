@@ -129,32 +129,32 @@ $$ LANGUAGE plpgsql;
 SELECT migrate_profile_data();
 
 -- Verify migration results
-SELECT 
+(SELECT 
     profile_id,
     'OLD' as structure_type,
     jsonb_pretty(profile_data) as data
 FROM profile_versions 
 WHERE profile_data IS NOT NULL 
-LIMIT 2
+LIMIT 2)
 
 UNION ALL
 
-SELECT 
+(SELECT 
     profile_id,
     'NEW' as structure_type,
     jsonb_pretty(profile_data_new) as data
 FROM profile_versions 
 WHERE profile_data_new IS NOT NULL 
-LIMIT 2;
+LIMIT 2);
 
 -- Once migration is verified, replace old data with new data
 -- UNCOMMENT THESE LINES AFTER VERIFICATION:
 
--- UPDATE profile_versions 
--- SET profile_data = profile_data_new
--- WHERE profile_data_new IS NOT NULL;
+UPDATE profile_versions 
+SET profile_data = profile_data_new
+WHERE profile_data_new IS NOT NULL;
 
--- ALTER TABLE profile_versions DROP COLUMN profile_data_new;
+ALTER TABLE profile_versions DROP COLUMN profile_data_new;
 
 -- Drop the migration function
 DROP FUNCTION IF EXISTS migrate_profile_data();

@@ -82,6 +82,9 @@ export default function Home() {
               <Link href="/create-questionnaire" className="btn-primary">
                 📝 Create Questionnaire
               </Link>
+              <Link href="/create-survey" className="btn-primary">
+                📋 Create Survey
+              </Link>
               <Link href="/chat" className="btn-secondary" title="Have open conversations with digital twins">
                 ▶ Chat with Twins
               </Link>

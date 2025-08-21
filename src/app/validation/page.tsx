@@ -11,6 +11,7 @@ interface Question {
 }
 
 interface Survey {
+  survey_name: string
   survey_title: string
   description: string
   target_accuracy: number
@@ -39,13 +40,16 @@ export default function ValidationTest() {
   const [humanAnswers, setHumanAnswers] = useState<{[key: string]: string}>({})
   const [comparisons, setComparisons] = useState<Comparison[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [testPhase, setTestPhase] = useState<'person_selection' | 'profile_selection' | 'loading' | 'questions' | 'results'>('person_selection')
+  const [testPhase, setTestPhase] = useState<'person_selection' | 'profile_selection' | 'survey_selection' | 'loading' | 'questions' | 'results'>('person_selection')
   const [accuracy, setAccuracy] = useState(0)
   const [selectedPerson, setSelectedPerson] = useState('')
   const [selectedPersonName, setSelectedPersonName] = useState('')
   const [profileId, setProfileId] = useState('')
   const [availableVersions, setAvailableVersions] = useState<ProfileVersion[]>([])
   const [isLoadingVersions, setIsLoadingVersions] = useState(false)
+  const [availableSurveys, setAvailableSurveys] = useState<Survey[]>([])
+  const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null)
+  const [isLoadingSurveys, setIsLoadingSurveys] = useState(false)
 
   const people = [
     { id: 'rachita', name: 'Rachita' },
@@ -54,20 +58,49 @@ export default function ValidationTest() {
   ]
 
   useEffect(() => {
-    loadSurvey()
+    loadAvailableSurveys()
   }, [])
 
-  const loadSurvey = async () => {
+  const loadAvailableSurveys = async () => {
+    setIsLoadingSurveys(true)
+    try {
+      const response = await fetch('/api/surveys')
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableSurveys(data.surveys || [])
+        
+        // Auto-select default survey if available
+        const defaultSurvey = data.surveys?.find((s: Survey) => s.survey_title.includes('validation'))
+        if (defaultSurvey) {
+          setSelectedSurvey(defaultSurvey)
+          setSurvey(defaultSurvey)
+        }
+      } else {
+        console.error('Failed to load surveys')
+        // Fallback to loading default survey from validation API
+        loadDefaultSurvey()
+      }
+    } catch (error) {
+      console.error('Error loading surveys:', error)
+      // Fallback to loading default survey from validation API
+      loadDefaultSurvey()
+    } finally {
+      setIsLoadingSurveys(false)
+    }
+  }
+
+  const loadDefaultSurvey = async () => {
     try {
       const response = await fetch('/api/validation')
       if (response.ok) {
         const surveyData = await response.json()
         setSurvey(surveyData)
+        setSelectedSurvey(surveyData)
       } else {
-        console.error('Failed to load survey')
+        console.error('Failed to load default survey')
       }
     } catch (error) {
-      console.error('Error loading survey:', error)
+      console.error('Error loading default survey:', error)
     }
   }
 
@@ -107,6 +140,12 @@ export default function ValidationTest() {
 
   const selectProfile = (profileId: string) => {
     setProfileId(profileId)
+    setTestPhase('survey_selection')
+  }
+
+  const selectSurvey = (survey: Survey) => {
+    setSelectedSurvey(survey)
+    setSurvey(survey)
     setTestPhase('questions')
   }
 
@@ -222,6 +261,8 @@ export default function ValidationTest() {
     setSelectedPersonName('')
     setProfileId('')
     setAvailableVersions([])
+    setSelectedSurvey(null)
+    setSurvey(null)
     setTestPhase('person_selection')
   }
 
@@ -404,6 +445,138 @@ export default function ValidationTest() {
                   >
                     ← Choose Different Person
                   </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (testPhase === 'survey_selection') {
+    return (
+      <div>
+        <header className="header">
+          <div className="container">
+            <nav className="nav">
+              <Link href="/" className="logo">
+                <div className="logo-icon">
+                  <div style={{ width: '16px', height: '16px', backgroundColor: 'white', borderRadius: '2px' }}></div>
+                </div>
+                <div className="logo-text">
+                  <h1>PAI</h1>
+                  <p>Validation Test</p>
+                </div>
+              </Link>
+              <div className="badge">Select Survey</div>
+            </nav>
+          </div>
+        </header>
+        <main className="main">
+          <div className="container">
+            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+              <h1 style={{ fontSize: '48px', fontWeight: '600', lineHeight: '1.1', marginBottom: '24px' }}>
+                Choose <span className="highlight">Survey Questions</span>
+              </h1>
+              <p style={{ fontSize: '18px', color: '#737373', maxWidth: '600px', margin: '0 auto' }}>
+                Select which set of questions you want to use to test {selectedPersonName}'s digital twin accuracy.
+              </p>
+            </div>
+
+            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+              {isLoadingSurveys ? (
+                <div className="card" style={{ textAlign: 'center', padding: '48px' }}>
+                  <div style={{ color: '#737373' }}>Loading available surveys...</div>
+                </div>
+              ) : availableSurveys.length > 0 ? (
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  {availableSurveys.map((survey, index) => (
+                    <div 
+                      key={survey.survey_name || index}
+                      className="card"
+                      style={{ 
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: selectedSurvey?.survey_name === survey.survey_name ? '2px solid #00d924' : '1px solid #e5e5e5'
+                      }}
+                      onClick={() => selectSurvey(survey)}
+                      onMouseEnter={(e) => {
+                        if (selectedSurvey?.survey_name !== survey.survey_name) {
+                          e.currentTarget.style.borderColor = '#00d924'
+                          e.currentTarget.style.backgroundColor = '#f0fdf0'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedSurvey?.survey_name !== survey.survey_name) {
+                          e.currentTarget.style.borderColor = '#e5e5e5'
+                          e.currentTarget.style.backgroundColor = 'white'
+                        }
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
+                            {survey.survey_title}
+                          </h3>
+                          <p style={{ fontSize: '14px', color: '#737373', marginBottom: '16px' }}>
+                            {survey.description}
+                          </p>
+                          <div style={{ display: 'flex', gap: '24px', fontSize: '14px' }}>
+                            <div>
+                              <strong>{survey.questions?.length || 0}</strong> questions
+                            </div>
+                            <div>
+                              Target: <strong>{Math.round((survey.target_accuracy || 0) * 100)}%</strong> accuracy
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '24px', marginLeft: '16px' }}>
+                          {selectedSurvey?.survey_name === survey.survey_name ? '✓' : '→'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="card" style={{ textAlign: 'center', padding: '48px' }}>
+                  <div style={{ color: '#dc2626', marginBottom: '16px', fontSize: '18px' }}>
+                    No surveys available
+                  </div>
+                  <div style={{ color: '#737373', fontSize: '14px', marginBottom: '24px' }}>
+                    You need to create a survey first before running accuracy tests.
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+                    <Link href="/create-survey" className="btn-primary">
+                      📋 Create Survey
+                    </Link>
+                    <button
+                      onClick={() => setTestPhase('profile_selection')}
+                      className="btn-secondary"
+                    >
+                      ← Back to Profile Selection
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {availableSurveys.length > 0 && (
+                <div style={{ textAlign: 'center', marginTop: '32px' }}>
+                  <button
+                    onClick={() => setTestPhase('profile_selection')}
+                    className="btn-secondary"
+                    style={{ marginRight: '16px' }}
+                  >
+                    ← Back to Profile Selection
+                  </button>
+                  {selectedSurvey && (
+                    <button
+                      onClick={() => selectSurvey(selectedSurvey)}
+                      className="btn-primary"
+                    >
+                      Start Test with Selected Survey →
+                    </button>
+                  )}
                 </div>
               )}
             </div>
