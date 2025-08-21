@@ -909,18 +909,18 @@ export default function CreateProfile() {
                           if ('centrepiece' in completeness && typeof completeness.centrepiece === 'object') {
                             const newFormat = completeness as CompletenessMetadata
                             const completed = []
-                            if (newFormat.centrepiece) completed.push('🔮 Core')
-                            if (newFormat.categories?.length) completed.push(`📂 ${newFormat.categories.length} cat`)
-                            if (newFormat.products?.length) completed.push(`📦 ${newFormat.products.length} prod`)
-                            completedQuests = completed.join(' ') || 'No data'
+                            if (newFormat.centrepiece) completed.push('Centrepiece')
+                            if (newFormat.categories?.length) completed.push(`${newFormat.categories.length} Category`)
+                            if (newFormat.products?.length) completed.push(`${newFormat.products.length} Product`)
+                            completedQuests = completed.join(', ') || 'No data'
                           } else {
-                            // Old format (Record<string, boolean>) - use short names
+                            // Old format (Record<string, boolean>) - use clear names
                             const oldFormat = completeness as Record<string, boolean>
                             const completed = []
-                            if (oldFormat.centrepiece) completed.push('🔮 Core')
+                            if (oldFormat.centrepiece) completed.push('Centrepiece')
                             const otherTypes = Object.keys(oldFormat).filter(key => oldFormat[key] === true && key !== 'centrepiece')
-                            if (otherTypes.length) completed.push(`📂 ${otherTypes.length} more`)
-                            completedQuests = completed.join(' ') || 'No data'
+                            if (otherTypes.length) completed.push(`${otherTypes.length} Category`)
+                            completedQuests = completed.join(', ') || 'No data'
                           }
                         }
                         
