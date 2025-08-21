@@ -20,6 +20,11 @@ SET questionnaire_type = CASE
   ELSE 'category'
 END;
 
+-- Update category to match questionnaire_type for centrepiece questionnaires
+UPDATE custom_questionnaires 
+SET category = 'centrepiece' 
+WHERE questionnaire_type = 'centrepiece';
+
 -- Add comment for documentation
 COMMENT ON COLUMN custom_questionnaires.questionnaire_type IS 'Type of questionnaire: centrepiece (general life), category (specific areas), or product (specific products)';
 

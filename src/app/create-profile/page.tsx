@@ -66,6 +66,13 @@ interface CompletenessMetadata {
   products: QuestionnaireItem[]
 }
 
+interface DatabaseQuestionnaire {
+  questionnaire_id: string
+  title: string
+  questionnaire_type: string
+  estimated_duration: number
+}
+
 interface ExtractedProfile {
   profile_id: string
   profile_data: {
@@ -173,11 +180,12 @@ export default function CreateProfile() {
       try {
         const response = await fetch('/api/questionnaires')
         if (response.ok) {
-          const data = await response.json()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const data: any = await response.json()
           const questionnaires = data.questionnaires || []
           
           // Convert database questionnaires to ModularQuestionnaire format
-          const converted: ModularQuestionnaire[] = questionnaires.map((q: any) => ({
+          const converted: ModularQuestionnaire[] = questionnaires.map((q: DatabaseQuestionnaire) => ({
             type: q.questionnaire_type || 'category',
             name: q.questionnaire_id,
             display_name: q.title,

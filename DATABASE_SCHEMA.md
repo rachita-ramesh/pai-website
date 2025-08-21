@@ -228,8 +228,8 @@ Actual implemented tables in Supabase database:
 ## 📝 CUSTOM QUESTIONNAIRES (supabase_custom_questionnaires.sql)
 
 ### 12. `custom_questionnaires`
-**Purpose**: User-created questionnaires for any category or topic
-**Why Created**: Allow users to create custom questionnaires beyond default skincare interview
+**Purpose**: User-created questionnaires for any category or topic with modular questionnaire type support
+**Why Created**: Allow users to create custom questionnaires beyond default skincare interview, supporting centrepiece/category/product modular system
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -237,6 +237,7 @@ Actual implemented tables in Supabase database:
 | `questionnaire_id` | CHARACTER VARYING | Questionnaire identifier (NOT NULL) |
 | `title` | CHARACTER VARYING | User-defined title (NOT NULL) |
 | `description` | TEXT | Questionnaire purpose |
+| `questionnaire_type` | VARCHAR(20) | Type: 'centrepiece', 'category', or 'product' (NOT NULL, default: 'category') |
 | `category` | CHARACTER VARYING | skincare, fitness, career, relationships, etc. (NOT NULL) |
 | `created_by` | CHARACTER VARYING | Creator name (optional) |
 | `questions` | JSONB | Complete questions array (NOT NULL) |
@@ -248,9 +249,13 @@ Actual implemented tables in Supabase database:
 | `updated_at` | TIMESTAMP WITH TIME ZONE | Last update time (default: now()) |
 
 **Business Logic**: 
-- User-generated content for questionnaires
+- User-generated content for questionnaires with modular type system
+- **Centrepiece**: General life and personality questionnaires (core digital twin foundation)
+- **Category**: Specific life areas (beauty, fitness, career, relationships, etc.)
+- **Product**: Specific products or sub-categories (moisturizer, sunscreen, supplements, etc.)
 - Public/private sharing model
 - Usage analytics for popular questionnaires
+- Check constraint ensures valid questionnaire_type values
 
 ---
 
@@ -353,5 +358,11 @@ Actual implemented tables in Supabase database:
 - Several optional JSONB columns (`detailed_results`, `test_metadata`) not implemented in `validation_test_results`
 - `questionnaire_completions.completed_at` uses `TIMESTAMP WITHOUT TIME ZONE`
 - Default model version is 'claude-3-5-sonnet' instead of generic placeholder
+
+### 🆕 Recent Schema Updates:
+- **August 2025**: Added `questionnaire_type` column to `custom_questionnaires` table
+  - Supports modular questionnaire system: centrepiece, category, product
+  - Includes check constraint for valid values
+  - Migration available in `supabase_migration_questionnaire_type.sql`
 
 This schema supports most of the PAI digital twins lifecycle from profile creation through validation testing with comprehensive analytics and user-generated content capabilities. Some advanced session management features require the missing tables to be implemented.

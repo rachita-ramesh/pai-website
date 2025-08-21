@@ -135,7 +135,7 @@ export default function CreateQuestionnaire() {
           title: questionnaire.title,
           description: questionnaire.description,
           questionnaire_type: questionnaire.questionnaire_type,
-          category: questionnaire.category,
+          category: questionnaire.questionnaire_type === 'centrepiece' ? 'centrepiece' : questionnaire.category,
           subcategory: questionnaire.subcategory,
           questions: questions.map((q, index) => ({
             ...q,
