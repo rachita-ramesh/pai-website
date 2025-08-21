@@ -11,6 +11,7 @@ interface Question {
 }
 
 interface Survey {
+  survey_name: string
   survey_title: string
   description: string
   target_accuracy: number
