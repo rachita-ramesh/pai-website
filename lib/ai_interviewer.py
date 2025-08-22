@@ -270,9 +270,11 @@ CRITICAL: Always ask ONE focused question per response. Keep responses conversat
         session.exchange_count += 1
         
         # Check if interview should be completed based on questionnaire target
-        target_questions = 15  # Default
+        target_questions = 8  # Reduced default for better user experience
         if self.questionnaire_context and 'target_questions' in self.questionnaire_context:
-            target_questions = self.questionnaire_context['target_questions']
+            # Use a more reasonable target based on questionnaire length
+            base_questions = len(self.questionnaire_context.get('questions', []))
+            target_questions = max(3, min(base_questions + 2, 8))  # 3-8 questions max
         
         if session.exchange_count >= target_questions:
             session.is_complete = True

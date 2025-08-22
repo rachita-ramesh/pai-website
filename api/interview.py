@@ -79,7 +79,7 @@ class handler(BaseHTTPRequestHandler):
                             'category': category,
                             'description': description,
                             'questions': questions,
-                            'target_questions': target_questions
+                            'target_questions': max(3, min(len(questions) + 2, 8))
                         }
                         
                         # Let the AI generate a natural conversational greeting
@@ -183,7 +183,7 @@ class handler(BaseHTTPRequestHandler):
                 print(f"DEBUG: Error storing initial interview data: {e}")
         
         # Get target questions from questionnaire context
-        target_questions = 20  # Default for skincare interviews
+        target_questions = 8  # Default reduced for better UX
         if questionnaire_context and 'target_questions' in questionnaire_context:
             target_questions = questionnaire_context['target_questions']
         
@@ -240,39 +240,89 @@ class handler(BaseHTTPRequestHandler):
                         'category': questionnaire.get('category', 'general'),
                         'description': questionnaire.get('description', ''),
                         'questions': questions,
-                        'target_questions': len(questions) + 3
+                        'target_questions': max(3, min(len(questions) + 2, 8))
                     }
                     print(f"DEBUG: Loaded questionnaire context for {questionnaire_context['category']}")
         except Exception as e:
             print(f"DEBUG: Error loading questionnaire context: {e}")
             questionnaire_context = None
         
-        # SIMPLE: Just get the next question from the questionnaire
-        ai_response = "Thank you for sharing that!"
-        
-        if questionnaire_context and 'questions' in questionnaire_context:
-            questions = questionnaire_context['questions']
+        # Use AI interviewer to generate proper responses
+        try:
+            # Load or create interview session from pickle file
+            import pickle
+            session_file = f"/tmp/interview_session_{session_id}.pkl"
             
-            # Use exchange_count to determine which question to ask
-            # exchange_count represents how many user-AI exchanges have happened
-            # If exchange_count = 1, we should ask question[1] (second question)
-            
-            print(f"DEBUG: Available questions: {len(questions)}")
-            print(f"DEBUG: Current exchange_count: {exchange_count}")
-            
-            # Print all questions for debugging
-            for i, q in enumerate(questions):
-                print(f"DEBUG: Question {i}: {q.get('text', 'NO TEXT')}")
-            
-            # If we haven't asked all the questionnaire questions yet, ask the next one
-            if exchange_count < len(questions):
-                next_question = questions[exchange_count]
-                ai_response = next_question.get('text') or next_question.get('question_text', 'Tell me more')
-                print(f"DEBUG: Exchange {exchange_count}, asking question {exchange_count + 1}: {ai_response}")
+            if os.path.exists(session_file):
+                with open(session_file, 'rb') as f:
+                    session_data = pickle.load(f)
+                    interviewer = AIInterviewer(api_key, questionnaire_context=session_data.get('questionnaire_context'))
+                    session = session_data['session']
+                    print(f"DEBUG: Loaded existing session from {session_file}")
             else:
-                # All questionnaire questions asked, generate simple follow-up
-                ai_response = "Thank you for sharing all of that! Is there anything else you'd like to tell me about this topic?"
-                print(f"DEBUG: All questionnaire questions asked, using generic follow-up")
+                # Create new AI interviewer and session if file doesn't exist
+                interviewer = AIInterviewer(api_key, questionnaire_context=questionnaire_context)
+                from lib.ai_interviewer import InterviewSession, InterviewMessage
+                from datetime import datetime
+                session = InterviewSession(
+                    session_id=session_id,
+                    participant_name="User",
+                    messages=[],
+                    start_time=datetime.now(),
+                    current_topic="category_relationship",
+                    exchange_count=exchange_count,
+                    is_complete=False
+                )
+                print(f"DEBUG: Created new session since file doesn't exist")
+            
+            # Get AI response using the interviewer
+            ai_response = interviewer.get_ai_response(session, message)
+            
+            # Update session with new messages
+            session = interviewer.update_session(session, message, ai_response)
+            
+            # Save updated session
+            session_data = {
+                'session': session,
+                'questionnaire_context': questionnaire_context
+            }
+            with open(session_file, 'wb') as f:
+                pickle.dump(session_data, f)
+            print(f"DEBUG: Updated and saved session to {session_file}")
+            
+            # Use session completion status
+            is_complete = session.is_complete
+            new_exchange_count = session.exchange_count
+            
+            print(f"DEBUG: AI response: {ai_response}")
+            print(f"DEBUG: Session complete: {is_complete}, exchange count: {new_exchange_count}")
+            
+        except Exception as e:
+            print(f"DEBUG: Error with AI interviewer: {e}")
+            # Fallback to simple question progression
+            ai_response = "Thank you for sharing that!"
+            
+            if questionnaire_context and 'questions' in questionnaire_context:
+                questions = questionnaire_context['questions']
+                print(f"DEBUG: Available questions: {len(questions)}")
+                print(f"DEBUG: Current exchange_count: {exchange_count}")
+                
+                # If we haven't asked all the questionnaire questions yet, ask the next one
+                if exchange_count < len(questions):
+                    next_question = questions[exchange_count]
+                    ai_response = next_question.get('text') or next_question.get('question_text', 'Tell me more')
+                    print(f"DEBUG: Exchange {exchange_count}, asking question {exchange_count + 1}: {ai_response}")
+                else:
+                    # All questionnaire questions asked, generate simple follow-up
+                    ai_response = "Thank you for sharing all of that! Is there anything else you'd like to tell me about this topic?"
+                    print(f"DEBUG: All questionnaire questions asked, using generic follow-up")
+            
+            # Fallback completion calculation
+            target_questions = 8
+            if questionnaire_context and 'target_questions' in questionnaire_context:
+                target_questions = questionnaire_context['target_questions']
+            new_exchange_count = exchange_count + 1
+            is_complete = new_exchange_count >= target_questions
         
         # Store the conversation messages in Supabase
         try:
@@ -319,13 +369,19 @@ class handler(BaseHTTPRequestHandler):
                     transcript_lines.append(f"{speaker}: {msg.get('content', '')}")
                 transcript = "\n\n".join(transcript_lines)
                 
-                # Determine completion status
-                target_questions = 15  # Default
-                if questionnaire_context and 'target_questions' in questionnaire_context:
-                    target_questions = questionnaire_context['target_questions']
-                
-                new_exchange_count = exchange_count + 1
-                is_complete = new_exchange_count >= target_questions
+                # Use completion status from AI interviewer if available, otherwise calculate
+                if 'new_exchange_count' not in locals() or 'is_complete' not in locals():
+                    target_questions = 8  # Default reduced
+                    if questionnaire_context and 'target_questions' in questionnaire_context:
+                        target_questions = questionnaire_context['target_questions']
+                    
+                    new_exchange_count = exchange_count + 1
+                    is_complete = new_exchange_count >= target_questions
+                else:
+                    # Calculate target_questions for response consistency
+                    target_questions = 8
+                    if questionnaire_context and 'target_questions' in questionnaire_context:
+                        target_questions = questionnaire_context['target_questions']
                 
                 print(f"DEBUG: Completion check - exchange_count: {exchange_count}, new_exchange_count: {new_exchange_count}, target_questions: {target_questions}, is_complete: {is_complete}")
                 
@@ -343,21 +399,23 @@ class handler(BaseHTTPRequestHandler):
                 
             except Exception as e:
                 print(f"DEBUG: Error updating interview session: {e}")
-                # Calculate completion anyway for response
-                target_questions = 15
+                # Use completion from AI interviewer if available, otherwise calculate
+                if 'new_exchange_count' not in locals() or 'is_complete' not in locals():
+                    target_questions = 8
+                    if questionnaire_context and 'target_questions' in questionnaire_context:
+                        target_questions = questionnaire_context['target_questions']
+                    new_exchange_count = exchange_count + 1
+                    is_complete = new_exchange_count >= target_questions
+                
+        except Exception as e:
+            print(f"DEBUG: Error storing conversation messages: {e}")
+            # Use completion from AI interviewer if available, otherwise calculate
+            if 'new_exchange_count' not in locals() or 'is_complete' not in locals():
+                target_questions = 8
                 if questionnaire_context and 'target_questions' in questionnaire_context:
                     target_questions = questionnaire_context['target_questions']
                 new_exchange_count = exchange_count + 1
                 is_complete = new_exchange_count >= target_questions
-                
-        except Exception as e:
-            print(f"DEBUG: Error storing conversation messages: {e}")
-            # Calculate completion anyway for response
-            target_questions = 15
-            if questionnaire_context and 'target_questions' in questionnaire_context:
-                target_questions = questionnaire_context['target_questions']
-            new_exchange_count = exchange_count + 1
-            is_complete = new_exchange_count >= target_questions
         
         # Send response
         response = {
