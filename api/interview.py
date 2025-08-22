@@ -321,16 +321,23 @@ class handler(BaseHTTPRequestHandler):
                 print(f"DEBUG: Available questions: {len(questions)}")
                 print(f"DEBUG: Current exchange_count: {exchange_count}")
                 
-                # Sequential question progression - ask next question in order
-                if exchange_count < len(questions):
-                    next_question = questions[exchange_count]
+                # Sequential question progression - always start from Q1 and go in order
+                # Frontend sends exchange_count already incremented, so we need to subtract 1
+                question_index = exchange_count - 1  # Q1 when exchange_count=1, Q2 when exchange_count=2, etc.
+                
+                print(f"DEBUG: SEQUENTIAL - exchange_count: {exchange_count}, will ask question_index: {question_index}")
+                
+                if question_index < len(questions):
+                    next_question = questions[question_index]
                     ai_response = next_question.get('text') or next_question.get('question_text', 'Tell me more')
-                    print(f"DEBUG: SEQUENTIAL - Exchange {exchange_count}, asking question {exchange_count + 1}: {ai_response}")
+                    question_id = next_question.get('id', f'q{question_index + 1}')
+                    print(f"DEBUG: SEQUENTIAL - Asking question {question_id} (index {question_index})")
+                    print(f"DEBUG: SEQUENTIAL - Question text: {ai_response[:100]}...")
                     
-                    # Set completion based on question count
+                    # Set completion based on question count  
                     new_exchange_count = exchange_count + 1
                     is_complete = new_exchange_count >= len(questions)
-                    print(f"DEBUG: SEQUENTIAL - Completion: {new_exchange_count}/{len(questions)}, complete: {is_complete}")
+                    print(f"DEBUG: SEQUENTIAL - After this exchange: {new_exchange_count}/{len(questions)}, complete: {is_complete}")
                 else:
                     # All questionnaire questions asked - mark complete
                     ai_response = "Thank you for sharing all of that! Is there anything else you'd like to tell me about this topic?"
