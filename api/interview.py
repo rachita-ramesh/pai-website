@@ -312,43 +312,35 @@ class handler(BaseHTTPRequestHandler):
             print(f"DEBUG: Session complete: {is_complete}, exchange count: {new_exchange_count}")
             
         else:
-            print(f"DEBUG: Using sequential question progression")
-            # Use sequential question progression
+            print(f"DEBUG: Using simple sequential question progression")
+            
+            # SIMPLE: Just get the next question from the questionnaire JSONB
             ai_response = "Thank you for sharing that!"
             
             if questionnaire_context and 'questions' in questionnaire_context:
                 questions = questionnaire_context['questions']
+                
                 print(f"DEBUG: Available questions: {len(questions)}")
                 print(f"DEBUG: Current exchange_count: {exchange_count}")
                 
-                # Sequential question progression - always start from Q1 and go in order
-                # Frontend sends exchange_count already incremented, so we need to subtract 1
-                question_index = exchange_count - 1  # Q1 when exchange_count=1, Q2 when exchange_count=2, etc.
-                
-                print(f"DEBUG: SEQUENTIAL - exchange_count: {exchange_count}, will ask question_index: {question_index}")
+                # exchange_count represents number of user messages received
+                # Question index should be exchange_count (0-based indexing)
+                # When exchange_count=0 (first user response), ask question[0] (Q2)
+                # When exchange_count=1 (second user response), ask question[1] (Q3), etc.
+                question_index = exchange_count
                 
                 if question_index < len(questions):
                     next_question = questions[question_index]
                     ai_response = next_question.get('text') or next_question.get('question_text', 'Tell me more')
                     question_id = next_question.get('id', f'q{question_index + 1}')
-                    print(f"DEBUG: SEQUENTIAL - Asking question {question_id} (index {question_index})")
-                    print(f"DEBUG: SEQUENTIAL - Question text: {ai_response[:100]}...")
-                    
-                    # Set completion based on question count  
-                    new_exchange_count = exchange_count + 1
-                    is_complete = new_exchange_count >= len(questions)
-                    print(f"DEBUG: SEQUENTIAL - After this exchange: {new_exchange_count}/{len(questions)}, complete: {is_complete}")
+                    print(f"DEBUG: Exchange {exchange_count}, asking question {question_id} (index {question_index})")
+                    print(f"DEBUG: Question: {ai_response[:80]}...")
                 else:
-                    # All questionnaire questions asked - mark complete
                     ai_response = "Thank you for sharing all of that! Is there anything else you'd like to tell me about this topic?"
-                    print(f"DEBUG: SEQUENTIAL - All questionnaire questions asked, marking complete")
-                    new_exchange_count = exchange_count + 1
-                    is_complete = True
-            else:
-                # Fallback completion calculation when no questions
-                target_questions = 8
-                new_exchange_count = exchange_count + 1
-                is_complete = new_exchange_count >= target_questions
+                    print(f"DEBUG: All questionnaire questions asked, using generic follow-up")
+            
+            new_exchange_count = exchange_count + 1
+            is_complete = False  # Let completion be handled elsewhere
         
         # Store the conversation messages in Supabase
         try:
