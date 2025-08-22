@@ -323,10 +323,10 @@ class handler(BaseHTTPRequestHandler):
                 print(f"DEBUG: Available questions: {len(questions)}")
                 print(f"DEBUG: Current exchange_count: {exchange_count}")
                 
-                # exchange_count represents number of user messages received
-                # Question index should be exchange_count (0-based indexing)
-                # When exchange_count=0 (first user response), ask question[0] (Q2)
-                # When exchange_count=1 (second user response), ask question[1] (Q3), etc.
+                # SIMPLE COUNTER: exchange_count = number of user responses received
+                # First user response (exchange_count=1) → ask questions[1] (Q2)
+                # Second user response (exchange_count=2) → ask questions[2] (Q3)  
+                # Third user response (exchange_count=3) → ask questions[3] (Q4)
                 question_index = exchange_count
                 
                 if question_index < len(questions):
@@ -340,7 +340,14 @@ class handler(BaseHTTPRequestHandler):
                     print(f"DEBUG: All questionnaire questions asked, using generic follow-up")
             
             new_exchange_count = exchange_count + 1
-            is_complete = False  # Let completion be handled elsewhere
+            
+            # Complete only when ALL questions have been asked
+            if questionnaire_context and 'questions' in questionnaire_context:
+                total_questions = len(questionnaire_context['questions'])
+                is_complete = new_exchange_count >= total_questions
+                print(f"DEBUG: Completion check: {new_exchange_count}/{total_questions}, complete: {is_complete}")
+            else:
+                is_complete = new_exchange_count >= 8  # Fallback
         
         # Store the conversation messages in Supabase
         try:
@@ -387,19 +394,21 @@ class handler(BaseHTTPRequestHandler):
                     transcript_lines.append(f"{speaker}: {msg.get('content', '')}")
                 transcript = "\n\n".join(transcript_lines)
                 
-                # Use completion status from AI interviewer if available, otherwise calculate
+                # Use completion status from sequential logic above
                 if 'new_exchange_count' not in locals() or 'is_complete' not in locals():
-                    target_questions = 8  # Default reduced
-                    if questionnaire_context and 'target_questions' in questionnaire_context:
-                        target_questions = questionnaire_context['target_questions']
-                    
                     new_exchange_count = exchange_count + 1
-                    is_complete = new_exchange_count >= target_questions
+                    # Complete when all questions are asked
+                    if questionnaire_context and 'questions' in questionnaire_context:
+                        total_questions = len(questionnaire_context['questions'])
+                        is_complete = new_exchange_count >= total_questions
+                    else:
+                        is_complete = new_exchange_count >= 8
+                        
+                # Set target_questions for response consistency
+                if questionnaire_context and 'questions' in questionnaire_context:
+                    target_questions = len(questionnaire_context['questions'])
                 else:
-                    # Calculate target_questions for response consistency
                     target_questions = 8
-                    if questionnaire_context and 'target_questions' in questionnaire_context:
-                        target_questions = questionnaire_context['target_questions']
                 
                 print(f"DEBUG: Completion check - exchange_count: {exchange_count}, new_exchange_count: {new_exchange_count}, target_questions: {target_questions}, is_complete: {is_complete}")
                 
@@ -417,23 +426,25 @@ class handler(BaseHTTPRequestHandler):
                 
             except Exception as e:
                 print(f"DEBUG: Error updating interview session: {e}")
-                # Use completion from AI interviewer if available, otherwise calculate
+                # Use completion from sequential logic above
                 if 'new_exchange_count' not in locals() or 'is_complete' not in locals():
-                    target_questions = 8
-                    if questionnaire_context and 'target_questions' in questionnaire_context:
-                        target_questions = questionnaire_context['target_questions']
                     new_exchange_count = exchange_count + 1
-                    is_complete = new_exchange_count >= target_questions
+                    if questionnaire_context and 'questions' in questionnaire_context:
+                        total_questions = len(questionnaire_context['questions'])
+                        is_complete = new_exchange_count >= total_questions
+                    else:
+                        is_complete = new_exchange_count >= 8
                 
         except Exception as e:
             print(f"DEBUG: Error storing conversation messages: {e}")
-            # Use completion from AI interviewer if available, otherwise calculate
+            # Use completion from sequential logic above
             if 'new_exchange_count' not in locals() or 'is_complete' not in locals():
-                target_questions = 8
-                if questionnaire_context and 'target_questions' in questionnaire_context:
-                    target_questions = questionnaire_context['target_questions']
                 new_exchange_count = exchange_count + 1
-                is_complete = new_exchange_count >= target_questions
+                if questionnaire_context and 'questions' in questionnaire_context:
+                    total_questions = len(questionnaire_context['questions'])
+                    is_complete = new_exchange_count >= total_questions
+                else:
+                    is_complete = new_exchange_count >= 8
         
         # Send response
         response = {
