@@ -323,10 +323,10 @@ class handler(BaseHTTPRequestHandler):
                 print(f"DEBUG: Available questions: {len(questions)}")
                 print(f"DEBUG: Current exchange_count: {exchange_count}")
                 
-                # SIMPLE COUNTER: exchange_count = number of user responses received
-                # First user response (exchange_count=1) → ask questions[1] (Q2)
-                # Second user response (exchange_count=2) → ask questions[2] (Q3)  
-                # Third user response (exchange_count=3) → ask questions[3] (Q4)
+                # Frontend already incremented exchange_count, so use it directly as question index
+                # exchange_count=1 after Q1 response → ask questions[1] (Q2)
+                # exchange_count=2 after Q2 response → ask questions[2] (Q3)  
+                # exchange_count=3 after Q3 response → ask questions[3] (Q4)
                 question_index = exchange_count
                 
                 if question_index < len(questions):
@@ -339,9 +339,10 @@ class handler(BaseHTTPRequestHandler):
                     ai_response = "Thank you for sharing all of that! Is there anything else you'd like to tell me about this topic?"
                     print(f"DEBUG: All questionnaire questions asked, using generic follow-up")
             
-            new_exchange_count = exchange_count + 1
+            # Frontend already incremented exchange_count, so don't increment again
+            new_exchange_count = exchange_count
             
-            # Complete only when ALL questions have been asked
+            # Complete only when ALL questions have been asked  
             if questionnaire_context and 'questions' in questionnaire_context:
                 total_questions = len(questionnaire_context['questions'])
                 is_complete = new_exchange_count >= total_questions
@@ -379,7 +380,7 @@ class handler(BaseHTTPRequestHandler):
                     'timestamp': datetime.now().isoformat()
                 }
                 new_ai_message = {
-                    'id': f"ai_{exchange_count + 1}",
+                    'id': f"ai_{exchange_count}",
                     'type': 'ai',
                     'content': ai_response, 
                     'timestamp': datetime.now().isoformat()
@@ -396,7 +397,7 @@ class handler(BaseHTTPRequestHandler):
                 
                 # Use completion status from sequential logic above
                 if 'new_exchange_count' not in locals() or 'is_complete' not in locals():
-                    new_exchange_count = exchange_count + 1
+                    new_exchange_count = exchange_count  # Frontend already incremented
                     # Complete when all questions are asked
                     if questionnaire_context and 'questions' in questionnaire_context:
                         total_questions = len(questionnaire_context['questions'])
@@ -428,7 +429,7 @@ class handler(BaseHTTPRequestHandler):
                 print(f"DEBUG: Error updating interview session: {e}")
                 # Use completion from sequential logic above
                 if 'new_exchange_count' not in locals() or 'is_complete' not in locals():
-                    new_exchange_count = exchange_count + 1
+                    new_exchange_count = exchange_count  # Frontend already incremented
                     if questionnaire_context and 'questions' in questionnaire_context:
                         total_questions = len(questionnaire_context['questions'])
                         is_complete = new_exchange_count >= total_questions
@@ -439,7 +440,7 @@ class handler(BaseHTTPRequestHandler):
             print(f"DEBUG: Error storing conversation messages: {e}")
             # Use completion from sequential logic above
             if 'new_exchange_count' not in locals() or 'is_complete' not in locals():
-                new_exchange_count = exchange_count + 1
+                new_exchange_count = exchange_count  # Frontend already incremented
                 if questionnaire_context and 'questions' in questionnaire_context:
                     total_questions = len(questionnaire_context['questions'])
                     is_complete = new_exchange_count >= total_questions
