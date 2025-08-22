@@ -58,6 +58,8 @@ class handler(BaseHTTPRequestHandler):
                 supabase = SupabaseClient()
                 questionnaire = supabase.get_custom_questionnaire(questionnaire_id)
                 
+                print(f"DEBUG: START - Retrieved questionnaire for ID '{questionnaire_id}': {questionnaire}")
+                
                 if questionnaire:
                     # Questions are stored in the questionnaire JSONB field, not a separate table
                     questions = questionnaire.get('questions', [])
@@ -65,8 +67,10 @@ class handler(BaseHTTPRequestHandler):
                     category = questionnaire.get('category', 'general')
                     description = questionnaire.get('description', '')
                     
-                    print(f"DEBUG: Found questionnaire: {questionnaire}")
-                    print(f"DEBUG: Loaded {len(questions)} questions")
+                    print(f"DEBUG: START - Found questionnaire: title='{title}', category='{category}', questions={len(questions)}")
+                    if questions:
+                        print(f"DEBUG: START - First question: {questions[0]}")
+                    print(f"DEBUG: START - Loaded {len(questions)} questions")
                     
                     if questions:
                         # Calculate target interview length (number of questions + 3 additional questions)
@@ -89,6 +93,8 @@ class handler(BaseHTTPRequestHandler):
                         # Fallback to category-based message if no questions
                         initial_message = f"Hi! Let's explore your thoughts about {category}. What role does {category} play in your life?"
                         print(f"DEBUG: No questions found, using category fallback: {initial_message}")
+                else:
+                    print(f"DEBUG: START - No questionnaire found for ID '{questionnaire_id}'")
             except Exception as e:
                 print(f"Error loading questionnaire {questionnaire_id}: {e}")
                 # Fall back to default
@@ -232,9 +238,15 @@ class handler(BaseHTTPRequestHandler):
                 supabase = SupabaseClient()
                 questionnaire = supabase.get_custom_questionnaire(questionnaire_id)
                 
+                print(f"DEBUG: Retrieved questionnaire for ID '{questionnaire_id}': {questionnaire}")
+                
                 if questionnaire:
                     # Questions are stored in the questionnaire JSONB field, not a separate table
                     questions = questionnaire.get('questions', [])
+                    print(f"DEBUG: Extracted {len(questions)} questions from questionnaire")
+                    if questions:
+                        print(f"DEBUG: First question: {questions[0]}")
+                    
                     questionnaire_context = {
                         'title': questionnaire.get('title', 'Custom Questionnaire'),
                         'category': questionnaire.get('category', 'general'),
@@ -242,7 +254,9 @@ class handler(BaseHTTPRequestHandler):
                         'questions': questions,
                         'target_questions': max(3, min(len(questions) + 2, 8))
                     }
-                    print(f"DEBUG: Loaded questionnaire context for {questionnaire_context['category']}")
+                    print(f"DEBUG: Loaded questionnaire context for category '{questionnaire_context['category']}' with {len(questions)} questions")
+                else:
+                    print(f"DEBUG: No questionnaire found for ID '{questionnaire_id}'")
         except Exception as e:
             print(f"DEBUG: Error loading questionnaire context: {e}")
             questionnaire_context = None
