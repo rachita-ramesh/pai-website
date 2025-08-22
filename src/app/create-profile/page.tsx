@@ -657,7 +657,7 @@ export default function CreateProfile() {
           session_id: updatedData.sessionId,
           message: currentMessage,
           exchange_count: updatedData.exchangeCount, // This should increment with each user message
-          questionnaire_id: selectedQuestionnaires.join(',') // Pass all selected questionnaires
+          questionnaire_id: selectedQuestionnaires[currentQuestionnaireIndex] || 'default' // Pass current questionnaire only
         })
       })
       
