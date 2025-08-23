@@ -371,8 +371,9 @@ class SupabaseClient:
             encoded_questionnaire = urllib.parse.quote(questionnaire_id.strip())
             
             # Get sessions from today for this person and questionnaire
+            today_start = urllib.parse.quote(self._get_today_start())
             result = self._make_request('GET', 
-                f'interview_sessions?person_name=eq.{encoded_name}&questionnaire_id=eq.{encoded_questionnaire}&created_at=gte.{self._get_today_start()}&order=created_at.desc')
+                f'interview_sessions?person_name=eq.{encoded_name}&questionnaire_id=eq.{encoded_questionnaire}&created_at=gte.{today_start}&order=created_at.desc')
             
             print(f"DEBUG: Found {len(result)} sessions for {person_name} + {questionnaire_id}")
             return result
