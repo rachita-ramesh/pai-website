@@ -678,88 +678,112 @@ class handler(BaseHTTPRequestHandler):
         
         system_prompt = f"""You are an expert psychological profiler and digital twin creator. Your task is to analyze an interview transcript and extract a comprehensive PAI (Profile AI Interview) personality profile.
 
-Create a detailed JSON profile following the PAI structured format. Analyze the interview transcript and extract insights about the person's psychology, attitudes, behaviors, and decision-making patterns.
+Create a detailed JSON profile following the PAI structured format based on the interview categories covered. Analyze the interview transcript and extract insights about the person's psychology, attitudes, behaviors, and decision-making patterns.
 
-Return ONLY a valid JSON object with this exact structure:
+Return ONLY a valid JSON object with this structure (include only sections that have data from the interviews):
 
 {{
   "profile_id": "{profile_id}",
   "demographics": {{
-    "age_range": "25-34",
-    "lifestyle": "urban_professional|student|homemaker|retired|entrepreneur",
-    "context": "wellness_oriented|career_focused|family_oriented|creative"
+    "name": "string",
+    "age": "number", 
+    "age_range": "string",
+    "gender": "string",
+    "country": "string",
+    "state": "string", 
+    "city": "string",
+    "education_level": "string",
+    "employment": "string",
+    "income": "string"
   }},
-  "core_attitudes": {{
-    "aging_approach": "proactive_prevention|acceptance|denial|anxiety",
-    "beauty_philosophy": "natural|scientific|minimal|maximalist",
-    "risk_tolerance": "conservative|moderate|experimental",
-    "trust_orientation": "expert_authority|social_proof|self_research|brand_loyalty"
+  "lifestyle": {{
+    "daily_life_work": "description of their work and daily routine",
+    "activity_wellness": "description of their fitness and wellness habits", 
+    "interests_hobbies": "description of their hobbies and interests",
+    "weekend_life": "description of their weekend activities"
   }},
-  "decision_psychology": {{
-    "research_style": "extensive_researcher|social_validator|expert_seeker|intuitive_decider",
-    "influence_hierarchy": [
-      "peer_recommendations",
-      "expert_advice",
-      "scientific_evidence",
-      "convenience"
-    ],
-    "purchase_triggers": [
-      "friend_recommendations",
-      "problem_solving",
-      "prevention"
-    ],
-    "regret_patterns": [
-      "too_expensive",
-      "too_complex",
-      "ineffective"
-    ]
+  "media_and_culture": {{
+    "news_information": "where they get news and what topics they follow",
+    "social_media_use": "their social media habits and platforms",
+    "tv_movies_sports": "their entertainment preferences", 
+    "music": "their music preferences and concert habits",
+    "celebrities_influences": "public figures who influence them"
   }},
-  "usage_patterns": {{
-    "routine_adherence": "strict|flexible|inconsistent",
-    "context_sensitivity": "weather|mood|lifestyle_changes|time_pressure",
-    "emotional_drivers": [
-      "confidence",
-      "health_indicators",
-      "social_situations"
-    ],
-    "change_catalysts": [
-      "life_events",
-      "seasonal_changes",
-      "social_influence"
-    ]
+  "personality": {{
+    "self_description": "how they describe themselves",
+    "misunderstood": "what people misunderstand about them",
+    "curiosity_openness": "their openness to new experiences",
+    "structure_vs_spontaneity": "whether they prefer structure or going with flow",
+    "social_energy": "whether they're energized by people or alone time",
+    "stress_challenge": "how they handle stress and challenges",
+    "signature_strengths": "their key personal strengths"
   }},
-  "value_system": {{
-    "priority_hierarchy": [
-      "effectiveness",
-      "convenience",
-      "price",
-      "ethics"
-    ],
-    "non_negotiables": [
-      "time_efficiency",
-      "ingredient_safety"
-    ],
-    "ideal_outcome": "clear_skin|anti_aging|minimal_effort|natural_glow",
-    "core_motivation": "health|appearance|confidence|social_acceptance"
+  "values_and_beliefs": {{
+    "core_values": "their most important values and priorities",
+    "influence_advice": "who they trust for advice",
+    "cultural_political_engagement": "their political engagement level",
+    "aspirations_worldview": "their aspirations and worldview",
+    "decision_priorities": "what they think about first when making big decisions"
   }},
-  "behavioral_quotes": [
-    "Direct quotes from the interview that reveal key behavioral insights"
-  ],
-  "prediction_weights": {{
-    "price_sensitivity": 0.5,
-    "ingredient_focus": 0.7,
-    "routine_complexity_tolerance": 0.3,
-    "brand_loyalty": 0.4,
-    "social_influence_susceptibility": 0.6
+  "skin_and_hair_type": {{
+    "skin_type": "description of their skin type and concerns",
+    "skin_concerns": "main skin concerns or goals",
+    "hair_type": "description of their hair type",  
+    "hair_concerns": "main hair concerns or goals"
+  }},
+  "routine": {{
+    "morning_routine": "their morning skincare/beauty routine",
+    "evening_routine": "their evening skincare/beauty routine",
+    "time_on_routine": "how much time they spend on beauty/self-care daily",
+    "extra_products_in_routine": "weekly or occasional products they use",
+    "changes_based_on_seasonality": "how routine changes with seasons",
+    "hero_product": "their most important product and why",
+    "beauty_routine_frustrations": "parts of routine that frustrate them",
+    "self_care_perception": "whether they see self-care as forward-looking or maintenance",
+    "beauty_routine_motivation": "what role beauty/self-care plays for them",
+    "product_experimentation": "whether they stick with same products or experiment",
+    "buyer_type": "whether they're budget-friendly, premium, or mixed buyer",
+    "engagement_with_beauty": "how engaged they are with beauty content/brands"
+  }},
+  "facial_moisturizer_attitudes": {{
+    "benefits_sought": "what they look for in facial moisturizer",
+    "most_important_benefit": "single most important benefit",
+    "sustainable_values": "importance of clean/natural/sustainable values",
+    "ingredients_seeking": "specific ingredients they look for", 
+    "ingredients_avoided": "ingredients they avoid or distrust",
+    "dermatologist_recommended": "importance of dermatologist recommendation",
+    "moisturizer_frustrations": "frustrations with facial moisturizers"
+  }},
+  "moisturizer_usage": {{
+    "current_product_usage": "description of current facial moisturizer",
+    "current_product_satisfaction": "what they like/dislike about current product",
+    "brand_awareness": "other brands they're aware of",
+    "brand_consideration": "brands they'd consider in future",
+    "past_usage": "brands they've used in the past",
+    "switching_triggers": "what motivates them to switch brands"
+  }},
+  "shopping_behaviors": {{
+    "online_vs_instore_shopping": "where they typically shop",
+    "purchase_frequency": "how often they buy moisturizers",
+    "budget_price_point": "average spend and price perception", 
+    "premium_cues": "what makes moisturizer feel premium",
+    "deal_sensitivity": "whether they wait for sales/promotions",
+    "packaging_presentation": "what they notice about packaging",
+    "brand_attributes": "what makes them trust a brand"
+  }},
+  "information_sources_messaging": {{
+    "information_searching": "how they research before buying",
+    "general_information_sources": "where they get moisturizer information",
+    "ideal_product": "description of their perfect moisturizer"
   }}
 }}
 
 Important guidelines:
-- Use actual quotes from the interview for behavioral_quotes
-- Set prediction_weights as decimals between 0.0-1.0 based on the interview evidence
-- Choose values from the provided options that best match the person's responses
+- Only include sections where you have data from the interviews (centrepiece, beauty, moisturizer)
+- Use descriptive text rather than categorical values for better readability
 - Base everything on evidence from the interview transcript
-- If information isn't available, make reasonable inferences based on what was discussed"""
+- If a section wasn't covered in the interviews, omit it entirely
+- Focus on extracting rich, detailed insights rather than just categorizing"""
         
         try:
             response = client.messages.create(
