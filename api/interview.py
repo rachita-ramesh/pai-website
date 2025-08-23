@@ -600,8 +600,18 @@ class handler(BaseHTTPRequestHandler):
                 profile_id = f"{person_name}_v{next_version}_{uuid.uuid4().hex[:8]}"
                 print(f"DEBUG: Profile ID conflict detected, using UUID suffix: {profile_id}")
             
-            # Extract profile using AI with the profile_id
-            profile_data = self._extract_profile_from_interview(interview_session, api_key, profile_id)
+            # Extract profile using AI with all collected sessions
+            sessions_for_extraction = all_sessions if len(all_sessions) > 1 else [interview_session]
+            print(f"DEBUG: Extracting profile from {len(sessions_for_extraction)} session(s)")
+            profile_data = self._extract_profile_from_interview(sessions_for_extraction, api_key, profile_id, questionnaires_completed)
+            
+            # Link all sessions to this profile_id for traceability
+            for session in sessions_for_extraction:
+                try:
+                    supabase.update_interview_session(session['session_id'], {'profile_id': profile_id})
+                    print(f"DEBUG: Linked session {session['session_id']} to profile {profile_id}")
+                except Exception as e:
+                    print(f"DEBUG: Error linking session {session['session_id']}: {e}")
             profile_version_data = {
                 'profile_id': profile_id,
                 'person_name': person_name,
@@ -667,123 +677,107 @@ class handler(BaseHTTPRequestHandler):
         except:
             return None
     
-    def _extract_profile_from_interview(self, interview_session, api_key, profile_id):
-        """Use AI to extract personality profile from interview transcript"""
+    def _extract_profile_from_interview(self, all_sessions, api_key, profile_id, questionnaires_completed):
+        """Use AI to extract personality profile from interview transcript with metadata tracking"""
         import anthropic
         
         client = anthropic.Anthropic(api_key=api_key)
         
-        transcript = interview_session.get('transcript', '')
-        person_name = interview_session.get('person_name', 'User')
+        # Build combined transcript and collect session metadata
+        combined_transcript = ""
+        session_metadata = {}
         
-        system_prompt = f"""You are an expert psychological profiler and digital twin creator. Your task is to analyze an interview transcript and extract a comprehensive PAI (Profile AI Interview) personality profile.
+        for session in all_sessions:
+            questionnaire_id = session.get('questionnaire_id', 'unknown')
+            session_id = session.get('session_id', 'unknown')
+            transcript = session.get('transcript', '')
+            
+            combined_transcript += f"\n\n--- {questionnaire_id.upper()} QUESTIONNAIRE (Session: {session_id}) ---\n{transcript}"
+            session_metadata[questionnaire_id] = {
+                'session_id': session_id,
+                'exchange_count': session.get('exchange_count', 0),
+                'completed_at': session.get('completed_at', session.get('created_at', ''))
+            }
+        
+        person_name = all_sessions[0].get('person_name', 'User') if all_sessions else 'User'
+        
+        system_prompt = f"""You are an expert psychological profiler and digital twin creator. Your task is to analyze interview transcripts and extract a comprehensive PAI personality profile with full traceability.
 
-Create a detailed JSON profile following the PAI structured format based on the interview categories covered. Analyze the interview transcript and extract insights about the person's psychology, attitudes, behaviors, and decision-making patterns.
+CRITICAL: You must return a JSON object where each profile field includes the VALUE and METADATA about which question generated that data.
 
-Return ONLY a valid JSON object with this structure (include only sections that have data from the interviews):
+Return ONLY a valid JSON object with this exact structure:
 
 {{
   "profile_id": "{profile_id}",
-  "demographics": {{
-    "name": "string",
-    "age": "number", 
-    "age_range": "string",
-    "gender": "string",
-    "country": "string",
-    "state": "string", 
-    "city": "string",
-    "education_level": "string",
-    "employment": "string",
-    "income": "string"
-  }},
-  "lifestyle": {{
-    "daily_life_work": "description of their work and daily routine",
-    "activity_wellness": "description of their fitness and wellness habits", 
-    "interests_hobbies": "description of their hobbies and interests",
-    "weekend_life": "description of their weekend activities"
-  }},
-  "media_and_culture": {{
-    "news_information": "where they get news and what topics they follow",
-    "social_media_use": "their social media habits and platforms",
-    "tv_movies_sports": "their entertainment preferences", 
-    "music": "their music preferences and concert habits",
-    "celebrities_influences": "public figures who influence them"
-  }},
-  "personality": {{
-    "self_description": "how they describe themselves",
-    "misunderstood": "what people misunderstand about them",
-    "curiosity_openness": "their openness to new experiences",
-    "structure_vs_spontaneity": "whether they prefer structure or going with flow",
-    "social_energy": "whether they're energized by people or alone time",
-    "stress_challenge": "how they handle stress and challenges",
-    "signature_strengths": "their key personal strengths"
-  }},
-  "values_and_beliefs": {{
-    "core_values": "their most important values and priorities",
-    "influence_advice": "who they trust for advice",
-    "cultural_political_engagement": "their political engagement level",
-    "aspirations_worldview": "their aspirations and worldview",
-    "decision_priorities": "what they think about first when making big decisions"
-  }},
-  "skin_and_hair_type": {{
-    "skin_type": "description of their skin type and concerns",
-    "skin_concerns": "main skin concerns or goals",
-    "hair_type": "description of their hair type",  
-    "hair_concerns": "main hair concerns or goals"
-  }},
-  "routine": {{
-    "morning_routine": "their morning skincare/beauty routine",
-    "evening_routine": "their evening skincare/beauty routine",
-    "time_on_routine": "how much time they spend on beauty/self-care daily",
-    "extra_products_in_routine": "weekly or occasional products they use",
-    "changes_based_on_seasonality": "how routine changes with seasons",
-    "hero_product": "their most important product and why",
-    "beauty_routine_frustrations": "parts of routine that frustrate them",
-    "self_care_perception": "whether they see self-care as forward-looking or maintenance",
-    "beauty_routine_motivation": "what role beauty/self-care plays for them",
-    "product_experimentation": "whether they stick with same products or experiment",
-    "buyer_type": "whether they're budget-friendly, premium, or mixed buyer",
-    "engagement_with_beauty": "how engaged they are with beauty content/brands"
-  }},
-  "facial_moisturizer_attitudes": {{
-    "benefits_sought": "what they look for in facial moisturizer",
-    "most_important_benefit": "single most important benefit",
-    "sustainable_values": "importance of clean/natural/sustainable values",
-    "ingredients_seeking": "specific ingredients they look for", 
-    "ingredients_avoided": "ingredients they avoid or distrust",
-    "dermatologist_recommended": "importance of dermatologist recommendation",
-    "moisturizer_frustrations": "frustrations with facial moisturizers"
-  }},
-  "moisturizer_usage": {{
-    "current_product_usage": "description of current facial moisturizer",
-    "current_product_satisfaction": "what they like/dislike about current product",
-    "brand_awareness": "other brands they're aware of",
-    "brand_consideration": "brands they'd consider in future",
-    "past_usage": "brands they've used in the past",
-    "switching_triggers": "what motivates them to switch brands"
-  }},
-  "shopping_behaviors": {{
-    "online_vs_instore_shopping": "where they typically shop",
-    "purchase_frequency": "how often they buy moisturizers",
-    "budget_price_point": "average spend and price perception", 
-    "premium_cues": "what makes moisturizer feel premium",
-    "deal_sensitivity": "whether they wait for sales/promotions",
-    "packaging_presentation": "what they notice about packaging",
-    "brand_attributes": "what makes them trust a brand"
-  }},
-  "information_sources_messaging": {{
-    "information_searching": "how they research before buying",
-    "general_information_sources": "where they get moisturizer information",
-    "ideal_product": "description of their perfect moisturizer"
+  "created_from_sessions": {session_metadata},
+  "profile_data": {{
+    "demographics": {{
+      "name": {{"value": "extracted name", "source": {{"questionnaire_id": "centrepiece", "question_id": "q0", "session_id": "session_123"}}}},
+      "age": {{"value": "extracted age", "source": {{"questionnaire_id": "centrepiece", "question_id": "q0", "session_id": "session_123"}}}},
+      "age_range": {{"value": "25-34", "source": {{"questionnaire_id": "centrepiece", "question_id": "q0", "session_id": "session_123"}}}},
+      "gender": {{"value": "extracted gender", "source": {{"questionnaire_id": "centrepiece", "question_id": "q0", "session_id": "session_123"}}}},
+      "education_level": {{"value": "extracted education", "source": {{"questionnaire_id": "centrepiece", "question_id": "q1", "session_id": "session_123"}}}},
+      "employment": {{"value": "extracted employment", "source": {{"questionnaire_id": "centrepiece", "question_id": "q1", "session_id": "session_123"}}}}
+    }},
+    "lifestyle": {{
+      "daily_life_work": {{"value": "description of work and routine", "source": {{"questionnaire_id": "centrepiece", "question_id": "q1", "session_id": "session_123"}}}},
+      "activity_wellness": {{"value": "fitness and wellness habits", "source": {{"questionnaire_id": "centrepiece", "question_id": "q2", "session_id": "session_123"}}}},
+      "interests_hobbies": {{"value": "hobbies and interests", "source": {{"questionnaire_id": "centrepiece", "question_id": "q4", "session_id": "session_123"}}}},
+      "weekend_life": {{"value": "weekend activities", "source": {{"questionnaire_id": "centrepiece", "question_id": "q5", "session_id": "session_123"}}}}
+    }},
+    "media_and_culture": {{
+      "news_information": {{"value": "news sources and topics", "source": {{"questionnaire_id": "centrepiece", "question_id": "q6", "session_id": "session_123"}}}},
+      "social_media_use": {{"value": "social media habits", "source": {{"questionnaire_id": "centrepiece", "question_id": "q8", "session_id": "session_123"}}}},
+      "tv_movies_sports": {{"value": "entertainment preferences", "source": {{"questionnaire_id": "centrepiece", "question_id": "q10", "session_id": "session_123"}}}},
+      "music": {{"value": "music preferences", "source": {{"questionnaire_id": "centrepiece", "question_id": "q14", "session_id": "session_123"}}}},
+      "celebrities_influences": {{"value": "influential figures", "source": {{"questionnaire_id": "centrepiece", "question_id": "q16", "session_id": "session_123"}}}}
+    }},
+    "personality": {{
+      "self_description": {{"value": "self description", "source": {{"questionnaire_id": "centrepiece", "question_id": "q18", "session_id": "session_123"}}}},
+      "misunderstood": {{"value": "what people misunderstand", "source": {{"questionnaire_id": "centrepiece", "question_id": "q19", "session_id": "session_123"}}}},
+      "curiosity_openness": {{"value": "openness to new experiences", "source": {{"questionnaire_id": "centrepiece", "question_id": "q20", "session_id": "session_123"}}}},
+      "structure_vs_spontaneity": {{"value": "preference for structure vs flow", "source": {{"questionnaire_id": "centrepiece", "question_id": "q21", "session_id": "session_123"}}}},
+      "social_energy": {{"value": "people vs alone time preference", "source": {{"questionnaire_id": "centrepiece", "question_id": "q22", "session_id": "session_123"}}}},
+      "stress_challenge": {{"value": "stress handling methods", "source": {{"questionnaire_id": "centrepiece", "question_id": "q23", "session_id": "session_123"}}}},
+      "signature_strengths": {{"value": "key personal strengths", "source": {{"questionnaire_id": "centrepiece", "question_id": "q24", "session_id": "session_123"}}}}
+    }},
+    "values_and_beliefs": {{
+      "core_values": {{"value": "most important values", "source": {{"questionnaire_id": "centrepiece", "question_id": "q25", "session_id": "session_123"}}}},
+      "influence_advice": {{"value": "trusted advice sources", "source": {{"questionnaire_id": "centrepiece", "question_id": "q26", "session_id": "session_123"}}}},
+      "cultural_political_engagement": {{"value": "political engagement level", "source": {{"questionnaire_id": "centrepiece", "question_id": "q27", "session_id": "session_123"}}}},
+      "aspirations_worldview": {{"value": "aspirations and worldview", "source": {{"questionnaire_id": "centrepiece", "question_id": "q30", "session_id": "session_123"}}}},
+      "decision_priorities": {{"value": "decision-making priorities", "source": {{"questionnaire_id": "centrepiece", "question_id": "q31", "session_id": "session_123"}}}}
+    }},
+    "skin_and_hair_type": {{
+      "skin_type": {{"value": "skin description", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q1", "session_id": "session_456"}}}},
+      "skin_concerns": {{"value": "skin concerns", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q2", "session_id": "session_456"}}}},
+      "hair_type": {{"value": "hair description", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q3", "session_id": "session_456"}}}},
+      "hair_concerns": {{"value": "hair concerns", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q4", "session_id": "session_456"}}}}
+    }},
+    "routine": {{
+      "morning_routine": {{"value": "morning routine description", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q5", "session_id": "session_456"}}}},
+      "evening_routine": {{"value": "evening routine description", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q6", "session_id": "session_456"}}}},
+      "time_on_routine": {{"value": "time spent on beauty daily", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q7", "session_id": "session_456"}}}},
+      "extra_products_in_routine": {{"value": "weekly/occasional products", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q8", "session_id": "session_456"}}}},
+      "changes_based_on_seasonality": {{"value": "seasonal routine changes", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q9", "session_id": "session_456"}}}},
+      "hero_product": {{"value": "most important product", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q10", "session_id": "session_456"}}}},
+      "beauty_routine_frustrations": {{"value": "routine frustrations", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q11", "session_id": "session_456"}}}},
+      "self_care_perception": {{"value": "self-care perception", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q12", "session_id": "session_456"}}}},
+      "beauty_routine_motivation": {{"value": "beauty routine motivation", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q13", "session_id": "session_456"}}}},
+      "product_experimentation": {{"value": "experimentation vs consistency", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q14", "session_id": "session_456"}}}},
+      "buyer_type": {{"value": "budget vs premium preference", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q15", "session_id": "session_456"}}}},
+      "engagement_with_beauty": {{"value": "engagement with beauty content", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q16", "session_id": "session_456"}}}}
+    }}
   }}
 }}
 
 Important guidelines:
-- Only include sections where you have data from the interviews (centrepiece, beauty, moisturizer)
-- Use descriptive text rather than categorical values for better readability
+- Include actual session_id from the sessions you're analyzing
+- Only include sections where you have data from the interviews
+- Use descriptive text for values, not just categories
 - Base everything on evidence from the interview transcript
-- If a section wasn't covered in the interviews, omit it entirely
-- Focus on extracting rich, detailed insights rather than just categorizing"""
+- If a section wasn't covered, omit it entirely
+- Focus on extracting rich, detailed insights rather than categorizing"""
         
         try:
             response = client.messages.create(
