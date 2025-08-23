@@ -176,7 +176,14 @@ CRITICAL: Always ask ONE focused question per response. Keep responses conversat
     
     def start_interview(self, participant_name: str) -> InterviewSession:
         """Start a new interview session"""
-        session_id = f"interview_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{participant_name}"
+        # Include questionnaire type in session_id to avoid conflicts
+        questionnaire_type = "default"
+        if self.questionnaire_context and 'questionnaire_id' in self.questionnaire_context:
+            questionnaire_type = self.questionnaire_context['questionnaire_id']
+        elif self.questionnaire_context and 'category' in self.questionnaire_context:
+            questionnaire_type = self.questionnaire_context['category']
+            
+        session_id = f"interview_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{participant_name}_{questionnaire_type}"
         
         # Generate natural welcome message based on questionnaire context
         if self.questionnaire_context:

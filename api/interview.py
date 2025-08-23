@@ -248,6 +248,7 @@ class handler(BaseHTTPRequestHandler):
                         print(f"DEBUG: First question: {questions[0]}")
                     
                     questionnaire_context = {
+                        'questionnaire_id': questionnaire_id,
                         'title': questionnaire.get('title', 'Custom Questionnaire'),
                         'category': questionnaire.get('category', 'general'),
                         'description': questionnaire.get('description', ''),
