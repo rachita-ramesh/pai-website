@@ -331,14 +331,17 @@ export default function CreateProfile() {
     }
   }
   
-  const startInterview = async () => {
+  const startInterview = async (overrideQuestionnaireIndex?: number) => {
     if (!userName.trim()) return
     
-    const currentQuestionnaire = selectedQuestionnaires[currentQuestionnaireIndex] || 'default'
+    const activeQuestionnaireIndex = overrideQuestionnaireIndex !== undefined ? overrideQuestionnaireIndex : currentQuestionnaireIndex
+    const currentQuestionnaire = selectedQuestionnaires[activeQuestionnaireIndex] || 'default'
     console.log('DEBUG: Starting interview with:', { 
       userName, 
       selectedQuestionnaires, 
       currentQuestionnaireIndex,
+      activeQuestionnaireIndex,
+      overrideQuestionnaireIndex,
       currentQuestionnaire 
     })
     setIsLoading(true)
@@ -719,9 +722,9 @@ export default function CreateProfile() {
             targetQuestions: 20
           })
           
-          // Auto-start next questionnaire
-          console.log(`DEBUG: Auto-starting next questionnaire in 1 second...`)
-          setTimeout(() => startInterview(), 1000)
+          // Auto-start next questionnaire with explicit index
+          console.log(`DEBUG: Auto-starting next questionnaire in 1 second with index ${nextIndex}...`)
+          setTimeout(() => startInterview(nextIndex), 1000)
         } else {
           // All questionnaires completed, extract profile
           console.log(`DEBUG: All questionnaires completed! Starting profile extraction...`)
