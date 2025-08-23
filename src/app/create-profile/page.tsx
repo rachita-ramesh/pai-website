@@ -173,6 +173,8 @@ export default function CreateProfile() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const personName = urlParams.get('name') || 'rachita'
+    console.log('DEBUG: URL params:', window.location.search)
+    console.log('DEBUG: Extracted person name:', personName)
     setUserName(personName)
   }, [])
   
