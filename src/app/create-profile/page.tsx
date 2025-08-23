@@ -468,12 +468,9 @@ export default function CreateProfile() {
           }
         }))
         
-        // Filter out already completed questionnaires from selection
-        setSelectedQuestionnaires(prev => 
-          prev.filter(qName => !completions.some((comp: { questionnaire_name: string; completed_at: string | null; skipped: boolean }) => 
-            comp.questionnaire_name === qName && comp.completed_at && !comp.skipped
-          ))
-        )
+        // NOTE: Do NOT filter out completed questionnaires from selection!
+        // selectedQuestionnaires should track what user wants to complete in THIS session
+        // Even if questionnaires were completed before, user might want to redo them
       } else {
         // If API doesn't exist yet, simulate realistic completions
         setModularQuestionnaires(prev => prev.map(q => ({
@@ -482,8 +479,8 @@ export default function CreateProfile() {
           skipped: false
         })))
         
-        // Remove centrepiece from selection since it's already completed
-        setSelectedQuestionnaires(prev => prev.filter(name => name !== 'centrepiece'))
+        // NOTE: Do NOT remove questionnaires from selection!
+        // User should be able to redo questionnaires even if completed before
       }
     } catch (error) {
       console.error('Error checking completions:', error)
@@ -493,7 +490,7 @@ export default function CreateProfile() {
         completed: q.name === 'centrepiece',
         skipped: false
       })))
-      setSelectedQuestionnaires(prev => prev.filter(name => name !== 'centrepiece'))
+      // NOTE: Do NOT remove questionnaires from selection!
     }
   }
   
@@ -762,6 +759,8 @@ export default function CreateProfile() {
 
   const startProfileExtraction = async (sessionId: string) => {
     console.log('Starting profile extraction for session:', sessionId)
+    console.log('DEBUG: selectedQuestionnaires at extraction time:', selectedQuestionnaires)
+    console.log('DEBUG: currentQuestionnaireIndex:', currentQuestionnaireIndex)
     setIsExtractingProfile(true)
     setProfileExtractionError(null)
     
@@ -770,18 +769,22 @@ export default function CreateProfile() {
       const completenessMetadata = buildCompletenessMetadata(selectedQuestionnaires)
       console.log('Built completeness metadata:', completenessMetadata)
 
+      const requestBody = {
+        session_id: sessionId,
+        completeness_metadata: completenessMetadata,
+        questionnaires_completed: selectedQuestionnaires,
+        profile_action: profileAction,
+        existing_profile_id: profileAction === 'existing' ? selectedExistingProfile : null
+      }
+      
+      console.log('DEBUG: Sending to complete-interview API:', requestBody)
+      
       const completeResponse = await fetch(`/api/interview?action=complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          session_id: sessionId,
-          completeness_metadata: completenessMetadata,
-          questionnaires_completed: selectedQuestionnaires,
-          profile_action: profileAction,
-          existing_profile_id: profileAction === 'existing' ? selectedExistingProfile : null
-        })
+        body: JSON.stringify(requestBody)
       })
       
       if (completeResponse.ok) {
