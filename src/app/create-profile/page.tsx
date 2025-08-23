@@ -688,11 +688,18 @@ export default function CreateProfile() {
       setInterviewData(finalData)
       
       if (finalData.isComplete) {
+        console.log(`DEBUG: Questionnaire completed! Current index: ${currentQuestionnaireIndex}, Total: ${selectedQuestionnaires.length}`)
+        console.log(`DEBUG: Selected questionnaires: ${selectedQuestionnaires}`)
+        
         // Check if there are more questionnaires to process
         if (currentQuestionnaireIndex < selectedQuestionnaires.length - 1) {
           // Move to next questionnaire
-          setCurrentQuestionnaireIndex(prev => prev + 1)
-          console.log(`Moving to next questionnaire: ${selectedQuestionnaires[currentQuestionnaireIndex + 1]}`)
+          const nextIndex = currentQuestionnaireIndex + 1
+          const nextQuestionnaire = selectedQuestionnaires[nextIndex]
+          console.log(`DEBUG: Moving to questionnaire ${nextIndex + 1}/${selectedQuestionnaires.length}: ${nextQuestionnaire}`)
+          
+          setCurrentQuestionnaireIndex(nextIndex)
+          console.log(`Moving to next questionnaire: ${nextQuestionnaire}`)
           
           // Start new interview for next questionnaire
           setInterviewData({
@@ -707,9 +714,11 @@ export default function CreateProfile() {
           })
           
           // Auto-start next questionnaire
+          console.log(`DEBUG: Auto-starting next questionnaire in 1 second...`)
           setTimeout(() => startInterview(), 1000)
         } else {
           // All questionnaires completed, extract profile
+          console.log(`DEBUG: All questionnaires completed! Starting profile extraction...`)
           setInterviewPhase('complete')
           startProfileExtraction(finalData.sessionId)
         }
