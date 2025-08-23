@@ -384,7 +384,7 @@ class SupabaseClient:
         """Get today's start timestamp in ISO format"""
         from datetime import datetime, timezone
         today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        return today_start.isoformat()
+        return today_start.strftime('%Y-%m-%dT%H:%M:%S+00:00')
     
     
     def create_profile_version(self, profile_data: Dict) -> Dict:
