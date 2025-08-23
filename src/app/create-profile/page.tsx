@@ -846,7 +846,11 @@ export default function CreateProfile() {
                 <p>Profile Creation</p>
               </div>
             </Link>
-            <div className="badge">Step 1 of 2</div>
+            <div className="badge">
+              {interviewPhase === 'complete' ? 'Complete' : 
+               interviewPhase === 'interview' ? `Step ${currentQuestionnaireIndex + 1} of ${selectedQuestionnaires.length}` :
+               'Setup'}
+            </div>
           </nav>
         </div>
       </header>
