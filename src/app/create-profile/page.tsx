@@ -334,7 +334,13 @@ export default function CreateProfile() {
   const startInterview = async () => {
     if (!userName.trim()) return
     
-    console.log('DEBUG: Starting interview with:', { userName, selectedQuestionnaires })
+    const currentQuestionnaire = selectedQuestionnaires[currentQuestionnaireIndex] || 'default'
+    console.log('DEBUG: Starting interview with:', { 
+      userName, 
+      selectedQuestionnaires, 
+      currentQuestionnaireIndex,
+      currentQuestionnaire 
+    })
     setIsLoading(true)
     
     try {
@@ -347,7 +353,7 @@ export default function CreateProfile() {
         },
         body: JSON.stringify({
           participant_name: userName,
-          questionnaire_id: selectedQuestionnaires[currentQuestionnaireIndex] || 'default' // Use current questionnaire
+          questionnaire_id: currentQuestionnaire // Use current questionnaire
         })
       })
       
