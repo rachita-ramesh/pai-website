@@ -503,6 +503,9 @@ class handler(BaseHTTPRequestHandler):
             questionnaires_completed = data.get('questionnaires_completed', [])
             print(f"DEBUG: Frontend reports completed questionnaires: {questionnaires_completed}")
             
+            # Initialize sessions for extraction
+            sessions_for_extraction = [interview_session]  # Default to single session
+            
             if len(questionnaires_completed) > 1:
                 # Multi-questionnaire flow - collect all related sessions
                 print(f"DEBUG: Multi-questionnaire flow detected, collecting {len(questionnaires_completed)} sessions")
@@ -520,26 +523,13 @@ class handler(BaseHTTPRequestHandler):
                 
                 if len(all_sessions) > 1:
                     print(f"DEBUG: Using combined data from {len(all_sessions)} sessions")
-                    # Combine all transcripts and session data
-                    combined_transcript = ""
-                    total_exchanges = 0
-                    for session in all_sessions:
-                        if session.get('transcript'):
-                            combined_transcript += f"\n\n--- {session.get('questionnaire_id', 'unknown')} QUESTIONNAIRE ---\n{session['transcript']}"
-                            total_exchanges += session.get('total_exchanges', 0)
-                    
-                    # Create a combined session object for profile extraction
-                    interview_session = {
-                        'session_id': f"combined_{session_id}",
-                        'person_name': person_name,
-                        'transcript': combined_transcript,
-                        'total_exchanges': total_exchanges,
-                        'questionnaire_id': 'multi_questionnaire',
-                        'created_at': interview_session['created_at']
-                    }
-                    print(f"DEBUG: Combined session created with {total_exchanges} total exchanges")
+                    # Use all individual sessions for AI extraction (it will combine them properly)
+                    sessions_for_extraction = all_sessions
+                    print(f"DEBUG: Will extract profile from {len(sessions_for_extraction)} individual sessions")
                 else:
                     print(f"DEBUG: Only found {len(all_sessions)} sessions, falling back to single session")
+                    if all_sessions:
+                        sessions_for_extraction = all_sessions
             else:
                 print(f"DEBUG: Single questionnaire flow, using original session")
             
@@ -600,8 +590,7 @@ class handler(BaseHTTPRequestHandler):
                 profile_id = f"{person_name}_v{next_version}_{uuid.uuid4().hex[:8]}"
                 print(f"DEBUG: Profile ID conflict detected, using UUID suffix: {profile_id}")
             
-            # Extract profile using AI with all collected sessions
-            sessions_for_extraction = all_sessions if len(all_sessions) > 1 else [interview_session]
+            # Extract profile using AI with all collected sessions (already determined above)
             print(f"DEBUG: Extracting profile from {len(sessions_for_extraction)} session(s)")
             profile_data = self._extract_profile_from_interview(sessions_for_extraction, api_key, profile_id, questionnaires_completed)
             
