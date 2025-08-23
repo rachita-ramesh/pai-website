@@ -363,6 +363,29 @@ class SupabaseClient:
         """Update an existing interview session"""
         return self._make_request('PATCH', f'interview_sessions?session_id=eq.{session_id}', updates)
     
+    def get_recent_interview_sessions_by_person_and_questionnaire(self, person_name: str, questionnaire_id: str) -> List[Dict]:
+        """Get recent interview sessions for a person and specific questionnaire type"""
+        try:
+            import urllib.parse
+            encoded_name = urllib.parse.quote(person_name.strip())
+            encoded_questionnaire = urllib.parse.quote(questionnaire_id.strip())
+            
+            # Get sessions from today for this person and questionnaire
+            result = self._make_request('GET', 
+                f'interview_sessions?person_name=eq.{encoded_name}&questionnaire_id=eq.{encoded_questionnaire}&created_at=gte.{self._get_today_start()}&order=created_at.desc')
+            
+            print(f"DEBUG: Found {len(result)} sessions for {person_name} + {questionnaire_id}")
+            return result
+        except Exception as e:
+            print(f"DEBUG: Error getting recent sessions: {e}")
+            return []
+    
+    def _get_today_start(self) -> str:
+        """Get today's start timestamp in ISO format"""
+        from datetime import datetime, timezone
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        return today_start.isoformat()
+    
     
     def create_profile_version(self, profile_data: Dict) -> Dict:
         """Create a new profile version"""

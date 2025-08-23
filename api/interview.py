@@ -495,6 +495,54 @@ class handler(BaseHTTPRequestHandler):
             if not interview_session:
                 raise Exception(f'Interview session {session_id} not found')
             
+            # For multi-questionnaire profiles, collect all sessions for this person from today
+            person_name = interview_session['person_name'].strip()
+            print(f"DEBUG: Collecting all recent sessions for person: {person_name}")
+            
+            # Get questionnaires completed from frontend
+            questionnaires_completed = data.get('questionnaires_completed', [])
+            print(f"DEBUG: Frontend reports completed questionnaires: {questionnaires_completed}")
+            
+            if len(questionnaires_completed) > 1:
+                # Multi-questionnaire flow - collect all related sessions
+                print(f"DEBUG: Multi-questionnaire flow detected, collecting {len(questionnaires_completed)} sessions")
+                all_sessions = []
+                
+                for questionnaire_name in questionnaires_completed:
+                    # Find the session for this questionnaire type
+                    matching_sessions = supabase.get_recent_interview_sessions_by_person_and_questionnaire(person_name, questionnaire_name)
+                    if matching_sessions:
+                        latest_session = max(matching_sessions, key=lambda x: x.get('created_at', ''))
+                        all_sessions.append(latest_session)
+                        print(f"DEBUG: Found session for {questionnaire_name}: {latest_session['session_id']}")
+                    else:
+                        print(f"DEBUG: No session found for questionnaire: {questionnaire_name}")
+                
+                if len(all_sessions) > 1:
+                    print(f"DEBUG: Using combined data from {len(all_sessions)} sessions")
+                    # Combine all transcripts and session data
+                    combined_transcript = ""
+                    total_exchanges = 0
+                    for session in all_sessions:
+                        if session.get('transcript'):
+                            combined_transcript += f"\n\n--- {session.get('questionnaire_id', 'unknown')} QUESTIONNAIRE ---\n{session['transcript']}"
+                            total_exchanges += session.get('total_exchanges', 0)
+                    
+                    # Create a combined session object for profile extraction
+                    interview_session = {
+                        'session_id': f"combined_{session_id}",
+                        'person_name': person_name,
+                        'transcript': combined_transcript,
+                        'total_exchanges': total_exchanges,
+                        'questionnaire_id': 'multi_questionnaire',
+                        'created_at': interview_session['created_at']
+                    }
+                    print(f"DEBUG: Combined session created with {total_exchanges} total exchanges")
+                else:
+                    print(f"DEBUG: Only found {len(all_sessions)} sessions, falling back to single session")
+            else:
+                print(f"DEBUG: Single questionnaire flow, using original session")
+            
             # Check if profile already exists for this session
             if interview_session.get('profile_id'):
                 print(f"DEBUG: Profile already exists for session {session_id}: {interview_session['profile_id']}")
