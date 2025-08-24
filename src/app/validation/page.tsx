@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from "next/link"
 
 interface Question {
@@ -57,11 +57,7 @@ export default function ValidationTest() {
     { id: 'gigi', name: 'Gigi' },
   ]
 
-  useEffect(() => {
-    loadAvailableSurveys()
-  }, [])
-
-  const loadAvailableSurveys = async () => {
+  const loadAvailableSurveys = useCallback(async () => {
     setIsLoadingSurveys(true)
     try {
       const response = await fetch('/api/surveys')
@@ -87,7 +83,11 @@ export default function ValidationTest() {
     } finally {
       setIsLoadingSurveys(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadAvailableSurveys()
+  }, [loadAvailableSurveys])
 
   const loadDefaultSurvey = async () => {
     try {

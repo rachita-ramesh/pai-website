@@ -22,11 +22,11 @@ export const ProfileDataDisplay: React.FC<ProfileDataDisplayProps> = ({ profileD
 // New Profile Data Display Component
 const NewProfileDataDisplay: React.FC<{ data: NewProfileData; profileId: string }> = ({ data }) => {
   // Handle new structure with profile_data wrapper
-  if ((data as any).profile_data && typeof (data as any).profile_data === 'object') {
-    const profileData = (data as any).profile_data;
+  if ((data as Record<string, unknown>).profile_data && typeof (data as Record<string, unknown>).profile_data === 'object') {
+    const profileData = (data as Record<string, unknown>).profile_data;
     return (
       <div style={{ display: 'grid', gap: '16px' }}>
-        {Object.entries(profileData).filter(([key]) => key !== 'profile_id' && key !== 'created_from_sessions').map(([sectionName, sectionData]) => {
+        {Object.entries(profileData as Record<string, unknown>).filter(([key]) => key !== 'profile_id' && key !== 'created_from_sessions').map(([sectionName, sectionData]) => {
           if (!sectionData || typeof sectionData !== 'object') return null;
           
           return (
@@ -36,20 +36,22 @@ const NewProfileDataDisplay: React.FC<{ data: NewProfileData; profileId: string 
               </h4>
               
               <div style={{ display: 'grid', gap: '8px', fontSize: '14px' }}>
-                {Object.entries(sectionData as Record<string, any>).map(([key, fieldData]) => {
+                {Object.entries(sectionData as Record<string, unknown>).map(([key, fieldData]) => {
                   if (!fieldData) return null;
                   
-                  const value = typeof fieldData === 'object' && fieldData.value ? fieldData.value : fieldData;
-                  const source = typeof fieldData === 'object' && fieldData.source ? fieldData.source : null;
+                  const value = typeof fieldData === 'object' && fieldData !== null && 'value' in fieldData 
+                    ? (fieldData as { value: unknown }).value : fieldData;
+                  const source = typeof fieldData === 'object' && fieldData !== null && 'source' in fieldData 
+                    ? (fieldData as { source: unknown }).source : null;
                   
                   return (
                     <div key={key} style={{ marginBottom: '8px' }}>
-                      <strong>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong> {value}
-                      {source && (
+                      <strong>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong> {String(value)}
+                      {source && typeof source === 'object' && source !== null ? (
                         <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
-                          Source: {source.questionnaire_id} - {source.question_id}
+                          Source: {(source as { questionnaire_id?: string; question_id?: string }).questionnaire_id} - {(source as { questionnaire_id?: string; question_id?: string }).question_id}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   );
                 })}

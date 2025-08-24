@@ -166,7 +166,7 @@ export type ProfileData = NewProfileData | LegacyProfileData
 export function isNewProfileData(data: ProfileData): data is NewProfileData {
   return data && typeof data === 'object' && 
     (('centrepiece' in data || 'categories' in data || 'products' in data) ||
-     ('profile_data' in data && typeof (data as any).profile_data === 'object'))
+     ('profile_data' in data && typeof (data as Record<string, unknown>).profile_data === 'object'))
 }
 
 // Type guard to check if profile data is legacy format  
