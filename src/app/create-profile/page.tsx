@@ -1111,7 +1111,7 @@ export default function CreateProfile() {
                                 color: questionnaire.completed ? '#16a34a' : 'inherit',
                                 textDecoration: questionnaire.completed ? 'none' : 'none'
                               }}>
-                                {questionnaire.completed ? '✅ ' : ''}{questionnaire.display_name}
+{questionnaire.display_name}
                               </h4>
                               <span style={{ 
                                 fontSize: '11px', 
@@ -1134,19 +1134,6 @@ export default function CreateProfile() {
                                   borderRadius: '4px'
                                 }}>
                                   Required
-                                </span>
-                              )}
-                              {questionnaire.completed && (
-                                <span style={{ 
-                                  fontSize: '12px', 
-                                  color: '#16a34a', 
-                                  backgroundColor: '#dcfce7',
-                                  border: '1px solid #16a34a',
-                                  padding: '4px 8px',
-                                  borderRadius: '6px',
-                                  fontWeight: '600'
-                                }}>
-                                  ✅ Completed
                                 </span>
                               )}
                             </div>
