@@ -533,6 +533,19 @@ class handler(BaseHTTPRequestHandler):
             else:
                 print(f"DEBUG: Single questionnaire flow, using original session")
             
+            # Fetch full questionnaire data for all sessions to get tags
+            questionnaires_data = {}
+            for session in sessions_for_extraction:
+                q_id = session.get('questionnaire_id')
+                if q_id and q_id not in questionnaires_data:
+                    try:
+                        q_data = supabase.get_custom_questionnaire(q_id)
+                        if q_data:
+                            questionnaires_data[q_id] = q_data
+                            print(f"DEBUG: Fetched questionnaire data for {q_id}")
+                    except Exception as e:
+                        print(f"DEBUG: Could not fetch questionnaire {q_id}: {e}")
+
             # Check if profile already exists for this session
             if interview_session.get('profile_id'):
                 print(f"DEBUG: Profile already exists for session {session_id}: {interview_session['profile_id']}")
@@ -592,7 +605,13 @@ class handler(BaseHTTPRequestHandler):
             
             # Extract profile using AI with all collected sessions (already determined above)
             print(f"DEBUG: Extracting profile from {len(sessions_for_extraction)} session(s)")
-            profile_data = self._extract_profile_from_interview(sessions_for_extraction, api_key, profile_id, questionnaires_completed)
+            profile_data = self._extract_profile_from_interview(
+                sessions_for_extraction, 
+                api_key, 
+                profile_id, 
+                questionnaires_completed,
+                questionnaires_data
+            )
             
             # Extract completeness metadata from request data
             completeness_metadata = data.get('completeness_metadata', {})
@@ -673,7 +692,36 @@ class handler(BaseHTTPRequestHandler):
         except:
             return None
     
-    def _extract_profile_from_interview(self, all_sessions, api_key, profile_id, questionnaires_completed):
+    def _generate_schema_from_tags(self, questionnaires_data, profile_id):
+        """Dynamically generate the JSON schema for the AI based on questionnaire tags."""
+        schema = {
+            "profile_id": profile_id,
+            "profile_data": {}
+        }
+        
+        for q_id, q_data in questionnaires_data.items():
+            questions = q_data.get('questions', [])
+            for question in questions:
+                tags = question.get('tags')
+                if tags and len(tags) == 2:
+                    category, sub_category = tags
+                    
+                    if category not in schema["profile_data"]:
+                        schema["profile_data"][category] = {}
+                    
+                    # Add a placeholder for the AI to fill
+                    schema["profile_data"][category][sub_category] = {
+                        "value": f"extracted {sub_category.replace('_', ' ')}",
+                        "source": {
+                            "questionnaire_id": q_id,
+                            "question_id": question.get('id', 'unknown'),
+                            "session_id": "session_id_placeholder"
+                        }
+                    }
+        
+        return schema
+
+    def _extract_profile_from_interview(self, all_sessions, api_key, profile_id, questionnaires_completed, questionnaires_data):
         """Use AI to extract personality profile from interview transcript with metadata tracking"""
         import anthropic
         
@@ -701,75 +749,22 @@ class handler(BaseHTTPRequestHandler):
         print(f"DEBUG: Session metadata: {session_metadata}")
         print(f"DEBUG: First 500 chars of combined transcript: {combined_transcript[:500]}...")
         
+        # Dynamically generate the schema from questionnaire tags
+        dynamic_schema = self._generate_schema_from_tags(questionnaires_data, profile_id)
+        
+        # Add session metadata to the schema for the AI prompt
+        dynamic_schema["created_from_sessions"] = session_metadata
+        
+        # Convert schema to a pretty-printed JSON string for the prompt
+        schema_json_string = json.dumps(dynamic_schema, indent=2)
+
         system_prompt = f"""You are an expert psychological profiler and digital twin creator. Your task is to analyze interview transcripts and extract a comprehensive PAI personality profile with full traceability.
 
 CRITICAL: You must return a JSON object where each profile field includes the VALUE and METADATA about which question generated that data.
 
 Return ONLY a valid JSON object with this exact structure:
 
-{{
-  "profile_id": "{profile_id}",
-  "created_from_sessions": {session_metadata},
-  "profile_data": {{
-    "demographics": {{
-      "name": {{"value": "extracted name", "source": {{"questionnaire_id": "centrepiece", "question_id": "q0", "session_id": "session_123"}}}},
-      "age": {{"value": "extracted age", "source": {{"questionnaire_id": "centrepiece", "question_id": "q0", "session_id": "session_123"}}}},
-      "age_range": {{"value": "25-34", "source": {{"questionnaire_id": "centrepiece", "question_id": "q0", "session_id": "session_123"}}}},
-      "gender": {{"value": "extracted gender", "source": {{"questionnaire_id": "centrepiece", "question_id": "q0", "session_id": "session_123"}}}},
-      "education_level": {{"value": "extracted education", "source": {{"questionnaire_id": "centrepiece", "question_id": "q1", "session_id": "session_123"}}}},
-      "employment": {{"value": "extracted employment", "source": {{"questionnaire_id": "centrepiece", "question_id": "q1", "session_id": "session_123"}}}}
-    }},
-    "lifestyle": {{
-      "daily_life_work": {{"value": "description of work and routine", "source": {{"questionnaire_id": "centrepiece", "question_id": "q1", "session_id": "session_123"}}}},
-      "activity_wellness": {{"value": "fitness and wellness habits", "source": {{"questionnaire_id": "centrepiece", "question_id": "q2", "session_id": "session_123"}}}},
-      "interests_hobbies": {{"value": "hobbies and interests", "source": {{"questionnaire_id": "centrepiece", "question_id": "q4", "session_id": "session_123"}}}},
-      "weekend_life": {{"value": "weekend activities", "source": {{"questionnaire_id": "centrepiece", "question_id": "q5", "session_id": "session_123"}}}}
-    }},
-    "media_and_culture": {{
-      "news_information": {{"value": "news sources and topics", "source": {{"questionnaire_id": "centrepiece", "question_id": "q6", "session_id": "session_123"}}}},
-      "social_media_use": {{"value": "social media habits", "source": {{"questionnaire_id": "centrepiece", "question_id": "q8", "session_id": "session_123"}}}},
-      "tv_movies_sports": {{"value": "entertainment preferences", "source": {{"questionnaire_id": "centrepiece", "question_id": "q10", "session_id": "session_123"}}}},
-      "music": {{"value": "music preferences", "source": {{"questionnaire_id": "centrepiece", "question_id": "q14", "session_id": "session_123"}}}},
-      "celebrities_influences": {{"value": "influential figures", "source": {{"questionnaire_id": "centrepiece", "question_id": "q16", "session_id": "session_123"}}}}
-    }},
-    "personality": {{
-      "self_description": {{"value": "self description", "source": {{"questionnaire_id": "centrepiece", "question_id": "q18", "session_id": "session_123"}}}},
-      "misunderstood": {{"value": "what people misunderstand", "source": {{"questionnaire_id": "centrepiece", "question_id": "q19", "session_id": "session_123"}}}},
-      "curiosity_openness": {{"value": "openness to new experiences", "source": {{"questionnaire_id": "centrepiece", "question_id": "q20", "session_id": "session_123"}}}},
-      "structure_vs_spontaneity": {{"value": "preference for structure vs flow", "source": {{"questionnaire_id": "centrepiece", "question_id": "q21", "session_id": "session_123"}}}},
-      "social_energy": {{"value": "people vs alone time preference", "source": {{"questionnaire_id": "centrepiece", "question_id": "q22", "session_id": "session_123"}}}},
-      "stress_challenge": {{"value": "stress handling methods", "source": {{"questionnaire_id": "centrepiece", "question_id": "q23", "session_id": "session_123"}}}},
-      "signature_strengths": {{"value": "key personal strengths", "source": {{"questionnaire_id": "centrepiece", "question_id": "q24", "session_id": "session_123"}}}}
-    }},
-    "values_and_beliefs": {{
-      "core_values": {{"value": "most important values", "source": {{"questionnaire_id": "centrepiece", "question_id": "q25", "session_id": "session_123"}}}},
-      "influence_advice": {{"value": "trusted advice sources", "source": {{"questionnaire_id": "centrepiece", "question_id": "q26", "session_id": "session_123"}}}},
-      "cultural_political_engagement": {{"value": "political engagement level", "source": {{"questionnaire_id": "centrepiece", "question_id": "q27", "session_id": "session_123"}}}},
-      "aspirations_worldview": {{"value": "aspirations and worldview", "source": {{"questionnaire_id": "centrepiece", "question_id": "q30", "session_id": "session_123"}}}},
-      "decision_priorities": {{"value": "decision-making priorities", "source": {{"questionnaire_id": "centrepiece", "question_id": "q31", "session_id": "session_123"}}}}
-    }},
-    "skin_and_hair_type": {{
-      "skin_type": {{"value": "skin description", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q1", "session_id": "session_456"}}}},
-      "skin_concerns": {{"value": "skin concerns", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q2", "session_id": "session_456"}}}},
-      "hair_type": {{"value": "hair description", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q3", "session_id": "session_456"}}}},
-      "hair_concerns": {{"value": "hair concerns", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q4", "session_id": "session_456"}}}}
-    }},
-    "routine": {{
-      "morning_routine": {{"value": "morning routine description", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q5", "session_id": "session_456"}}}},
-      "evening_routine": {{"value": "evening routine description", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q6", "session_id": "session_456"}}}},
-      "time_on_routine": {{"value": "time spent on beauty daily", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q7", "session_id": "session_456"}}}},
-      "extra_products_in_routine": {{"value": "weekly/occasional products", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q8", "session_id": "session_456"}}}},
-      "changes_based_on_seasonality": {{"value": "seasonal routine changes", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q9", "session_id": "session_456"}}}},
-      "hero_product": {{"value": "most important product", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q10", "session_id": "session_456"}}}},
-      "beauty_routine_frustrations": {{"value": "routine frustrations", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q11", "session_id": "session_456"}}}},
-      "self_care_perception": {{"value": "self-care perception", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q12", "session_id": "session_456"}}}},
-      "beauty_routine_motivation": {{"value": "beauty routine motivation", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q13", "session_id": "session_456"}}}},
-      "product_experimentation": {{"value": "experimentation vs consistency", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q14", "session_id": "session_456"}}}},
-      "buyer_type": {{"value": "budget vs premium preference", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q15", "session_id": "session_456"}}}},
-      "engagement_with_beauty": {{"value": "engagement with beauty content", "source": {{"questionnaire_id": "beauty_v1", "question_id": "q16", "session_id": "session_456"}}}}
-    }}
-  }}
-}}
+{schema_json_string}
 
 Important guidelines:
 - Include actual session_id from the sessions you're analyzing
