@@ -690,6 +690,10 @@ class handler(BaseHTTPRequestHandler):
         
         person_name = all_sessions[0].get('person_name', 'User') if all_sessions else 'User'
         
+        print(f"DEBUG: Combined transcript length: {len(combined_transcript)} chars")
+        print(f"DEBUG: Session metadata: {session_metadata}")
+        print(f"DEBUG: First 500 chars of combined transcript: {combined_transcript[:500]}...")
+        
         system_prompt = f"""You are an expert psychological profiler and digital twin creator. Your task is to analyze interview transcripts and extract a comprehensive PAI personality profile with full traceability.
 
 CRITICAL: You must return a JSON object where each profile field includes the VALUE and METADATA about which question generated that data.
@@ -776,7 +780,7 @@ Important guidelines:
                 system=system_prompt,
                 messages=[{
                     "role": "user", 
-                    "content": f"Analyze this interview transcript and create a personality profile for {person_name}:\n\n{transcript}"
+                    "content": f"Analyze this interview transcript and create a personality profile for {person_name}:\n\n{combined_transcript}"
                 }]
             )
             
