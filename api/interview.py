@@ -607,18 +607,9 @@ class handler(BaseHTTPRequestHandler):
                 else:
                     print(f"DEBUG: Confirmed existing profile exists: {profile_id}")
                     
-                    # Get all sessions already linked to this existing profile
-                    existing_sessions = supabase.get_sessions_by_profile_id(profile_id)
-                    print(f"DEBUG: Found {len(existing_sessions)} existing sessions for profile {profile_id}")
-                    
-                    # Add existing sessions to the extraction set (avoid duplicates)
-                    existing_session_ids = {s['session_id'] for s in sessions_for_extraction}
-                    for existing_session in existing_sessions:
-                        if existing_session['session_id'] not in existing_session_ids:
-                            sessions_for_extraction.append(existing_session)
-                            print(f"DEBUG: Added existing session {existing_session['session_id']} to extraction")
-                    
-                    print(f"DEBUG: Will re-extract profile from {len(sessions_for_extraction)} total sessions (existing + new)")
+                    # For existing profiles, we only extract from NEW sessions
+                    # The existing profile data should be preserved and merged with new data
+                    print(f"DEBUG: Will extract NEW data from {len(sessions_for_extraction)} new session(s) only")
             else:
                 # Creating new profile
                 latest_profile = supabase.get_latest_profile_version(person_name)
@@ -656,15 +647,55 @@ class handler(BaseHTTPRequestHandler):
                     # Update existing profile
                     print(f"DEBUG: Updating existing profile {profile_id}")
                     
-                    # Merge the new profile data with existing data
+                    # Get existing profile data to merge with new data
                     existing_data = existing_profile.get('profile_data', {})
                     existing_completeness = existing_profile.get('completeness_metadata', {})
                     
-                    # For now, we'll replace the profile_data entirely with the new AI extraction
-                    # The AI should have combined all sessions including the existing profile's sessions
+                    print(f"DEBUG: Existing profile data structure: {list(existing_data.keys()) if existing_data else 'None'}")
+                    print(f"DEBUG: New profile data structure: {list(profile_data.keys()) if profile_data else 'None'}")
+                    
+                    # Merge profile data - preserve existing structure and add new sections
+                    merged_profile_data = existing_data.copy() if existing_data else {}
+                    
+                    # Check if we have new structured data vs old format
+                    if 'profile_data' in existing_data and isinstance(existing_data['profile_data'], dict):
+                        # Existing profile uses new structure
+                        print("DEBUG: Existing profile uses new structure, merging sections")
+                        if 'profile_data' in profile_data and isinstance(profile_data['profile_data'], dict):
+                            # Both use new structure - merge sections
+                            if 'profile_data' not in merged_profile_data:
+                                merged_profile_data['profile_data'] = {}
+                            
+                            # Merge each section
+                            for section_name, section_data in profile_data['profile_data'].items():
+                                if section_name in merged_profile_data['profile_data']:
+                                    # Merge fields within existing section
+                                    if isinstance(section_data, dict) and isinstance(merged_profile_data['profile_data'][section_name], dict):
+                                        merged_profile_data['profile_data'][section_name].update(section_data)
+                                    else:
+                                        merged_profile_data['profile_data'][section_name] = section_data
+                                else:
+                                    # Add new section
+                                    merged_profile_data['profile_data'][section_name] = section_data
+                        else:
+                            # New data is legacy format - don't merge, keep existing structure
+                            print("DEBUG: New data is legacy format, preserving existing structure")
+                    else:
+                        # Existing profile uses legacy format - use new extraction
+                        print("DEBUG: Existing profile uses legacy format, using new extraction")
+                        merged_profile_data = profile_data
+                    
+                    # Merge completeness metadata
+                    merged_completeness = existing_completeness.copy() if existing_completeness else {}
+                    if completeness_metadata:
+                        if isinstance(completeness_metadata, dict) and isinstance(merged_completeness, dict):
+                            merged_completeness.update(completeness_metadata)
+                        else:
+                            merged_completeness = completeness_metadata
+                    
                     update_data = {
-                        'profile_data': profile_data,
-                        'completeness_metadata': completeness_metadata,
+                        'profile_data': merged_profile_data,
+                        'completeness_metadata': merged_completeness,
                         'updated_at': 'NOW()'
                     }
                     
