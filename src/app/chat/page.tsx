@@ -30,7 +30,7 @@ export default function Chat() {
     {
       id: '1',
       type: 'ai',
-      content: "Hi! I'm Rachita's digital twin, created from her real skincare interview. Ask me about skincare decisions, wellness approaches, or how I make choices - I'll respond based on her actual psychological profile!",
+      content: "Hi! I'm Rachita's digital twin. Ask me anything and I'll respond as they would.",
       person: 'rachita'
     }
   ])
@@ -207,12 +207,7 @@ export default function Chat() {
     const targetPersonData = people.find(f => f.id === targetPerson)
     
     // Generate specific welcome message based on person
-    let welcomeContent
-    if (targetPerson === 'rachita') {
-      welcomeContent = "Hi! I'm Rachita's digital twin, created from her real skincare interview. Ask me about skincare decisions, wellness approaches, or how I make choices - I'll respond based on her actual psychological profile!"
-    } else {
-      welcomeContent = `Hi! I'm ${targetPersonData?.name}'s digital twin. Ask me anything and I'll respond as they would.`
-    }
+    const welcomeContent = `Hi! I'm ${targetPersonData?.name}'s digital twin. Ask me anything and I'll respond as they would.`
     
     const welcomeMessage = {
       id: '1',
