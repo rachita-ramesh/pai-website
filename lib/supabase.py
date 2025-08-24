@@ -138,6 +138,14 @@ class SupabaseClient:
             'completed_at': 'NOW()'
         })
     
+    def get_sessions_by_profile_id(self, profile_id: str) -> List[Dict]:
+        """Get all interview sessions linked to a profile"""
+        try:
+            return self._make_request('GET', f'interview_sessions?profile_id=eq.{profile_id}')
+        except Exception as e:
+            print(f"DEBUG: Error getting sessions for profile {profile_id}: {e}")
+            return []
+    
     # ============================================================================
     # SURVEY & VALIDATION MANAGEMENT
     # ============================================================================

@@ -586,22 +586,55 @@ class handler(BaseHTTPRequestHandler):
             from datetime import datetime
             import uuid
             
-            # Try to get latest profile version
-            latest_profile = supabase.get_latest_profile_version(person_name)
-            print(f"DEBUG: Latest profile found: {latest_profile}")
-            next_version = (latest_profile['version_number'] + 1) if latest_profile else 1
+            # Check if we should add to existing profile or create new one
+            existing_profile_id = data.get('existing_profile_id')
+            profile_action = data.get('profile_action', 'new')
             
-            # Create a unique profile version ID with timestamp to avoid duplicates
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            profile_id = f"{person_name}_v{next_version}"
-            print(f"DEBUG: Creating profile with unique ID: {profile_id}")
-            
-            # Double-check this profile_id doesn't exist
-            existing_check = supabase.get_profile_version(profile_id)
-            if existing_check:
-                # If it somehow exists, add a UUID suffix
-                profile_id = f"{person_name}_v{next_version}_{uuid.uuid4().hex[:8]}"
-                print(f"DEBUG: Profile ID conflict detected, using UUID suffix: {profile_id}")
+            if profile_action == 'existing' and existing_profile_id:
+                # Adding to existing profile - use the provided profile ID
+                profile_id = existing_profile_id
+                print(f"DEBUG: Adding to existing profile: {profile_id}")
+                
+                # Verify the existing profile exists
+                existing_profile = supabase.get_profile_version(profile_id)
+                if not existing_profile:
+                    print(f"ERROR: Existing profile {profile_id} not found, creating new one instead")
+                    # Fall back to creating new profile
+                    latest_profile = supabase.get_latest_profile_version(person_name)
+                    print(f"DEBUG: Latest profile found: {latest_profile}")
+                    next_version = (latest_profile['version_number'] + 1) if latest_profile else 1
+                    profile_id = f"{person_name}_v{next_version}"
+                else:
+                    print(f"DEBUG: Confirmed existing profile exists: {profile_id}")
+                    
+                    # Get all sessions already linked to this existing profile
+                    existing_sessions = supabase.get_sessions_by_profile_id(profile_id)
+                    print(f"DEBUG: Found {len(existing_sessions)} existing sessions for profile {profile_id}")
+                    
+                    # Add existing sessions to the extraction set (avoid duplicates)
+                    existing_session_ids = {s['session_id'] for s in sessions_for_extraction}
+                    for existing_session in existing_sessions:
+                        if existing_session['session_id'] not in existing_session_ids:
+                            sessions_for_extraction.append(existing_session)
+                            print(f"DEBUG: Added existing session {existing_session['session_id']} to extraction")
+                    
+                    print(f"DEBUG: Will re-extract profile from {len(sessions_for_extraction)} total sessions (existing + new)")
+            else:
+                # Creating new profile
+                latest_profile = supabase.get_latest_profile_version(person_name)
+                print(f"DEBUG: Latest profile found: {latest_profile}")
+                next_version = (latest_profile['version_number'] + 1) if latest_profile else 1
+                
+                # Create a unique profile version ID
+                profile_id = f"{person_name}_v{next_version}"
+                print(f"DEBUG: Creating new profile with ID: {profile_id}")
+                
+                # Double-check this profile_id doesn't exist
+                existing_check = supabase.get_profile_version(profile_id)
+                if existing_check:
+                    # If it somehow exists, add a UUID suffix
+                    profile_id = f"{person_name}_v{next_version}_{uuid.uuid4().hex[:8]}"
+                    print(f"DEBUG: Profile ID conflict detected, using UUID suffix: {profile_id}")
             
             # Extract profile using AI with all collected sessions (already determined above)
             print(f"DEBUG: Extracting profile from {len(sessions_for_extraction)} session(s)")
@@ -617,21 +650,43 @@ class handler(BaseHTTPRequestHandler):
             completeness_metadata = data.get('completeness_metadata', {})
             print(f"DEBUG: Saving completeness_metadata: {completeness_metadata}")
             
-            profile_version_data = {
-                'profile_id': profile_id,
-                'person_name': person_name,
-                'version_number': next_version,
-                'profile_data': profile_data,
-                'completeness_metadata': completeness_metadata,
-                'is_active': True,
-                'created_at': 'NOW()',
-                'updated_at': 'NOW()'
-            }
-            
-            # Save profile and update session atomically
+            # Save or update profile based on action
             try:
-                created_profile = supabase.create_profile_version(profile_version_data)
-                print(f"DEBUG: Created profile version {profile_id}")
+                if profile_action == 'existing' and existing_profile_id and existing_profile:
+                    # Update existing profile
+                    print(f"DEBUG: Updating existing profile {profile_id}")
+                    
+                    # Merge the new profile data with existing data
+                    existing_data = existing_profile.get('profile_data', {})
+                    existing_completeness = existing_profile.get('completeness_metadata', {})
+                    
+                    # For now, we'll replace the profile_data entirely with the new AI extraction
+                    # The AI should have combined all sessions including the existing profile's sessions
+                    update_data = {
+                        'profile_data': profile_data,
+                        'completeness_metadata': completeness_metadata,
+                        'updated_at': 'NOW()'
+                    }
+                    
+                    updated_profile = supabase.update_profile_version(profile_id, update_data)
+                    print(f"DEBUG: Updated existing profile {profile_id}")
+                    created_profile = updated_profile
+                else:
+                    # Create new profile version
+                    print(f"DEBUG: Creating new profile {profile_id}")
+                    profile_version_data = {
+                        'profile_id': profile_id,
+                        'person_name': person_name,
+                        'version_number': next_version if 'next_version' in locals() else 1,
+                        'profile_data': profile_data,
+                        'completeness_metadata': completeness_metadata,
+                        'is_active': True,
+                        'created_at': 'NOW()',
+                        'updated_at': 'NOW()'
+                    }
+                    
+                    created_profile = supabase.create_profile_version(profile_version_data)
+                    print(f"DEBUG: Created profile version {profile_id}")
                 
                 # Link all sessions to this profile_id for full traceability
                 for session in sessions_for_extraction:
