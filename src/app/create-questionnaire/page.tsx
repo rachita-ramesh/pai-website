@@ -10,6 +10,7 @@ interface Question {
   options?: string[]
   required: boolean
   helpText?: string
+  tags?: string[][]
 }
 
 export default function CreateQuestionnaire() {
@@ -29,7 +30,8 @@ export default function CreateQuestionnaire() {
     text: '',
     type: 'open_ended',
     required: true,
-    helpText: ''
+    helpText: '',
+    tags: []
   })
   
   const [isLoading, setIsLoading] = useState(false)
@@ -58,6 +60,26 @@ export default function CreateQuestionnaire() {
     ]
   }
 
+  // Tag options based on existing questionnaire structure
+  const tagOptions = {
+    // Centrepiece questionnaire tags
+    lifestyle: ['daily_life_work', 'activity_wellness', 'interests_hobbies', 'weekend_life'],
+    media_and_culture: ['news_information', 'social_media_use', 'tv_movies_sports', 'music', 'celebrities_influences'],
+    personality: ['self_description', 'misunderstood', 'curiosity_openness', 'structure_vs_spontaneity', 'social_energy', 'stress_challenge', 'signature_strengths'],
+    values_and_beliefs: ['core_values', 'influence_advice', 'cultural_political_engagement', 'aspirations_worldview', 'decision_priorities'],
+    demographics: ['age_range', 'gender', 'location', 'education', 'employment'],
+    
+    // Beauty questionnaire tags
+    skin_and_hair_type: ['skin_type', 'skin_concerns', 'hair_type', 'hair_concerns'],
+    routine: ['morning_routine', 'evening_routine', 'time_on_routine', 'extra_products_in_routine', 'changes_based_on_seasonality', 'hero_product', 'beauty_routine_frustrations', 'self_care_perception', 'beauty_routine_motivation', 'product_experimentation', 'buyer_type', 'engagement_with_beauty'],
+    
+    // Future category tags (examples)
+    fitness: ['workout_routine', 'fitness_goals', 'exercise_preferences', 'recovery_habits'],
+    nutrition: ['dietary_preferences', 'meal_planning', 'nutrition_goals', 'supplement_usage'],
+    career: ['work_style', 'career_goals', 'professional_values', 'workplace_preferences'],
+    relationships: ['relationship_style', 'communication_preferences', 'social_priorities', 'family_values']
+  }
+
   const addQuestion = () => {
     if (!currentQuestion.text.trim()) return
 
@@ -73,7 +95,8 @@ export default function CreateQuestionnaire() {
       text: '',
       type: 'open_ended',
       required: true,
-      helpText: ''
+      helpText: '',
+      tags: []
     })
   }
 
@@ -102,6 +125,26 @@ export default function CreateQuestionnaire() {
     setCurrentQuestion({
       ...currentQuestion,
       options: newOptions
+    })
+  }
+
+  // Tag management functions
+  const addTag = (category: string, subcategory: string) => {
+    const newTag = [category, subcategory]
+    const tagString = newTag.join('::')
+    
+    if (!currentQuestion.tags?.some(tag => Array.isArray(tag) && tag.join('::') === tagString)) {
+      setCurrentQuestion({
+        ...currentQuestion,
+        tags: [...(currentQuestion.tags || []), newTag]
+      })
+    }
+  }
+
+  const removeTag = (index: number) => {
+    setCurrentQuestion({
+      ...currentQuestion,
+      tags: (currentQuestion.tags || []).filter((_, i) => i !== index)
     })
   }
 
@@ -516,6 +559,123 @@ export default function CreateQuestionnaire() {
               />
             </div>
 
+            {/* Tags Section */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                Profile Tags (optional) 
+                <span style={{ fontSize: '12px', color: '#666', fontWeight: '400' }}>
+                  - Specify which profile sections this question should contribute to
+                </span>
+              </label>
+              
+              {/* Current Tags */}
+              {currentQuestion.tags && currentQuestion.tags.length > 0 && (
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {currentQuestion.tags.map((tag, index) => (
+                      <span 
+                        key={index} 
+                        style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          backgroundColor: '#f0fdf4', 
+                          color: '#166534', 
+                          padding: '4px 8px', 
+                          borderRadius: '16px', 
+                          fontSize: '12px',
+                          border: '1px solid #bbf7d0'
+                        }}
+                      >
+                        {tag[0]} → {tag[1].replace(/_/g, ' ')}
+                        <button 
+                          type="button"
+                          onClick={() => removeTag(index)}
+                          style={{ 
+                            marginLeft: '6px', 
+                            background: 'none', 
+                            border: 'none', 
+                            color: '#dc2626', 
+                            cursor: 'pointer', 
+                            fontSize: '12px',
+                            padding: '0'
+                          }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tag Selection */}
+              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: '1fr 1fr' }}>
+                <div>
+                  <select
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px 12px', 
+                      border: '1px solid #e5e5e5', 
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                    onChange={(e) => {
+                      const category = e.target.value
+                      if (category) {
+                        // Auto-select first subcategory for quick adding
+                        const subcategories = tagOptions[category as keyof typeof tagOptions]
+                        if (subcategories && subcategories.length > 0) {
+                          addTag(category, subcategories[0])
+                        }
+                      }
+                    }}
+                    value=""
+                  >
+                    <option value="">Select a profile section...</option>
+                    {Object.keys(tagOptions).map(category => (
+                      <option key={category} value={category}>
+                        {category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <select
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px 12px', 
+                      border: '1px solid #e5e5e5', 
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                    onChange={(e) => {
+                      const [category, subcategory] = e.target.value.split('::')
+                      if (category && subcategory) {
+                        addTag(category, subcategory)
+                      }
+                    }}
+                    value=""
+                  >
+                    <option value="">Or select specific field...</option>
+                    {Object.entries(tagOptions).map(([category, subcategories]) =>
+                      subcategories.map(sub => (
+                        <option key={`${category}::${sub}`} value={`${category}::${sub}`}>
+                          {category.replace(/_/g, ' ')} → {sub.replace(/_/g, ' ')}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              </div>
+              
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                💡 Tags help the AI know which parts of the personality profile this question should influence. 
+                For example, a question about daily routines might be tagged as "lifestyle → daily_life_work".
+              </div>
+            </div>
+
             <button 
               onClick={addQuestion}
               disabled={!currentQuestion.text.trim()}
@@ -559,6 +719,27 @@ export default function CreateQuestionnaire() {
                         <p style={{ fontSize: '14px', color: '#737373', fontStyle: 'italic' }}>
                           Help: {question.helpText}
                         </p>
+                      )}
+                      {question.tags && question.tags.length > 0 && (
+                        <div style={{ marginTop: '8px' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {question.tags.map((tag, tagIndex) => (
+                              <span 
+                                key={tagIndex}
+                                style={{ 
+                                  backgroundColor: '#f0fdf4', 
+                                  color: '#166534', 
+                                  padding: '2px 6px', 
+                                  borderRadius: '12px', 
+                                  fontSize: '11px',
+                                  border: '1px solid #bbf7d0'
+                                }}
+                              >
+                                {tag[0]} → {tag[1].replace(/_/g, ' ')}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                     <button 
