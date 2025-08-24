@@ -111,6 +111,7 @@ interface ExtractedProfile {
   }
   questionnaire_id: string
   person_name: string
+  total_exchanges?: number
 }
 
 interface ModularQuestionnaire {
@@ -817,7 +818,7 @@ export default function CreateProfile() {
   const downloadProfile = () => {
     if (!extractedProfile?.profile_data) return
     
-    const filename = `${extractedProfile.person_name}_${extractedProfile.profile_id}_${extractedProfile.questionnaire_id}.json`
+    const filename = `${extractedProfile.profile_id}.json`
     const dataStr = JSON.stringify(extractedProfile.profile_data, null, 2)
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
     
@@ -1371,7 +1372,7 @@ export default function CreateProfile() {
                 <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#00d924' }}>Interview Summary</h3>
                 <ul style={{ fontSize: '14px', color: '#737373', paddingLeft: '20px', margin: '0' }}>
                   <li>Participant: {interviewData.name}</li>
-                  <li>Total exchanges: {interviewData.exchangeCount}</li>
+                  <li>Total exchanges: {extractedProfile?.total_exchanges || interviewData.exchangeCount}</li>
                   {extractedProfile && (
                     <li>Profile ID: {extractedProfile.profile_id}</li>
                   )}

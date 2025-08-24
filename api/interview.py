@@ -631,13 +631,18 @@ class handler(BaseHTTPRequestHandler):
                     pass
                 raise e
             
+            # Calculate total exchanges from all sessions used in profile creation
+            total_exchanges = sum(session.get('exchange_count', 0) for session in sessions_for_extraction)
+            print(f"DEBUG: Total exchanges across all sessions: {total_exchanges}")
+            
             response = {
                 'status': 'success',
                 'message': 'Interview completed successfully. Profile has been extracted.',
                 'profile_id': profile_id,
                 'profile_data': profile_data,
                 'questionnaire_id': interview_session.get('questionnaire_id', 'unknown'),
-                'person_name': person_name
+                'person_name': person_name,
+                'total_exchanges': total_exchanges
             }
             
             self.send_response(200)

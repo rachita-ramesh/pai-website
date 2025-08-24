@@ -21,6 +21,46 @@ export const ProfileDataDisplay: React.FC<ProfileDataDisplayProps> = ({ profileD
 
 // New Profile Data Display Component
 const NewProfileDataDisplay: React.FC<{ data: NewProfileData; profileId: string }> = ({ data }) => {
+  // Handle new structure with profile_data wrapper
+  if ((data as any).profile_data && typeof (data as any).profile_data === 'object') {
+    const profileData = (data as any).profile_data;
+    return (
+      <div style={{ display: 'grid', gap: '16px' }}>
+        {Object.entries(profileData).filter(([key]) => key !== 'profile_id' && key !== 'created_from_sessions').map(([sectionName, sectionData]) => {
+          if (!sectionData || typeof sectionData !== 'object') return null;
+          
+          return (
+            <div key={sectionName} style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#171717' }}>
+                {getSectionIcon(sectionName)} {sectionName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </h4>
+              
+              <div style={{ display: 'grid', gap: '8px', fontSize: '14px' }}>
+                {Object.entries(sectionData as Record<string, any>).map(([key, fieldData]) => {
+                  if (!fieldData) return null;
+                  
+                  const value = typeof fieldData === 'object' && fieldData.value ? fieldData.value : fieldData;
+                  const source = typeof fieldData === 'object' && fieldData.source ? fieldData.source : null;
+                  
+                  return (
+                    <div key={key} style={{ marginBottom: '8px' }}>
+                      <strong>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong> {value}
+                      {source && (
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                          Source: {source.questionnaire_id} - {source.question_id}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  
   return (
     <div style={{ display: 'grid', gap: '16px' }}>
       {/* Centrepiece Section */}
@@ -287,3 +327,21 @@ const LegacyProfileDataDisplay: React.FC<{ data: LegacyProfileData; profileId: s
     </div>
   )
 }
+
+// Helper function to get section icons
+const getSectionIcon = (sectionName: string): string => {
+  const icons: Record<string, string> = {
+    demographics: '👤',
+    lifestyle: '🌱',
+    media_and_culture: '📺',
+    personality: '🧠',
+    values_and_beliefs: '💫',
+    skin_and_hair_type: '✨',
+    routine: '💄',
+    facial_moisturizer_attitudes: '🧴',
+    moisturizer_usage: '🔄',
+    shopping_behaviors: '🛒',
+    information_sources_messaging: '📱'
+  };
+  return icons[sectionName] || '📊';
+};
