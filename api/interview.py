@@ -601,11 +601,16 @@ class handler(BaseHTTPRequestHandler):
                     print(f"DEBUG: Linked session {session['session_id']} to profile {profile_id}")
                 except Exception as e:
                     print(f"DEBUG: Error linking session {session['session_id']}: {e}")
+            # Extract completeness metadata from request data
+            completeness_metadata = data.get('completeness_metadata', {})
+            print(f"DEBUG: Saving completeness_metadata: {completeness_metadata}")
+            
             profile_version_data = {
                 'profile_id': profile_id,
                 'person_name': person_name,
                 'version_number': next_version,
                 'profile_data': profile_data,
+                'completeness_metadata': completeness_metadata,
                 'is_active': True,
                 'created_at': 'NOW()',
                 'updated_at': 'NOW()'
