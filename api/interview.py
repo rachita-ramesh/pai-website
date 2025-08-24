@@ -755,6 +755,9 @@ class handler(BaseHTTPRequestHandler):
         # Add session metadata to the schema for the AI prompt
         dynamic_schema["created_from_sessions"] = session_metadata
         
+        # DEBUG: Print the generated schema to the console for verification
+        print(f"DEBUG: Dynamically generated schema for AI prompt:\\n{json.dumps(dynamic_schema, indent=2)}")
+        
         # Convert schema to a pretty-printed JSON string for the prompt
         schema_json_string = json.dumps(dynamic_schema, indent=2)
 
