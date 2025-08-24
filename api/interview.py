@@ -594,13 +594,6 @@ class handler(BaseHTTPRequestHandler):
             print(f"DEBUG: Extracting profile from {len(sessions_for_extraction)} session(s)")
             profile_data = self._extract_profile_from_interview(sessions_for_extraction, api_key, profile_id, questionnaires_completed)
             
-            # Link all sessions to this profile_id for traceability
-            for session in sessions_for_extraction:
-                try:
-                    supabase.update_interview_session(session['session_id'], {'profile_id': profile_id})
-                    print(f"DEBUG: Linked session {session['session_id']} to profile {profile_id}")
-                except Exception as e:
-                    print(f"DEBUG: Error linking session {session['session_id']}: {e}")
             # Extract completeness metadata from request data
             completeness_metadata = data.get('completeness_metadata', {})
             print(f"DEBUG: Saving completeness_metadata: {completeness_metadata}")
@@ -621,9 +614,13 @@ class handler(BaseHTTPRequestHandler):
                 created_profile = supabase.create_profile_version(profile_version_data)
                 print(f"DEBUG: Created profile version {profile_id}")
                 
-                # Immediately update interview session with profile_id
-                supabase.update_interview_session(session_id, {'profile_id': profile_id})
-                print(f"DEBUG: Successfully linked profile {profile_id} to session {session_id}")
+                # Link all sessions to this profile_id for full traceability
+                for session in sessions_for_extraction:
+                    try:
+                        supabase.update_interview_session(session['session_id'], {'profile_id': profile_id})
+                        print(f"DEBUG: Linked session {session['session_id']} to profile {profile_id}")
+                    except Exception as e:
+                        print(f"DEBUG: Error linking session {session['session_id']}: {e}")
                 
             except Exception as e:
                 print(f"DEBUG: Error creating or linking profile: {e}")
