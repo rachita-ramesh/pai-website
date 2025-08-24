@@ -76,7 +76,8 @@ class SupabaseClient:
     def get_person_profiles(self, person_name: str) -> List[Dict]:
         """Get all profile versions for a person"""
         try:
-            return self._make_request('GET', f'profile_versions?person_name=eq.{person_name}&order=version_number.desc')
+            # Use ilike for case-insensitive matching
+            return self._make_request('GET', f'profile_versions?person_name=ilike.{person_name}&order=version_number.desc')
         except:
             return []
     
