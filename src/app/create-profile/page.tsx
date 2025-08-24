@@ -420,7 +420,12 @@ export default function CreateProfile() {
           { profile_id: 'Rachita_v9', is_active: true, created_at: '2025-08-15T15:57:14.423447', completeness_metadata: { centrepiece: true, beauty: true } }, // More complete
           { profile_id: 'Rachita_v10', is_active: false, created_at: '2025-08-16T22:20:54.316476', completeness_metadata: undefined }, // Failed extraction  
           { profile_id: 'Rachita_v11', is_active: false, created_at: '2025-08-16T22:31:47.805901', completeness_metadata: undefined }, // Failed extraction
-          { profile_id: 'Rachita_v12_20250817_000655', is_active: true, created_at: '2025-08-17T00:07:04.176858', completeness_metadata: { centrepiece: true, beauty: true, fitness: true } } // Most complete
+          { profile_id: 'Rachita_v12_20250817_000655', is_active: false, created_at: '2025-08-17T00:07:04.176858', completeness_metadata: { centrepiece: true, beauty: true, fitness: true } }, // Old format
+          { profile_id: 'rachita_v12', is_active: true, created_at: '2025-08-24T12:20:00.000000', completeness_metadata: {
+            centrepiece: { name: 'centrepiece', display_name: 'Centrepiece Interview v1' },
+            categories: [{ name: 'beauty_v1', display_name: 'Beauty v1' }],
+            products: []
+          } as CompletenessMetadata } // New format with beauty_v1 completed
         ],
         'everhett': [
           { profile_id: 'Everhett_v1', is_active: true, created_at: '2025-08-17T14:59:16.453013', completeness_metadata: { centrepiece: true } },
@@ -450,18 +455,31 @@ export default function CreateProfile() {
     try {
       console.log('Checking completions for profile:', profileId)
       
-      // Call API to get questionnaire completions for this profile
-      const response = await fetch(`/api/questionnaire-completions?profile_id=${encodeURIComponent(profileId)}`)
+      // Find the selected profile to get its completeness metadata
+      const selectedProfile = existingProfiles.find(p => p.profile_id === profileId)
+      const completeness = selectedProfile?.completeness_metadata
       
-      if (response.ok) {
-        const data = await response.json()
-        const completions = data.completions || []
+      if (completeness && 'centrepiece' in completeness && typeof completeness.centrepiece === 'object') {
+        // Use the new format (CompletenessMetadata)
+        const metadata = completeness as CompletenessMetadata
         
-        // Update questionnaires based on actual completions
+        // Update questionnaires based on completeness metadata
         setModularQuestionnaires(prev => prev.map(q => {
-          const isCompleted = completions.some((comp: { questionnaire_name: string; completed_at: string | null; skipped: boolean }) => 
-            comp.questionnaire_name === q.name && comp.completed_at && !comp.skipped
-          )
+          let isCompleted = false
+          
+          // Check if this questionnaire is completed based on metadata
+          if (q.name === 'centrepiece') {
+            isCompleted = metadata.centrepiece !== null
+          } else {
+            // Check categories (beauty_v1, fitness_v1, etc.)
+            isCompleted = metadata.categories.some(cat => cat.name === q.name)
+            
+            // Check products (moisturizer_v1, etc.) 
+            if (!isCompleted) {
+              isCompleted = metadata.products.some(prod => prod.name === q.name)
+            }
+          }
+          
           return {
             ...q,
             completed: isCompleted,
@@ -469,20 +487,20 @@ export default function CreateProfile() {
           }
         }))
         
-        // NOTE: Do NOT filter out completed questionnaires from selection!
-        // selectedQuestionnaires should track what user wants to complete in THIS session
-        // Even if questionnaires were completed before, user might want to redo them
+        console.log('Updated questionnaires based on completeness metadata:', metadata)
       } else {
-        // If API doesn't exist yet, simulate realistic completions
+        // Fallback for old format or missing data
         setModularQuestionnaires(prev => prev.map(q => ({
           ...q,
-          completed: q.name === 'centrepiece', // Simulate centrepiece already completed for existing profiles
+          completed: q.name === 'centrepiece', // Only mark centrepiece as completed for safety
           skipped: false
         })))
         
-        // NOTE: Do NOT remove questionnaires from selection!
-        // User should be able to redo questionnaires even if completed before
+        console.log('Using fallback completion logic')
       }
+      
+      // NOTE: Do NOT remove questionnaires from selection!
+      // User should be able to redo questionnaires even if completed before
     } catch (error) {
       console.error('Error checking completions:', error)
       // Fallback simulation
@@ -491,7 +509,6 @@ export default function CreateProfile() {
         completed: q.name === 'centrepiece',
         skipped: false
       })))
-      // NOTE: Do NOT remove questionnaires from selection!
     }
   }
   
