@@ -258,52 +258,6 @@ async def extract_profile_background(interview_file: str, participant_name: str)
         print(f"Background profile extraction failed: {e}")
 
 
-@app.get("/profiles")
-async def list_profiles():
-    """List all available profiles"""
-    profiles_dir = "data/profiles"
-    
-    if not os.path.exists(profiles_dir):
-        return {"profiles": []}
-    
-    profile_files = [f for f in os.listdir(profiles_dir) if f.endswith('_profile.json')]
-    profiles = []
-    
-    for filename in profile_files:
-        filepath = os.path.join(profiles_dir, filename)
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                profile_data = json.load(f)
-            
-            profiles.append({
-                "pai_id": profile_data.get("pai_id"),
-                "filename": filename,
-                "created": os.path.getmtime(filepath)
-            })
-        except Exception as e:
-            print(f"Error loading profile {filename}: {e}")
-            continue
-    
-    return {"profiles": profiles}
-
-
-@app.get("/profile/{pai_id}")
-async def get_profile(pai_id: str):
-    """Get a specific profile by ID"""
-    profiles_dir = "data/profiles"
-    profile_file = f"{pai_id}_profile.json"
-    filepath = os.path.join(profiles_dir, profile_file)
-    
-    if not os.path.exists(filepath):
-        raise HTTPException(status_code=404, detail="Profile not found")
-    
-    try:
-        profile = extractor.load_profile(filepath)
-        return profile.dict()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load profile: {str(e)}")
-
-
 @app.get("/survey/questions")
 async def get_survey_questions():
     """Get the test survey questions"""
