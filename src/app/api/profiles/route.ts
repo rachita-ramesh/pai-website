@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       completeness_metadata: (profile.completeness_metadata as Record<string, unknown>) || {}
     }))
 
-    console.log('DEBUG: Transformed profiles:', transformedProfiles.length, transformedProfiles.map(p => p.profile_id))
+    console.log('DEBUG: Transformed profiles:', transformedProfiles.length, transformedProfiles.map((p: { profile_id: string }) => p.profile_id))
     
     return NextResponse.json(transformedProfiles)
     
