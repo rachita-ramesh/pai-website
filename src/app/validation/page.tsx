@@ -59,11 +59,15 @@ export default function ValidationTest() {
 
   const loadAvailableSurveys = useCallback(async () => {
     setIsLoadingSurveys(true)
+    console.log('DEBUG: Loading available surveys...')
     try {
       const response = await fetch('/api/surveys')
+      console.log('DEBUG: Surveys API response status:', response.status)
       if (response.ok) {
         const data = await response.json()
+        console.log('DEBUG: Surveys API data:', data)
         const surveys = data.surveys || []
+        console.log('DEBUG: Setting surveys:', surveys)
         setAvailableSurveys(surveys)
         
         // Auto-select default survey if available
@@ -77,11 +81,11 @@ export default function ValidationTest() {
           setSurvey(surveys[0])
         }
       } else {
-        console.error('Failed to load surveys, using fallback')
+        console.error('DEBUG: Failed to load surveys, status:', response.status, 'using fallback')
         await loadDefaultSurveyAsSurveyList()
       }
     } catch (error) {
-      console.error('Error loading surveys:', error)
+      console.error('DEBUG: Error loading surveys:', error, 'using fallback')
       await loadDefaultSurveyAsSurveyList()
     } finally {
       setIsLoadingSurveys(false)
@@ -129,16 +133,18 @@ export default function ValidationTest() {
 
   const loadProfileVersions = async (personName: string) => {
     setIsLoadingVersions(true)
+    console.log('DEBUG: Loading profiles for person:', personName)
     try {
-      const response = await fetch(`/api/chat?person=${encodeURIComponent(personName)}`)
+      const response = await fetch(`/api/profiles?person_name=${encodeURIComponent(personName)}`)
       if (response.ok) {
-        const data = await response.json()
-        setAvailableVersions(data.profiles || [])
+        const profiles = await response.json()
+        console.log('DEBUG: Found profiles:', profiles)
+        setAvailableVersions(profiles || [])
         
         // Auto-select the latest active version or first version
-        if (data.profiles && data.profiles.length > 0) {
-          const activeVersion = data.profiles.find((p: ProfileVersion) => p.is_active)
-          const latestVersion = data.profiles[0] // Assuming sorted by latest first
+        if (profiles && profiles.length > 0) {
+          const activeVersion = profiles.find((p: ProfileVersion) => p.is_active)
+          const latestVersion = profiles[0] // Assuming sorted by latest first
           const defaultVersion = activeVersion || latestVersion
           setProfileId(defaultVersion.profile_id)
         }
