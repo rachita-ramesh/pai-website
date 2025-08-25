@@ -407,50 +407,16 @@ export default function CreateProfile() {
     try {
       console.log('Loading existing profiles for:', personName)
       
-      // Since API doesn't exist, create mock data based on what we see in database
-      // Note: Many profiles had errors/failed extraction based on profile_data column
-      const mockProfiles = {
-        'rachita': [
-          // Old capitalized format
-          { profile_id: 'Rachita_v1', is_active: false, created_at: '2025-08-15T15:13:08.244627', completeness_metadata: undefined }, // Failed extraction
-          { profile_id: 'Rachita_v2', is_active: false, created_at: '2025-08-15T15:13:12.073769', completeness_metadata: undefined }, // Failed extraction
-          { profile_id: 'Rachita_v3', is_active: false, created_at: '2025-08-15T15:13:19.189163', completeness_metadata: { centrepiece: true } }, // Some completion
-          { profile_id: 'Rachita_v5', is_active: false, created_at: '2025-08-15T15:27:31.600409', completeness_metadata: { centrepiece: true } }, // Some completion
-          { profile_id: 'Rachita_v7', is_active: false, created_at: '2025-08-15T15:37:14.375349', completeness_metadata: { centrepiece: true } }, // Some completion
-          { profile_id: 'Rachita_v8', is_active: false, created_at: '2025-08-15T15:44:59.339835', completeness_metadata: { centrepiece: true } }, // Some completion
-          { profile_id: 'Rachita_v9', is_active: true, created_at: '2025-08-15T15:57:14.423447', completeness_metadata: { centrepiece: true, beauty: true } }, // More complete
-          { profile_id: 'Rachita_v10', is_active: false, created_at: '2025-08-16T22:20:54.316476', completeness_metadata: undefined }, // Failed extraction  
-          { profile_id: 'Rachita_v11', is_active: false, created_at: '2025-08-16T22:31:47.805901', completeness_metadata: undefined }, // Failed extraction
-          { profile_id: 'Rachita_v12_20250817_000655', is_active: false, created_at: '2025-08-17T00:07:04.176858', completeness_metadata: { centrepiece: true, beauty: true, fitness: true } }, // Old format
-          
-          // New lowercase format (from actual backend)
-          { profile_id: 'rachita_v12', is_active: true, created_at: '2025-08-24T12:20:00.000000', completeness_metadata: {
-            centrepiece: { name: 'centrepiece', display_name: 'Centrepiece Interview v1' },
-            categories: [{ name: 'beauty_v1', display_name: 'Beauty v1' }],
-            products: []
-          } as CompletenessMetadata }, // New format with beauty_v1 completed
-          { profile_id: 'rachita_v13', is_active: false, created_at: '2025-08-24T13:00:00.000000', completeness_metadata: {
-            centrepiece: { name: 'centrepiece', display_name: 'Centrepiece Interview v1' },
-            categories: [{ name: 'beauty_v1', display_name: 'Beauty v1' }],
-            products: [{ name: 'moisturizer_v1', display_name: 'Moisturizer v1' }]
-          } as CompletenessMetadata }, // Example with moisturizer added
-        ],
-        'everhett': [
-          { profile_id: 'Everhett_v1', is_active: true, created_at: '2025-08-17T14:59:16.453013', completeness_metadata: { centrepiece: true } },
-          { profile_id: 'Everhett_v2', is_active: false, created_at: '2025-08-17T17:09:39.626929', completeness_metadata: { centrepiece: true } }
-        ],
-        'gigi': [
-          { profile_id: 'Gigi_v1', is_active: false, created_at: '2025-08-17T16:12:38.646263', completeness_metadata: { centrepiece: true } },
-          { profile_id: 'Gigi_v2', is_active: false, created_at: '2025-08-17T16:17:24.214877', completeness_metadata: { centrepiece: true } },
-          { profile_id: 'Gigi_v3', is_active: false, created_at: '2025-08-17T16:18:32.285234', completeness_metadata: { centrepiece: true } },
-          { profile_id: 'Gigi_v4', is_active: true, created_at: '2025-08-17T17:38:31.934118', completeness_metadata: { centrepiece: true } }
-        ]
+      // Call the real profiles API
+      const response = await fetch(`http://localhost:8001/?person_name=${encodeURIComponent(personName)}`)
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch profiles: ${response.status}`)
       }
       
-      const profiles = mockProfiles[personName.toLowerCase() as keyof typeof mockProfiles] || []
-      console.log('Mock profiles for', personName, ':', profiles)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setExistingProfiles(profiles as any) // Type assertion to handle mock data
+      const profiles = await response.json()
+      console.log('Loaded profiles for', personName, ':', profiles)
+      setExistingProfiles(profiles)
       
     } catch (error) {
       console.error('Error loading existing profiles:', error)
