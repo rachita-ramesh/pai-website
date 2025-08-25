@@ -408,7 +408,8 @@ class SupabaseClient:
             # URL encode the person name to handle spaces and special characters
             encoded_name = urllib.parse.quote(person_name.strip())
             print(f"DEBUG: Querying latest profile version for person: {person_name} (encoded: {encoded_name})")
-            result = self._make_request('GET', f'profile_versions?person_name=eq.{encoded_name}&order=version_number.desc&limit=1')
+            # Use ilike for case-insensitive matching to handle both "rachita_v1" and "Rachita_v1" formats
+            result = self._make_request('GET', f'profile_versions?person_name=ilike.{encoded_name}&order=version_number.desc&limit=1')
             print(f"DEBUG: Latest profile query result: {result}")
             return result[0] if result else None
         except Exception as e:

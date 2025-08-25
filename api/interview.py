@@ -685,11 +685,36 @@ class handler(BaseHTTPRequestHandler):
                         print("DEBUG: Existing profile uses legacy format, using new extraction")
                         merged_profile_data = profile_data
                     
-                    # Merge completeness metadata
+                    # Merge completeness metadata - preserve existing questionnaires and add new ones
                     merged_completeness = existing_completeness.copy() if existing_completeness else {}
                     if completeness_metadata:
                         if isinstance(completeness_metadata, dict) and isinstance(merged_completeness, dict):
-                            merged_completeness.update(completeness_metadata)
+                            # Deep merge completeness metadata arrays
+                            for key in ['centrepiece', 'categories', 'products']:
+                                if key in completeness_metadata:
+                                    new_value = completeness_metadata[key]
+                                    if key in merged_completeness:
+                                        existing_value = merged_completeness[key]
+                                        
+                                        if key == 'centrepiece':
+                                            # Centrepiece is a single object, replace if new one provided
+                                            if new_value is not None:
+                                                merged_completeness[key] = new_value
+                                        else:
+                                            # Categories and products are arrays - merge them
+                                            if isinstance(existing_value, list) and isinstance(new_value, list):
+                                                # Create a set of existing names to avoid duplicates
+                                                existing_names = {item.get('name') for item in existing_value if isinstance(item, dict)}
+                                                # Add new items that don't already exist
+                                                for new_item in new_value:
+                                                    if isinstance(new_item, dict) and new_item.get('name') not in existing_names:
+                                                        existing_value.append(new_item)
+                                                merged_completeness[key] = existing_value
+                                            else:
+                                                merged_completeness[key] = new_value
+                                    else:
+                                        # Key doesn't exist in merged, add it
+                                        merged_completeness[key] = new_value
                         else:
                             merged_completeness = completeness_metadata
                     
