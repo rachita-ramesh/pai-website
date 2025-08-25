@@ -810,7 +810,8 @@ export default function CreateProfile() {
     if (!extractedProfile?.profile_data) return
     
     const filename = `${extractedProfile.profile_id}.json`
-    const dataStr = JSON.stringify(extractedProfile.profile_data, null, 2)
+    // Download the complete profile including profile_id and all profile_data sections
+    const dataStr = JSON.stringify(extractedProfile, null, 2)
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
     
     const exportFileDefaultName = filename
