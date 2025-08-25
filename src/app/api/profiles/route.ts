@@ -28,11 +28,11 @@ export async function GET(request: NextRequest) {
     const profiles = await response.json()
     
     // Transform the data to match frontend expectations
-    const transformedProfiles = profiles.map((profile: any) => ({
-      profile_id: profile.profile_id,
-      is_active: profile.is_active || false,
-      created_at: profile.created_at,
-      completeness_metadata: profile.completeness_metadata || {}
+    const transformedProfiles = profiles.map((profile: Record<string, unknown>) => ({
+      profile_id: profile.profile_id as string,
+      is_active: (profile.is_active as boolean) || false,
+      created_at: profile.created_at as string,
+      completeness_metadata: (profile.completeness_metadata as Record<string, unknown>) || {}
     }))
 
     return NextResponse.json(transformedProfiles)
