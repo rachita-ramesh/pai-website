@@ -5,6 +5,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const personName = searchParams.get('person_name')
     
+    console.log('DEBUG: Profiles API called with person_name:', personName)
+    
     if (!personName) {
       return NextResponse.json({ error: 'person_name parameter is required' }, { status: 400 })
     }
@@ -13,7 +15,10 @@ export async function GET(request: NextRequest) {
     const supabaseUrl = process.env.SUPABASE_URL || 'https://bbxqbozcdpdymuduyuel.supabase.co'
     const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJieHFib3pjZHBkeW11ZHV5dWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxOTYzMTksImV4cCI6MjA3MDc3MjMxOX0.1yb1u_BUjlQ2-bQ8B0S50LUG2iH0ANntcPnxNvJFd40'
     
-    const response = await fetch(`${supabaseUrl}/rest/v1/profile_versions?person_name=ilike.${encodeURIComponent(personName)}&order=version_number.desc`, {
+    const url = `${supabaseUrl}/rest/v1/profile_versions?person_name=ilike.${encodeURIComponent(personName)}&order=version_number.desc`
+    console.log('DEBUG: Fetching from URL:', url)
+    
+    const response = await fetch(url, {
       headers: {
         'apikey': supabaseKey,
         'Authorization': `Bearer ${supabaseKey}`,
@@ -21,20 +26,27 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    console.log('DEBUG: Supabase response status:', response.status)
+
     if (!response.ok) {
       throw new Error(`Supabase error: ${response.status}`)
     }
 
     const profiles = await response.json()
+    console.log('DEBUG: Found profiles:', profiles.length)
+    console.log('DEBUG: First profile structure:', profiles[0])
     
     // Transform the data to match frontend expectations
     const transformedProfiles = profiles.map((profile: Record<string, unknown>) => ({
       profile_id: profile.profile_id as string,
+      version_number: (profile.version_number as number) || 1,
       is_active: (profile.is_active as boolean) || false,
       created_at: profile.created_at as string,
       completeness_metadata: (profile.completeness_metadata as Record<string, unknown>) || {}
     }))
 
+    console.log('DEBUG: Transformed profiles:', transformedProfiles.length, transformedProfiles.map(p => p.profile_id))
+    
     return NextResponse.json(transformedProfiles)
     
   } catch (error) {
