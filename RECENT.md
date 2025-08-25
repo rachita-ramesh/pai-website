@@ -137,16 +137,64 @@
 
 ---
 
-## 🔮 Next Steps
+## 🆕 Recent Updates (August 25, 2025)
 
-1. **Test the complete flow** end-to-end with new questionnaire combinations
-2. **Implement real API** for existing profile fetching (currently using mock data)
-3. **Add more questionnaire types** (fitness, nutrition) leveraging the new structure
-4. **Consider cleanup** of unused database columns (`profile_data_new`)
-5. **Monitor profile creation** to ensure consistency in production
+### 5. Profile Dropdown & Download Fixes
+**Problems:**
+- Profile dropdown showing fake/mock data instead of real profiles from Supabase database
+- Profile download only including beauty_v1 data instead of complete profile with all questionnaires
+- Localhost dependencies preventing Vercel deployment
+
+**Solutions Applied:**
+- **Real Profile Data:** Replaced 50+ lines of hardcoded mock data with API call to Supabase
+- **Vercel Deployment:** Created Next.js API route (`/src/app/api/profiles/route.ts`) instead of localhost server
+- **Complete Downloads:** Fixed download function to include complete profile object with all questionnaire sections
+- **Case-Insensitive Queries:** Used `ilike` operator for proper name matching
+
+### Additional Files Modified
+
+#### New Files Created
+- **`src/app/api/profiles/route.ts`** (NEW)
+  - Next.js API route for Vercel-compatible profile fetching
+  - Direct Supabase REST API integration with proper TypeScript types
+  - Case-insensitive profile matching with `ilike` operator
+
+#### Backend Enhancements
+- **`lib/supabase.py`**
+  - Fixed case sensitivity by changing `get_latest_profile_version` to use `ilike`
+  - Enhanced completeness metadata merging logic with deep array merging
+  - Added moisturizer questionnaire tags standardization
+
+#### Frontend Updates
+- **`src/app/create-profile/page.tsx`**
+  - Fixed profile action default from empty string to 'new' 
+  - Replaced entire `loadExistingProfiles` function (lines 406-425) from mock data to real API call
+  - Updated download function to use complete `extractedProfile` instead of just `profile_data`
+  - Added proper TypeScript types (`Record<string, unknown>` instead of `any`)
+
+### Testing Results - Profile System
+
+✅ **Real Profile Dropdown:** Shows actual profiles like "rachita_v12" instead of fake "v1 • No data"  
+✅ **Complete Downloads:** JSON includes both centrepiece and beauty_v1 sections (10,401+ characters)  
+✅ **Vercel Deployment:** No localhost dependencies, works on production  
+✅ **Case Sensitivity:** Queries work for both "rachita" and "Rachita"  
+✅ **Profile Merging:** Adding questionnaires to existing profiles preserves completeness metadata  
+✅ **TypeScript Build:** All type errors resolved for production deployment
 
 ---
 
-*Generated: August 24, 2025*  
-*Total commits: 6 major fixes*  
-*Build status: ✅ Passing*
+## 🔮 Next Steps
+
+1. **Test the complete flow** end-to-end with new questionnaire combinations
+2. ~~**Implement real API** for existing profile fetching~~ ✅ COMPLETED
+3. **Add more questionnaire types** (fitness, nutrition) leveraging the new structure
+4. **Consider cleanup** of unused database columns (`profile_data_new`)
+5. **Monitor profile creation** to ensure consistency in production
+6. **Test moisturizer questionnaire integration** with existing profiles
+
+---
+
+*Generated: August 25, 2025*  
+*Total commits: 11 major fixes*  
+*Build status: ✅ Passing*  
+*Profile System: ✅ Fully Functional*

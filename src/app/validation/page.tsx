@@ -841,6 +841,24 @@ export default function ValidationTest() {
                           </div>
                         </div>
                       </div>
+
+                      {comparison.reasoning && (
+                        <div style={{ marginTop: '16px' }}>
+                          <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                            🤔 Digital Twin Reasoning:
+                          </div>
+                          <div style={{ 
+                            padding: '12px', 
+                            backgroundColor: '#f8f9fa', 
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontStyle: 'italic',
+                            color: '#555'
+                          }}>
+                            {comparison.reasoning}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
