@@ -63,23 +63,26 @@ export default function ValidationTest() {
       const response = await fetch('/api/surveys')
       if (response.ok) {
         const data = await response.json()
-        setAvailableSurveys(data.surveys || [])
+        const surveys = data.surveys || []
+        setAvailableSurveys(surveys)
         
         // Auto-select default survey if available
-        const defaultSurvey = data.surveys?.find((s: Survey) => s.survey_title.includes('validation'))
+        const defaultSurvey = surveys.find((s: Survey) => s.survey_title.includes('validation') || s.survey_title.includes('Validation'))
         if (defaultSurvey) {
           setSelectedSurvey(defaultSurvey)
           setSurvey(defaultSurvey)
+        } else if (surveys.length > 0) {
+          // Select the first survey if no validation survey found
+          setSelectedSurvey(surveys[0])
+          setSurvey(surveys[0])
         }
       } else {
-        console.error('Failed to load surveys')
-        // Fallback to loading default survey from validation API
-        loadDefaultSurvey()
+        console.error('Failed to load surveys, using fallback')
+        await loadDefaultSurveyAsSurveyList()
       }
     } catch (error) {
       console.error('Error loading surveys:', error)
-      // Fallback to loading default survey from validation API
-      loadDefaultSurvey()
+      await loadDefaultSurveyAsSurveyList()
     } finally {
       setIsLoadingSurveys(false)
     }
@@ -101,6 +104,26 @@ export default function ValidationTest() {
       }
     } catch (error) {
       console.error('Error loading default survey:', error)
+    }
+  }
+
+  const loadDefaultSurveyAsSurveyList = async () => {
+    try {
+      const response = await fetch('/api/validation')
+      if (response.ok) {
+        const surveyData = await response.json()
+        // Convert single survey to survey list format
+        const surveyList = [surveyData]
+        setAvailableSurveys(surveyList)
+        setSurvey(surveyData)
+        setSelectedSurvey(surveyData)
+      } else {
+        console.error('Failed to load default survey')
+        setAvailableSurveys([])
+      }
+    } catch (error) {
+      console.error('Error loading default survey:', error)
+      setAvailableSurveys([])
     }
   }
 
