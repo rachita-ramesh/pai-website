@@ -814,8 +814,18 @@ class handler(BaseHTTPRequestHandler):
             questions = q_data.get('questions', [])
             for question in questions:
                 tags = question.get('tags')
-                if tags and len(tags) == 2:
-                    category, sub_category = tags
+                if tags:
+                    # Handle both flat format ['category', 'subcategory'] and nested format [['category', 'subcategory']]
+                    if len(tags) == 2 and isinstance(tags[0], str):
+                        # Flat format: ['lifestyle', 'daily_life_work']
+                        category, sub_category = tags
+                    elif len(tags) == 1 and isinstance(tags[0], list) and len(tags[0]) == 2:
+                        # Nested format: [['facial_moisturizer_attitudes', 'benefits_sought']]
+                        category, sub_category = tags[0]
+                    else:
+                        # Unsupported format, skip
+                        print(f"DEBUG: Skipping question {question.get('id', 'unknown')} with unsupported tag format: {tags}")
+                        continue
                     
                     if category not in schema["profile_data"]:
                         schema["profile_data"][category] = {}
