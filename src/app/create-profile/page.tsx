@@ -137,7 +137,7 @@ export default function CreateProfile() {
   const [profileExtractionError, setProfileExtractionError] = useState<string | null>(null)
   
   // Modular questionnaire state
-  const [profileAction, setProfileAction] = useState<'new' | 'existing' | ''>('')
+  const [profileAction, setProfileAction] = useState<'new' | 'existing' | ''>('new')
   const [existingProfiles, setExistingProfiles] = useState<Array<{
     profile_id: string
     is_active: boolean
@@ -411,6 +411,7 @@ export default function CreateProfile() {
       // Note: Many profiles had errors/failed extraction based on profile_data column
       const mockProfiles = {
         'rachita': [
+          // Old capitalized format
           { profile_id: 'Rachita_v1', is_active: false, created_at: '2025-08-15T15:13:08.244627', completeness_metadata: undefined }, // Failed extraction
           { profile_id: 'Rachita_v2', is_active: false, created_at: '2025-08-15T15:13:12.073769', completeness_metadata: undefined }, // Failed extraction
           { profile_id: 'Rachita_v3', is_active: false, created_at: '2025-08-15T15:13:19.189163', completeness_metadata: { centrepiece: true } }, // Some completion
@@ -421,11 +422,18 @@ export default function CreateProfile() {
           { profile_id: 'Rachita_v10', is_active: false, created_at: '2025-08-16T22:20:54.316476', completeness_metadata: undefined }, // Failed extraction  
           { profile_id: 'Rachita_v11', is_active: false, created_at: '2025-08-16T22:31:47.805901', completeness_metadata: undefined }, // Failed extraction
           { profile_id: 'Rachita_v12_20250817_000655', is_active: false, created_at: '2025-08-17T00:07:04.176858', completeness_metadata: { centrepiece: true, beauty: true, fitness: true } }, // Old format
+          
+          // New lowercase format (from actual backend)
           { profile_id: 'rachita_v12', is_active: true, created_at: '2025-08-24T12:20:00.000000', completeness_metadata: {
             centrepiece: { name: 'centrepiece', display_name: 'Centrepiece Interview v1' },
             categories: [{ name: 'beauty_v1', display_name: 'Beauty v1' }],
             products: []
-          } as CompletenessMetadata } // New format with beauty_v1 completed
+          } as CompletenessMetadata }, // New format with beauty_v1 completed
+          { profile_id: 'rachita_v13', is_active: false, created_at: '2025-08-24T13:00:00.000000', completeness_metadata: {
+            centrepiece: { name: 'centrepiece', display_name: 'Centrepiece Interview v1' },
+            categories: [{ name: 'beauty_v1', display_name: 'Beauty v1' }],
+            products: [{ name: 'moisturizer_v1', display_name: 'Moisturizer v1' }]
+          } as CompletenessMetadata }, // Example with moisturizer added
         ],
         'everhett': [
           { profile_id: 'Everhett_v1', is_active: true, created_at: '2025-08-17T14:59:16.453013', completeness_metadata: { centrepiece: true } },
