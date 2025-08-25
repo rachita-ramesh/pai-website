@@ -407,8 +407,8 @@ export default function CreateProfile() {
     try {
       console.log('Loading existing profiles for:', personName)
       
-      // Call the real profiles API
-      const response = await fetch(`http://localhost:8001/?person_name=${encodeURIComponent(personName)}`)
+      // Call the Next.js API route (works on Vercel)
+      const response = await fetch(`/api/profiles?person_name=${encodeURIComponent(personName)}`)
       
       if (!response.ok) {
         throw new Error(`Failed to fetch profiles: ${response.status}`)
