@@ -3,20 +3,5 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["iad1"],
-  "builds": [
-    {
-      "src": "api/**/*.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "rewrites": [
-    { "source": "/api/chat", "destination": "/api/chat.py" },
-    { "source": "/api/create-profile", "destination": "/api/create-profile.py" },
-    { "source": "/api/interview", "destination": "/api/interview.py" },
-    { "source": "/api/questionnaires", "destination": "/api/questionnaires.py" },
-    { "source": "/api/surveys", "destination": "/api/surveys.py" },
-    { "source": "/api/validation", "destination": "/api/validation.py" },
-    { "source": "/(.*)", "destination": "/$1" }
-  ]
+  "regions": ["iad1"]
 }
