@@ -117,8 +117,8 @@ export default function Chat() {
     try {
       // Use real digital twin if we have a selected profile ID, otherwise use mock responses
       if (selectedProfileId) {
-        // Call backend to get digital twin response
-        const response = await fetch('/python-api/chat', {
+        // Call Next.js chat API with Python fallback
+        const response = await fetch('/api/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
