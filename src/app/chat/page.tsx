@@ -58,7 +58,7 @@ export default function Chat() {
         console.log('Setting available versions:', profiles)
         
         // Transform to match ProfileVersion interface
-        const profileVersions = profiles.map((p: any) => ({
+        const profileVersions = profiles.map((p: { profile_id: string; version_number: number; is_active: boolean; created_at: string }) => ({
           profile_id: p.profile_id,
           version_number: p.version_number,
           is_active: p.is_active,
