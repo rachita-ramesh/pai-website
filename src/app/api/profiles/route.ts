@@ -16,10 +16,10 @@ export async function GET(request: NextRequest) {
     const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJieHFib3pjZHBkeW11ZHV5dWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxOTYzMTksImV4cCI6MjA3MDc3MjMxOX0.1yb1u_BUjlQ2-bQ8B0S50LUG2iH0ANntcPnxNvJFd40'
     
     // Try both exact case and lowercase to handle case sensitivity issues
-    let url = `${supabaseUrl}/rest/v1/profile_versions?person_name=ilike.${encodeURIComponent(personName)}&order=version_number.desc`
+    const url = `${supabaseUrl}/rest/v1/profile_versions?person_name=ilike.${encodeURIComponent(personName)}&order=version_number.desc`
     console.log('DEBUG: First trying exact case query:', url)
     
-    let response = await fetch(url, {
+    const response = await fetch(url, {
       headers: {
         'apikey': supabaseKey,
         'Authorization': `Bearer ${supabaseKey}`,
@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
       })
 
       if (lowercaseResponse.ok) {
-        profiles = await lowercaseResponse.json()
+        const lowercaseProfiles = await lowercaseResponse.json()
+        profiles = lowercaseProfiles
         console.log('DEBUG: Found profiles with lowercase:', profiles.length)
       }
     }
