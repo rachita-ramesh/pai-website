@@ -48,19 +48,29 @@ export default function Chat() {
     console.log('Loading profile versions for:', personName)
     setIsLoadingVersions(true)
     try {
-      const response = await fetch(`/python-api/chat?person=${encodeURIComponent(personName)}`)
+      // Use Next.js profiles API instead of Python chat API for better reliability
+      const response = await fetch(`/api/profiles?person_name=${encodeURIComponent(personName)}`)
       console.log('API response status:', response.status)
       if (response.ok) {
-        const data = await response.json()
-        console.log('Profile versions loaded:', data)
-        console.log('Number of profiles:', data.profiles?.length || 0)
-        console.log('Setting available versions:', data.profiles)
-        setAvailableVersions(data.profiles || [])
+        const profiles = await response.json()
+        console.log('Profile versions loaded:', profiles)
+        console.log('Number of profiles:', profiles?.length || 0)
+        console.log('Setting available versions:', profiles)
+        
+        // Transform to match ProfileVersion interface
+        const profileVersions = profiles.map((p: any) => ({
+          profile_id: p.profile_id,
+          version_number: p.version_number,
+          is_active: p.is_active,
+          created_at: p.created_at
+        }))
+        
+        setAvailableVersions(profileVersions || [])
         
         // Auto-select the latest active version or first version
-        if (data.profiles && data.profiles.length > 0) {
-          const activeVersion = data.profiles.find((p: ProfileVersion) => p.is_active)
-          const latestVersion = data.profiles[0] // Assuming sorted by latest first
+        if (profileVersions && profileVersions.length > 0) {
+          const activeVersion = profileVersions.find((p: ProfileVersion) => p.is_active)
+          const latestVersion = profileVersions[0] // Assuming sorted by latest first
           const defaultVersion = activeVersion || latestVersion
           setSelectedProfileId(defaultVersion.profile_id)
           console.log('Auto-selected profile:', defaultVersion.profile_id)
