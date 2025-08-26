@@ -26,8 +26,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           profile_id,
           message
-        }),
-        timeout: 10000 // 10 second timeout
+        })
       })
 
       if (pythonResponse.ok) {
@@ -62,9 +61,6 @@ export async function POST(request: NextRequest) {
 }
 
 function generateMockChatResponse(profileId: string, message: string): string {
-  // Extract person name from profile_id
-  const personName = profileId.split('_')[0]
-  
   // Simple keyword-based responses for different topics
   const lowerMessage = message.toLowerCase()
   
@@ -88,7 +84,7 @@ function generateMockChatResponse(profileId: string, message: string): string {
   return `That's an interesting question! I think it really depends on the specific context and what matters most to you. What's your take on it? I'd love to hear your perspective - it might help me think about it in a new way.`
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   return NextResponse.json({
     status: 'Chat API ready',
     timestamp: new Date().toISOString()
