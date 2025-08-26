@@ -16,6 +16,7 @@
     { "source": "/api/interview", "destination": "/api/interview.py" },
     { "source": "/api/questionnaires", "destination": "/api/questionnaires.py" },
     { "source": "/api/surveys", "destination": "/api/surveys.py" },
-    { "source": "/api/validation", "destination": "/api/validation.py" }
+    { "source": "/api/validation", "destination": "/api/validation.py" },
+    { "source": "/(.*)", "destination": "/$1" }
   ]
 }
