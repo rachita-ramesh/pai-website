@@ -349,8 +349,8 @@ export default function CreateProfile() {
     
     try {
       // Call backend to start interview session
-      console.log('DEBUG: Calling /python-api/interview')
-      const response = await fetch('/python-api/interview', {
+      console.log('DEBUG: Calling /api/interview')
+      const response = await fetch('/api/interview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
