@@ -48,7 +48,7 @@ export default function Chat() {
     console.log('Loading profile versions for:', personName)
     setIsLoadingVersions(true)
     try {
-      const response = await fetch(`/api/chat?person=${encodeURIComponent(personName)}`)
+      const response = await fetch(`/python-api/chat?person=${encodeURIComponent(personName)}`)
       console.log('API response status:', response.status)
       if (response.ok) {
         const data = await response.json()
@@ -108,7 +108,7 @@ export default function Chat() {
       // Use real digital twin if we have a selected profile ID, otherwise use mock responses
       if (selectedProfileId) {
         // Call backend to get digital twin response
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/python-api/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

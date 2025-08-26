@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       
       try {
         // Call the existing Python validation API
-        const pythonApiUrl = process.env.PYTHON_VALIDATION_API_URL || 'http://localhost:8001/api/validation'
+        const pythonApiUrl = process.env.PYTHON_VALIDATION_API_URL || 'http://localhost:8001/python-api/validation'
         
         const response = await fetch(pythonApiUrl, {
           method: 'POST',

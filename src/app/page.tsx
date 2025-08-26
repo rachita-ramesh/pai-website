@@ -20,7 +20,7 @@ export default function Home() {
         for (const person of people) {
           try {
             // Check if this person has profiles via chat API
-            const response = await fetch(`/api/chat?person=${encodeURIComponent(person)}`)
+            const response = await fetch(`/python-api/chat?person=${encodeURIComponent(person)}`)
             if (response.ok) {
               const data = await response.json()
               // If profiles exist, set to 100%

@@ -4,10 +4,10 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
   : 'http://localhost:8000' // Local development
 
 export const API_ENDPOINTS = {
-  startInterview: `${API_BASE_URL}/api/start-interview`,
-  sendMessage: `${API_BASE_URL}/api/send-message`,
-  chat: `${API_BASE_URL}/api/chat`,
-  createProfile: `${API_BASE_URL}/api/create-profile`,
+  startInterview: `${API_BASE_URL}/python-api/start-interview`,
+  sendMessage: `${API_BASE_URL}/python-api/send-message`,
+  chat: `${API_BASE_URL}/python-api/chat`,
+  createProfile: `${API_BASE_URL}/python-api/create-profile`,
   validation: {
     survey: `${API_BASE_URL}/api/validation/survey`,
     predict: `${API_BASE_URL}/api/validation/predict`,

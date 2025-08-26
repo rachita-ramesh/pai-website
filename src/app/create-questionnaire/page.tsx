@@ -144,7 +144,7 @@ export default function CreateQuestionnaire() {
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '')
 
-      const response = await fetch('/api/questionnaires', {
+      const response = await fetch('/python-api/questionnaires', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
