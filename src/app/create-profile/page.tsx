@@ -183,7 +183,7 @@ export default function CreateProfile() {
   useEffect(() => {
     const loadQuestionnaires = async () => {
       try {
-        const response = await fetch('/python-api/questionnaires')
+        const response = await fetch('/api/questionnaires')
         if (response.ok) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const data: any = await response.json()
@@ -648,7 +648,7 @@ export default function CreateProfile() {
     
     try {
       // Call the interview API to continue the conversation
-      const response = await fetch('/python-api/interview', {
+      const response = await fetch('/api/interview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -771,7 +771,7 @@ export default function CreateProfile() {
       
       console.log('DEBUG: Sending to complete-interview API:', requestBody)
       
-      const completeResponse = await fetch(`/python-api/interview?action=complete`, {
+      const completeResponse = await fetch(`/api/interview?action=complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
