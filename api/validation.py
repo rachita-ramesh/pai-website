@@ -644,7 +644,13 @@ class handler(BaseHTTPRequestHandler):
                         'started_at': 'NOW()',
                         'completed_at': 'NOW()'
                     }
-                    supabase.create_validation_test_session(session_data)
+                    try:
+                        session_result = supabase.create_validation_test_session(session_data)
+                        print(f"DEBUG: Successfully created validation_test_session: {session_result}")
+                    except Exception as session_error:
+                        print(f"ERROR: Failed to create validation_test_session: {session_error}")
+                        print(f"ERROR: Session data was: {session_data}")
+                        raise session_error
                     
                     # Save individual question responses
                     for comparison in comparisons:
@@ -667,7 +673,12 @@ class handler(BaseHTTPRequestHandler):
                                 'is_correct': comparison.get('is_match', False),
                                 'response_order': survey_data['questions'].index(question_data) + 1
                             }
-                            supabase._make_request('POST', 'survey_responses', response_data)
+                            try:
+                                survey_result = supabase._make_request('POST', 'survey_responses', response_data)
+                                print(f"DEBUG: Successfully saved survey_response: {survey_result}")
+                            except Exception as survey_error:
+                                print(f"ERROR: Failed to save survey_response: {survey_error}")
+                                print(f"ERROR: Response data was: {response_data}")
                             
                             # Also save to ai_predictions table for AI analytics
                             prediction_data = {
@@ -678,7 +689,12 @@ class handler(BaseHTTPRequestHandler):
                                 'reasoning': comparison.get('reasoning', ''),
                                 'model_version': model_version
                             }
-                            supabase._make_request('POST', 'ai_predictions', prediction_data)
+                            try:
+                                ai_result = supabase._make_request('POST', 'ai_predictions', prediction_data)
+                                print(f"DEBUG: Successfully saved ai_prediction: {ai_result}")
+                            except Exception as ai_error:
+                                print(f"ERROR: Failed to save ai_prediction: {ai_error}")
+                                print(f"ERROR: Prediction data was: {prediction_data}")
                     
                     # Save overall test results
                     test_results = {
@@ -699,7 +715,13 @@ class handler(BaseHTTPRequestHandler):
                             'test_type': 'digital_twin_validation'
                         }
                     }
-                    supabase.insert_validation_result(test_results)
+                    try:
+                        result_insert = supabase.insert_validation_result(test_results)
+                        print(f"DEBUG: Successfully saved validation_test_results: {result_insert}")
+                    except Exception as result_error:
+                        print(f"ERROR: Failed to save validation_test_results: {result_error}")
+                        print(f"ERROR: Test results data was: {test_results}")
+                        raise result_error
                     
                     # Update test history summary for this profile
                     try:
@@ -718,7 +740,13 @@ class handler(BaseHTTPRequestHandler):
                                 'latest_test_date': 'NOW()',
                                 'improvement_trend': 'improving' if accuracy_percentage > existing_summary['average_accuracy'] else 'stable'
                             }
-                            supabase.update_test_history_summary(profile_id, summary_update)
+                            try:
+                                summary_result = supabase.update_test_history_summary(profile_id, summary_update)
+                                print(f"DEBUG: Successfully updated test_history_summary: {summary_result}")
+                            except Exception as summary_error:
+                                print(f"ERROR: Failed to update test_history_summary: {summary_error}")
+                                print(f"ERROR: Summary update data was: {summary_update}")
+                                # Don't raise - this is not critical to the validation flow
                         else:
                             # Create new summary
                             summary_data = {
@@ -729,7 +757,13 @@ class handler(BaseHTTPRequestHandler):
                                 'latest_test_date': 'NOW()',
                                 'improvement_trend': 'new'
                             }
-                            supabase._make_request('POST', 'test_history_summary', summary_data)
+                            try:
+                                new_summary_result = supabase._make_request('POST', 'test_history_summary', summary_data)
+                                print(f"DEBUG: Successfully created test_history_summary: {new_summary_result}")
+                            except Exception as new_summary_error:
+                                print(f"ERROR: Failed to create test_history_summary: {new_summary_error}")
+                                print(f"ERROR: New summary data was: {summary_data}")
+                                # Don't raise - this is not critical to the validation flow
                     except Exception as summary_error:
                         print(f"DEBUG: Failed to update test history summary: {summary_error}")
                     
