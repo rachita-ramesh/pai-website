@@ -5,7 +5,7 @@ import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 
-class ProfilesHandler(BaseHTTPRequestHandler):
+class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             parsed_url = urlparse(self.path)
@@ -71,7 +71,4 @@ class ProfilesHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
-if __name__ == '__main__':
-    server = HTTPServer(('localhost', 8001), ProfilesHandler)
-    print('Profiles API server running on http://localhost:8001/')
-    server.serve_forever()
+# Vercel serverless function - no main server needed

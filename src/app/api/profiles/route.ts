@@ -29,56 +29,38 @@ export async function GET(request: NextRequest) {
 
     console.log('DEBUG: Supabase response status:', response.status)
 
-    if (!response.ok) {
-      throw new Error(`Supabase error: ${response.status}`)
-    }
-
-    let profiles = await response.json()
-    console.log('DEBUG: Found profiles with exact case:', profiles.length)
-
-    // If no profiles found, try lowercase version
-    if (profiles.length === 0 && personName !== personName.toLowerCase()) {
-      const lowercaseUrl = `${supabaseUrl}/rest/v1/profile_versions?person_name=ilike.${encodeURIComponent(personName.toLowerCase())}&order=version_number.desc`
-      console.log('DEBUG: Trying lowercase query:', lowercaseUrl)
+    if (response.ok) {
+      const profiles = await response.json()
+      console.log('DEBUG: Found profiles:', profiles.length)
       
-      const lowercaseResponse = await fetch(lowercaseUrl, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json'
+      // If no profiles found, try lowercase version
+      if (profiles.length === 0 && personName !== personName.toLowerCase()) {
+        const lowercaseUrl = `${supabaseUrl}/rest/v1/profile_versions?person_name=ilike.${encodeURIComponent(personName.toLowerCase())}&order=version_number.desc`
+        console.log('DEBUG: Trying lowercase query:', lowercaseUrl)
+        
+        const lowercaseResponse = await fetch(lowercaseUrl, {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (lowercaseResponse.ok) {
+          const lowercaseProfiles = await lowercaseResponse.json()
+          console.log('DEBUG: Found profiles with lowercase:', lowercaseProfiles.length)
+          return NextResponse.json(lowercaseProfiles)
         }
-      })
-
-      if (lowercaseResponse.ok) {
-        const lowercaseProfiles = await lowercaseResponse.json()
-        profiles = lowercaseProfiles
-        console.log('DEBUG: Found profiles with lowercase:', profiles.length)
       }
+      
+      return NextResponse.json(profiles)
+    } else {
+      const errorText = await response.text()
+      console.error('DEBUG: Supabase error:', errorText)
+      return NextResponse.json({ error: 'Failed to fetch profiles' }, { status: 500 })
     }
-
-    console.log('DEBUG: Final profiles count:', profiles.length)
-    if (profiles.length > 0) {
-      console.log('DEBUG: First profile structure:', profiles[0])
-    }
-    
-    // Transform the data to match frontend expectations
-    const transformedProfiles = profiles.map((profile: Record<string, unknown>) => ({
-      profile_id: profile.profile_id as string,
-      version_number: (profile.version_number as number) || 1,
-      is_active: (profile.is_active as boolean) || false,
-      created_at: profile.created_at as string,
-      completeness_metadata: (profile.completeness_metadata as Record<string, unknown>) || {}
-    }))
-
-    console.log('DEBUG: Transformed profiles:', transformedProfiles.length, transformedProfiles.map((p: { profile_id: string }) => p.profile_id))
-    
-    return NextResponse.json(transformedProfiles)
-    
   } catch (error) {
-    console.error('Error fetching profiles:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch profiles' }, 
-      { status: 500 }
-    )
+    console.error('Profiles API error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
