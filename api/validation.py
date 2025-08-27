@@ -11,14 +11,14 @@ from lib.response_predictor import ResponsePredictor, SurveyQuestion
 from lib.profile_extractor import ProfileExtractor
 import glob
 
-def get_validation_survey_data():
+def get_validation_survey_data(survey_name: str = 'validation_survey_1'):
     """Load survey data from Supabase survey_templates table"""
     try:
         from lib.supabase import SupabaseClient
         supabase = SupabaseClient()
         
-        # Try to get the default validation survey
-        survey_template = supabase.get_survey_template('validation_survey_1')
+        # Try to get the specified survey
+        survey_template = supabase.get_survey_template(survey_name)
         if survey_template:
             return {
                 'survey_name': survey_template['survey_name'],
@@ -205,8 +205,9 @@ class handler(BaseHTTPRequestHandler):
             if 'history' in query_params or 'test_session_id' in query_params:
                 return self._handle_validation_history(query_params)
             
-            # Default: Return the validation survey
-            survey_data = get_validation_survey_data()
+            # Default: Return the validation survey (support survey_name parameter)
+            survey_name = query_params.get('survey_name', ['validation_survey_1'])[0]
+            survey_data = get_validation_survey_data(survey_name)
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -391,6 +392,7 @@ class handler(BaseHTTPRequestHandler):
                 question_id = data.get('question_id')
                 human_answer = data.get('human_answer')
                 profile_id = data.get('profile_id', 'rachita_v1')
+                survey_name = data.get('survey_name', 'validation_survey_1')
                 
                 # Get API key from environment
                 api_key = os.getenv('ANTHROPIC_API_KEY')
@@ -409,121 +411,23 @@ class handler(BaseHTTPRequestHandler):
                     # Extract the profile JSON data
                     profile = profile_data.get('profile_data', {})
                     
-                    # Create the survey question objects - matching the embedded survey
-                    survey_questions = {
-                        'routine_complexity': SurveyQuestion(
-                            id="routine_complexity",
-                            category="Usage Patterns",
-                            question="How many skincare products do you typically use in your daily routine?",
-                            options=[
-                                "1-2 products (cleanser, moisturizer)",
-                                "3-5 products (cleanser, toner, serum, moisturizer, sunscreen)",
-                                "6-8 products (multi-step routine with treatments)",
-                                "9+ products (extensive Korean-style routine)"
-                            ]
-                        ),
-                        'purchase_decision_driver': SurveyQuestion(
-                            id="purchase_decision_driver",
-                            category="Decision Making",
-                            question="What most influences your skincare purchase decisions?",
-                            options=[
-                                "Friend and family recommendations",
-                                "Online reviews and ratings",
-                                "Scientific research and ingredient lists",
-                                "Dermatologist or expert advice",
-                                "Brand reputation and marketing",
-                                "Price and value for money"
-                            ]
-                        ),
-                        'wellness_priority': SurveyQuestion(
-                            id="wellness_priority",
-                            category="Core Attitudes",
-                            question="How important is the connection between overall health and skin health to you?",
-                            options=[
-                                "Extremely important - I see them as completely connected",
-                                "Very important - I consider both when making choices",
-                                "Moderately important - somewhat related",
-                                "Not very important - I treat them separately"
-                            ]
-                        ),
-                        'research_approach': SurveyQuestion(
-                            id="research_approach",
-                            category="Decision Making",
-                            question="How do you typically research new skincare products before buying?",
-                            options=[
-                                "I don't research much - I go with recommendations",
-                                "Quick online search and review check",
-                                "Moderate research - compare ingredients and reviews",
-                                "Extensive research - studies, expert opinions, ingredient analysis"
-                            ]
-                        ),
-                        'aging_attitude': SurveyQuestion(
-                            id="aging_attitude",
-                            category="Core Attitudes",
-                            question="What's your approach to aging and skincare?",
-                            options=[
-                                "Prevention-focused - start early to prevent issues",
-                                "Treatment-focused - address problems as they appear",
-                                "Acceptance-focused - minimal intervention, natural aging",
-                                "Enhancement-focused - actively improve skin appearance"
-                            ]
-                        ),
-                        'routine_flexibility': SurveyQuestion(
-                            id="routine_flexibility",
-                            category="Usage Patterns",
-                            question="How consistent are you with your skincare routine?",
-                            options=[
-                                "Very consistent - same routine every day",
-                                "Mostly consistent - occasional skips when busy",
-                                "Flexible - adjust based on skin needs and time",
-                                "Inconsistent - often forget or skip steps"
-                            ]
-                        ),
-                        'ingredient_knowledge': SurveyQuestion(
-                            id="ingredient_knowledge",
-                            category="Decision Making",
-                            question="How familiar are you with skincare ingredients and their benefits?",
-                            options=[
-                                "Very familiar - I know most active ingredients",
-                                "Moderately familiar - I know key ingredients like retinol, niacinamide",
-                                "Basic knowledge - I know some common ingredients",
-                                "Not familiar - I don't focus on specific ingredients"
-                            ]
-                        ),
-                        'time_investment': SurveyQuestion(
-                            id="time_investment",
-                            category="Usage Patterns",
-                            question="How much time do you prefer to spend on your skincare routine?",
-                            options=[
-                                "Less than 5 minutes total (quick and simple)",
-                                "5-10 minutes total (efficient but thorough)",
-                                "10-20 minutes total (relaxing self-care time)",
-                                "20+ minutes total (comprehensive ritual)"
-                            ]
-                        ),
-                        'problem_solving': SurveyQuestion(
-                            id="problem_solving",
-                            category="Core Attitudes",
-                            question="When you have a skin concern, what's your typical approach?",
-                            options=[
-                                "Ask friends who have similar issues",
-                                "Research online and try popular solutions",
-                                "Consult a dermatologist or skincare professional",
-                                "Try to address it through lifestyle changes (diet, exercise, sleep)"
-                            ]
-                        ),
-                        'price_sensitivity': SurveyQuestion(
-                            id="price_sensitivity",
-                            category="Decision Making",
-                            question="How does price influence your skincare purchases?",
-                            options=[
-                                "Price is not a major factor - quality matters most",
-                                "I prefer mid-range products - balance of quality and value",
-                                "I'm price-conscious but will splurge on proven ingredients",
-                                "Price is very important - I look for budget-friendly options"
-                            ]
+                    # Load the survey questions dynamically from database
+                    survey_data = get_validation_survey_data(survey_name)
+                    survey_questions = {}
+                    
+                    # Convert database questions to SurveyQuestion objects
+                    for question_data in survey_data['questions']:
+                        q_id = question_data.get('id')
+                        q_text = question_data.get('question', '')
+                        q_options = question_data.get('options', [])
+                        q_category = question_data.get('category', 'General')
+                        
+                        survey_questions[q_id] = SurveyQuestion(
+                            id=q_id,
+                            category=q_category,
+                            question=q_text,
+                            options=q_options
                         )
-                    }
                     
                     if question_id not in survey_questions:
                         raise Exception(f'Question not found: {question_id}')
@@ -561,13 +465,13 @@ class handler(BaseHTTPRequestHandler):
                 profile_id = data.get('profile_id', 'rachita_v1')
                 comparisons = data.get('comparisons', [])
                 accuracy_percentage = data.get('accuracy_percentage', 0)
+                survey_name = data.get('survey_name', 'validation_survey_1')
                 total_questions = data.get('total_questions', 0)
                 correct_answers = data.get('correct_answers', 0)
                 model_version = data.get('model_version', 'claude-3-5-sonnet-20241022')
                 
                 # Get survey info and determine counter
-                survey_data = get_validation_survey_data()
-                survey_name = survey_data['survey_name']
+                survey_data = get_validation_survey_data(survey_name)
                 results_dir = get_validation_results_path()
                 
                 # Ensure results directory exists
@@ -605,7 +509,7 @@ class handler(BaseHTTPRequestHandler):
                     question_id = comparison.get('question_id')
                     
                     # Find the original question from our embedded survey
-                    survey_data = get_validation_survey_data()
+                    survey_data = get_validation_survey_data(survey_name)
                     question_data = None
                     for q in survey_data['questions']:
                         if q['id'] == question_id:

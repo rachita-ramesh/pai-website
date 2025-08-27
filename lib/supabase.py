@@ -153,7 +153,9 @@ class SupabaseClient:
     def get_survey_template(self, survey_name: str) -> Optional[Dict]:
         """Get survey template by name"""
         try:
-            result = self._make_request('GET', f'survey_templates?survey_name=eq.{survey_name}')
+            import urllib.parse
+            encoded_name = urllib.parse.quote(survey_name)
+            result = self._make_request('GET', f'survey_templates?survey_name=eq.{encoded_name}')
             return result[0] if result else None
         except:
             return None
