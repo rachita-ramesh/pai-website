@@ -219,7 +219,8 @@ export default function ValidationTest() {
             body: JSON.stringify({
               profile_id: profileId,
               question_id: question.id,
-              human_answer: humanAnswer
+              human_answer: humanAnswer,
+              survey_name: survey?.survey_name || 'validation_survey_1'
             })
           })
 
@@ -259,7 +260,8 @@ export default function ValidationTest() {
             total_questions: totalQuestions,
             correct_answers: matches,
             model_version: 'claude-3-5-sonnet-20241022',
-            digital_twin_version: null  // Let backend determine this from profile
+            digital_twin_version: null,  // Let backend determine this from profile
+            survey_name: survey?.survey_name || 'validation_survey_1'
           })
         })
 
