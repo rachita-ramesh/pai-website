@@ -8,8 +8,55 @@ import time
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from lib.response_predictor import ResponsePredictor, SurveyQuestion
-from lib.profile_extractor import ProfileExtractor
+from lib.profile_extractor import ProfileExtractor, PaiProfile
 import glob
+
+def _convert_structured_profile_to_legacy(structured_profile: dict) -> dict:
+    """Convert new structured profile format to legacy format expected by ResponsePredictor"""
+    try:
+        legacy_profile = {
+            "pai_id": "converted_profile",
+            "demographics": {},
+            "core_attitudes": {},
+            "decision_psychology": {},
+            "usage_patterns": {},
+            "value_system": {},
+            "behavioral_quotes": [],
+            "prediction_weights": {}
+        }
+        
+        # Extract values from the structured format and map to legacy categories
+        for section_name, fields in structured_profile.items():
+            for field_name, field_data in fields.items():
+                if isinstance(field_data, dict) and 'value' in field_data:
+                    value = field_data['value']
+                    
+                    # Map sections to legacy categories based on content
+                    if section_name in ['lifestyle', 'media_and_culture']:
+                        legacy_profile['demographics'][f'{section_name}_{field_name}'] = value
+                    elif section_name in ['personality', 'values_and_beliefs']:
+                        legacy_profile['core_attitudes'][f'{section_name}_{field_name}'] = value
+                    elif section_name in ['routine', 'skin_and_hair_type']:
+                        legacy_profile['usage_patterns'][f'{section_name}_{field_name}'] = value
+                    else:
+                        # Default to decision_psychology for other sections
+                        legacy_profile['decision_psychology'][f'{section_name}_{field_name}'] = value
+        
+        return legacy_profile
+        
+    except Exception as e:
+        print(f"Error converting structured profile: {e}")
+        # Return minimal structure if conversion fails
+        return {
+            "pai_id": "conversion_error",
+            "demographics": {"error": str(e)},
+            "core_attitudes": {},
+            "decision_psychology": {},
+            "usage_patterns": {},
+            "value_system": {},
+            "behavioral_quotes": [],
+            "prediction_weights": {}
+        }
 
 def get_validation_survey_data(survey_name: str = 'validation_survey_1'):
     """Load survey data from Supabase survey_templates table"""
@@ -408,8 +455,16 @@ class handler(BaseHTTPRequestHandler):
                     if not profile_data:
                         raise Exception(f'Profile not found in database: {profile_id}')
                     
-                    # Extract the profile JSON data
-                    profile = profile_data.get('profile_data', {})
+                    # Extract and convert the profile data
+                    raw_profile_data = profile_data.get('profile_data', {})
+                    
+                    # Convert new structured profile to legacy format for ResponsePredictor
+                    if 'profile_data' in raw_profile_data:
+                        # New structure with metadata - extract just the values
+                        profile = _convert_structured_profile_to_legacy(raw_profile_data['profile_data'])
+                    else:
+                        # Legacy structure - use as-is
+                        profile = raw_profile_data
                     
                     # Load the survey questions dynamically from database
                     survey_data = get_validation_survey_data(survey_name)
@@ -434,7 +489,14 @@ class handler(BaseHTTPRequestHandler):
                     
                     # Get prediction using ResponsePredictor
                     predictor = ResponsePredictor(api_key)
-                    prediction = predictor.predict_response(profile, survey_questions[question_id])
+                    
+                    # Create a PaiProfile object from the converted data
+                    if isinstance(profile, dict):
+                        pai_profile = PaiProfile(**profile)
+                    else:
+                        pai_profile = profile
+                    
+                    prediction = predictor.predict_response(pai_profile, survey_questions[question_id])
                     
                     # Compare with human answer
                     is_match = human_answer.strip() == prediction.predicted_answer.strip()
