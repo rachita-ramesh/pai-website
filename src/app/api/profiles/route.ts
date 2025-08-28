@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Make direct request to Supabase
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bbxqbozcdpdymuduyuel.supabase.co'
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJieHFib3pjZHBkeW11ZHV5dWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxOTYzMTksImV4cCI6MjA3MDc3MjMxOX0.1yb1u_BUjlQ2-bQ8B0S50LUG2iH0ANntcPnxNvJFd40'
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://bbxqbozcdpdymuduyuel.supabase.co'
+    const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJieHFib3pjZHBkeW11ZHV5dWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxOTYzMTksImV4cCI6MjA3MDc3MjMxOX0.1yb1u_BUjlQ2-bQ8B0S50LUG2iH0ANntcPnxNvJFd40'
     
     // Try both exact case and lowercase to handle case sensitivity issues
     const url = `${supabaseUrl}/rest/v1/profile_versions?person_name=ilike.${encodeURIComponent(personName)}&order=version_number.desc`
