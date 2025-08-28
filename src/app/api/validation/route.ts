@@ -38,14 +38,14 @@ interface SaveResultsRequest {
   model_version?: string;
 }
 
-function convertStructuredProfileToLegacy(structuredProfile: Record<string, any>): Record<string, any> {
+function convertStructuredProfileToLegacy(structuredProfile: Record<string, unknown>): Record<string, unknown> {
   const legacyProfile = {
     pai_id: "converted_profile",
-    demographics: {} as Record<string, any>,
-    core_attitudes: {} as Record<string, any>,
-    decision_psychology: {} as Record<string, any>,
-    usage_patterns: {} as Record<string, any>,
-    value_system: {} as Record<string, any>,
+    demographics: {} as Record<string, unknown>,
+    core_attitudes: {} as Record<string, unknown>,
+    decision_psychology: {} as Record<string, unknown>,
+    usage_patterns: {} as Record<string, unknown>,
+    value_system: {} as Record<string, unknown>,
     behavioral_quotes: [],
     prediction_weights: {}
   };
@@ -53,9 +53,9 @@ function convertStructuredProfileToLegacy(structuredProfile: Record<string, any>
   // Extract values from the structured format and map to legacy categories
   for (const [sectionName, fields] of Object.entries(structuredProfile)) {
     if (typeof fields === 'object' && fields !== null) {
-      for (const [fieldName, fieldData] of Object.entries(fields as Record<string, any>)) {
+      for (const [fieldName, fieldData] of Object.entries(fields as Record<string, unknown>)) {
         if (typeof fieldData === 'object' && fieldData !== null && 'value' in fieldData) {
-          const value = fieldData.value;
+          const value = (fieldData as Record<string, unknown>).value;
           const key = `${sectionName}_${fieldName}`;
           
           // Map sections to legacy categories based on content
@@ -77,7 +77,7 @@ function convertStructuredProfileToLegacy(structuredProfile: Record<string, any>
   return legacyProfile;
 }
 
-async function getValidationSurveyData(surveyName: string = 'validation_survey_1') {
+async function getValidationSurveyData(surveyName = 'validation_survey_1') {
   try {
     // Try to get the specified survey from database
     const { data: surveyTemplate, error } = await supabase
@@ -196,7 +196,7 @@ export async function GET(request: NextRequest) {
     const surveyData = await getValidationSurveyData(surveyName);
     
     return NextResponse.json(surveyData);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Validation GET error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
       // Results saving
       return handleResultsSaving(data as SaveResultsRequest);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Validation POST error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -242,15 +242,12 @@ async function handleQuestionValidation(data: ValidationRequest) {
 
     // Extract and convert the profile data
     const rawProfileData = profileData.profile_data || {};
-    let profile: Record<string, any>;
 
     if ('profile_data' in rawProfileData) {
       // New structure with metadata - extract just the values
-      profile = convertStructuredProfileToLegacy(rawProfileData.profile_data);
-    } else {
-      // Legacy structure - use as-is
-      profile = rawProfileData;
+      convertStructuredProfileToLegacy(rawProfileData.profile_data);
     }
+    // Legacy structure handling would go here if needed
 
     // For now, return a fallback response since we don't have the full ResponsePredictor
     // implementation in TypeScript. This provides basic functionality while avoiding the error.
@@ -265,7 +262,7 @@ async function handleQuestionValidation(data: ValidationRequest) {
 
     return NextResponse.json(result);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Question validation error:', error);
     
     // Fallback response
@@ -319,7 +316,7 @@ async function handleResultsSaving(data: SaveResultsRequest) {
     const questionResponsesData = [];
 
     for (const comparison of comparisons) {
-      const questionData = surveyData.questions.find((q: any) => q.id === comparison.question_id);
+      const questionData = surveyData.questions.find((q: Record<string, unknown>) => q.id === comparison.question_id);
       
       if (questionData) {
         questionResponsesData.push({
@@ -331,7 +328,7 @@ async function handleResultsSaving(data: SaveResultsRequest) {
           ai_response: comparison.predicted_answer,
           ai_reasoning: comparison.reasoning,
           is_correct: comparison.is_match,
-          response_order: surveyData.questions.findIndex((q: any) => q.id === comparison.question_id) + 1
+          response_order: surveyData.questions.findIndex((q: Record<string, unknown>) => q.id === comparison.question_id) + 1
         });
       }
     }
@@ -398,7 +395,7 @@ async function handleResultsSaving(data: SaveResultsRequest) {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Results saving error:', error);
     return NextResponse.json({
       status: 'partial_success',
@@ -438,7 +435,7 @@ async function handleValidationHistory(searchParams: URLSearchParams) {
         timestamp: testResult.created_at,
         digital_twin_version: testResult.profile_id,
         model_version: 'claude-3-5-sonnet-20241022',
-        comparisons: (questionResponses || []).map((qr: any) => ({
+        comparisons: (questionResponses || []).map((qr: Record<string, unknown>) => ({
           question_id: qr.question_id,
           human_answer: qr.human_response,
           predicted_answer: qr.ai_response,
@@ -471,7 +468,7 @@ async function handleValidationHistory(searchParams: URLSearchParams) {
     }
 
     // Format results for history display
-    const formattedResults = allResults.map((result: any) => ({
+    const formattedResults = allResults.map((result: Record<string, unknown>) => ({
       filename: `${result.survey_name}_${result.profile_id}.json`,
       profile_id: result.profile_id,
       digital_twin_version: result.profile_id,
@@ -489,7 +486,7 @@ async function handleValidationHistory(searchParams: URLSearchParams) {
       results: formattedResults
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Validation history error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
