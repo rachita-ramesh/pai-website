@@ -208,29 +208,27 @@ export default function ValidationTest() {
 
       for (const question of survey.questions) {
         const humanAnswer = humanAnswers[question.id]
-        if (humanAnswer) {
-          console.log(`Processing question ${question.id}:`, humanAnswer)
-          
-          const response = await fetch('/api/validation', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              profile_id: profileId,
-              question_id: question.id,
-              human_answer: humanAnswer,
-              survey_name: survey?.survey_name || 'validation_survey_1'
-            })
+        console.log(`Processing question ${question.id}:`, humanAnswer || 'NO ANSWER')
+        
+        const response = await fetch('/api/validation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            profile_id: profileId,
+            question_id: question.id,
+            human_answer: humanAnswer || 'NO_ANSWER',
+            survey_name: survey?.survey_name || 'validation_survey_1'
           })
+        })
 
-          if (response.ok) {
-            const comparison = await response.json()
-            console.log(`Comparison result for ${question.id}:`, comparison)
-            comparisonsResults.push(comparison)
-          } else {
-            console.error(`Failed to compare question ${question.id}:`, response.status, response.statusText)
-          }
+        if (response.ok) {
+          const comparison = await response.json()
+          console.log(`Comparison result for ${question.id}:`, comparison)
+          comparisonsResults.push(comparison)
+        } else {
+          console.error(`Failed to compare question ${question.id}:`, response.status, response.statusText)
         }
       }
 
