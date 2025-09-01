@@ -540,11 +540,20 @@ class handler(BaseHTTPRequestHandler):
                 print(f"DEBUG: Comparisons: {len(comparisons)}, accuracy: {accuracy_percentage}%")
                 
                 # Get survey info and determine counter
-                survey_data = get_validation_survey_data(survey_name)
+                print(f"DEBUG: About to load survey data for: {survey_name}")
+                try:
+                    survey_data = get_validation_survey_data(survey_name)
+                    print(f"DEBUG: ✅ Loaded survey data: {survey_data['survey_title']}")
+                except Exception as survey_error:
+                    print(f"ERROR: ❌ Failed to load survey data: {survey_error}")
+                    raise survey_error
+                
+                print(f"DEBUG: About to setup results directory")
                 results_dir = get_validation_results_path()
                 
                 # Ensure results directory exists
                 os.makedirs(results_dir, exist_ok=True)
+                print(f"DEBUG: ✅ Results directory ready: {results_dir}")
                 
                 # Get next counter for this survey-profile combination
                 test_counter = get_next_test_counter(survey_name, profile_id, results_dir)
@@ -604,9 +613,12 @@ class handler(BaseHTTPRequestHandler):
                     })
                 
                 # Save to Supabase database
+                print(f"DEBUG: About to start Supabase operations")
                 try:
                     from lib.supabase import SupabaseClient
+                    print(f"DEBUG: ✅ Imported SupabaseClient")
                     supabase = SupabaseClient()
+                    print(f"DEBUG: ✅ Created SupabaseClient instance")
                     
                     # Create validation test session
                     session_data = {
