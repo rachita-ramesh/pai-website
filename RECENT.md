@@ -247,6 +247,83 @@
 
 ---
 
+## 📋 Vercel Deployment Patterns (Critical)
+
+### 🚨 **API Route Conflicts - The #1 Issue**
+
+**Problem**: Vercel can have both Python serverless functions (`api/file.py`) and Next.js API routes (`src/app/api/file/route.ts`) for the same endpoint. They conflict and cause unpredictable behavior.
+
+**Solution**: **Choose one technology per endpoint** and delete the other.
+
+### ✅ **Successful Pattern (Profiles & Validation)**
+
+| Endpoint | Technology | File | Status |
+|----------|------------|------|--------|
+| `/api/profiles` | Python Serverless | `api/profiles.py` | ✅ Working |
+| `/api/validation` | Python Serverless | `api/validation.py` | ✅ Should work |
+
+### ❌ **Failed Pattern (What We Fixed)**
+
+| Endpoint | Technology | File | Issue |
+|----------|------------|------|-------|
+| `/api/profiles` | Next.js Route | `src/app/api/profiles/route.ts` | ❌ Conflicted with Python |
+| `/api/validation` | Next.js Route | `src/app/api/validation/route.ts` | ❌ Conflicted with Python |
+
+### 🔧 **Python Serverless Requirements**
+
+For `api/filename.py` to work on Vercel:
+```python
+from http.server import BaseHTTPRequestHandler
+
+class handler(BaseHTTPRequestHandler):  # Must be lowercase "handler"
+    def do_GET(self):
+        # Handle GET requests
+        pass
+    
+    def do_POST(self):
+        # Handle POST requests  
+        pass
+```
+
+### 🔧 **Next.js API Requirements**
+
+For `src/app/api/endpoint/route.ts` to work:
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest) {
+    // Handle GET requests
+}
+
+export async function POST(request: NextRequest) {
+    // Handle POST requests
+}
+```
+
+### 🎯 **When to Use Which**
+
+**Use Python Serverless When**:
+- Complex AI/ML processing (ResponsePredictor, ProfileExtractor)
+- Heavy data processing with existing Python libraries
+- Database operations with custom Supabase client
+- Need `ANTHROPIC_API_KEY` for AI calls
+
+**Use Next.js API Routes When**:
+- Simple data transformations
+- TypeScript type safety critical
+- Lightweight operations
+- Direct Supabase client integration
+
+### 🚨 **Critical Rule**
+
+**NEVER have both `api/endpoint.py` AND `src/app/api/endpoint/route.ts`**
+- Vercel routing becomes unpredictable
+- One will win randomly
+- Database operations may not execute
+- AI calls may fail silently
+
+---
+
 ## 🔮 Next Steps
 
 1. **Test the complete flow** end-to-end with new questionnaire combinations
