@@ -9,7 +9,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from lib.response_predictor import ResponsePredictor, SurveyQuestion
 from lib.profile_extractor import ProfileExtractor, PaiProfile
-import glob
 
 def _convert_structured_profile_to_legacy(structured_profile: dict) -> dict:
     """Convert new structured profile format to legacy format expected by ResponsePredictor"""
@@ -206,35 +205,10 @@ def _get_fallback_survey_data():
         ]
     }
 
-def get_validation_results_path():
-    """Get the validation results directory path"""
-    return os.path.join(os.path.dirname(__file__), '..', 'backend', 'data', 'validation_results')
+# File system functions removed for serverless compatibility
+# All validation data is now stored directly in Supabase
 
-def get_next_test_counter(survey_name, profile_id, results_dir):
-    """Get the next counter for this survey-profile combination"""
-    # Look for existing files matching the pattern: survey_name_profile_id_*.json
-    pattern = os.path.join(results_dir, f"{survey_name}_{profile_id}_*.json")
-    existing_files = glob.glob(pattern)
-    
-    # Extract counter numbers from existing files
-    counters = []
-    for filepath in existing_files:
-        filename = os.path.basename(filepath)
-        # Extract counter from filename like: survey_1_rachita_v1_3.json -> 3
-        parts = filename.replace('.json', '').split('_')
-        if len(parts) >= 4:
-            try:
-                counter = int(parts[-1])
-                counters.append(counter)
-            except ValueError:
-                continue
-    
-    # Return next counter (max + 1, or 1 if no files exist)
-    return max(counters) + 1 if counters else 1
-
-def generate_validation_filename(survey_name, profile_id, counter):
-    """Generate validation filename: survey_name_profile_id_counter.json"""
-    return f"{survey_name}_{profile_id}_{counter}.json"
+# Filename generation not needed - all data stored in Supabase
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -548,15 +522,10 @@ class handler(BaseHTTPRequestHandler):
                     print(f"ERROR: ❌ Failed to load survey data: {survey_error}")
                     raise survey_error
                 
-                print(f"DEBUG: About to setup results directory")
-                results_dir = get_validation_results_path()
-                
-                # Ensure results directory exists
-                os.makedirs(results_dir, exist_ok=True)
-                print(f"DEBUG: ✅ Results directory ready: {results_dir}")
-                
-                # Get next counter for this survey-profile combination
-                test_counter = get_next_test_counter(survey_name, profile_id, results_dir)
+                print(f"DEBUG: Generating test counter from timestamp")
+                # Use timestamp-based counter for serverless (no file system access)
+                test_counter = int(time.time() % 10000)  # Last 4 digits of timestamp
+                print(f"DEBUG: ✅ Test counter generated: {test_counter}")
                 
                 # Create comprehensive validation result
                 validation_result = {
