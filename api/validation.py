@@ -9,7 +9,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from lib.response_predictor import ResponsePredictor, SurveyQuestion
 from lib.profile_extractor import ProfileExtractor, PaiProfile
-import glob
 
 def _convert_structured_profile_to_legacy(structured_profile: dict) -> dict:
     """Convert new structured profile format to legacy format expected by ResponsePredictor"""
@@ -206,35 +205,10 @@ def _get_fallback_survey_data():
         ]
     }
 
-def get_validation_results_path():
-    """Get the validation results directory path"""
-    return os.path.join(os.path.dirname(__file__), '..', 'backend', 'data', 'validation_results')
+# File system functions removed for serverless compatibility
+# All validation data is now stored directly in Supabase
 
-def get_next_test_counter(survey_name, profile_id, results_dir):
-    """Get the next counter for this survey-profile combination"""
-    # Look for existing files matching the pattern: survey_name_profile_id_*.json
-    pattern = os.path.join(results_dir, f"{survey_name}_{profile_id}_*.json")
-    existing_files = glob.glob(pattern)
-    
-    # Extract counter numbers from existing files
-    counters = []
-    for filepath in existing_files:
-        filename = os.path.basename(filepath)
-        # Extract counter from filename like: survey_1_rachita_v1_3.json -> 3
-        parts = filename.replace('.json', '').split('_')
-        if len(parts) >= 4:
-            try:
-                counter = int(parts[-1])
-                counters.append(counter)
-            except ValueError:
-                continue
-    
-    # Return next counter (max + 1, or 1 if no files exist)
-    return max(counters) + 1 if counters else 1
-
-def generate_validation_filename(survey_name, profile_id, counter):
-    """Generate validation filename: survey_name_profile_id_counter.json"""
-    return f"{survey_name}_{profile_id}_{counter}.json"
+# Filename generation not needed - all data stored in Supabase
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -432,8 +406,11 @@ class handler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
             
+            print(f"DEBUG: POST received with keys: {list(data.keys())}")
+            
             # Check if this is a single question validation or results saving
             if 'question_id' in data and 'human_answer' in data:
+                print("DEBUG: Taking single question validation path")
                 # Single question validation using real ResponsePredictor
                 
                 question_id = data.get('question_id')
@@ -523,6 +500,7 @@ class handler(BaseHTTPRequestHandler):
                 
             else:
                 # Results saving - save comprehensive validation data
+                print("DEBUG: Entered results saving block")
                 test_session_id = data.get('test_session_id', f'test_{int(time.time())}')
                 profile_id = data.get('profile_id', 'rachita_v1')
                 comparisons = data.get('comparisons', [])
@@ -532,15 +510,22 @@ class handler(BaseHTTPRequestHandler):
                 correct_answers = data.get('correct_answers', 0)
                 model_version = data.get('model_version', 'claude-3-5-sonnet-20241022')
                 
+                print(f"DEBUG: Results saving payload - session_id: {test_session_id}, profile: {profile_id}")
+                print(f"DEBUG: Comparisons: {len(comparisons)}, accuracy: {accuracy_percentage}%")
+                
                 # Get survey info and determine counter
-                survey_data = get_validation_survey_data(survey_name)
-                results_dir = get_validation_results_path()
+                print(f"DEBUG: About to load survey data for: {survey_name}")
+                try:
+                    survey_data = get_validation_survey_data(survey_name)
+                    print(f"DEBUG: ✅ Loaded survey data: {survey_data['survey_title']}")
+                except Exception as survey_error:
+                    print(f"ERROR: ❌ Failed to load survey data: {survey_error}")
+                    raise survey_error
                 
-                # Ensure results directory exists
-                os.makedirs(results_dir, exist_ok=True)
-                
-                # Get next counter for this survey-profile combination
-                test_counter = get_next_test_counter(survey_name, profile_id, results_dir)
+                print(f"DEBUG: Generating test counter from timestamp")
+                # Use timestamp-based counter for serverless (no file system access)
+                test_counter = int(time.time() % 10000)  # Last 4 digits of timestamp
+                print(f"DEBUG: ✅ Test counter generated: {test_counter}")
                 
                 # Create comprehensive validation result
                 validation_result = {
@@ -597,9 +582,14 @@ class handler(BaseHTTPRequestHandler):
                     })
                 
                 # Save to Supabase database
+                print(f"DEBUG: About to start Supabase operations")
+                print(f"DEBUG: Will save {len(comparisons)} survey responses and 1 test result")
+                print(f"DEBUG: Profile ID: {profile_id}, Survey: {survey_name}")
                 try:
                     from lib.supabase import SupabaseClient
+                    print(f"DEBUG: ✅ Imported SupabaseClient")
                     supabase = SupabaseClient()
+                    print(f"DEBUG: ✅ Created SupabaseClient instance")
                     
                     # Create validation test session
                     session_data = {
@@ -610,12 +600,14 @@ class handler(BaseHTTPRequestHandler):
                         'started_at': 'NOW()',
                         'completed_at': 'NOW()'
                     }
+                    print(f"DEBUG: About to create validation_test_session with data: {session_data}")
                     try:
                         session_result = supabase.create_validation_test_session(session_data)
-                        print(f"DEBUG: Successfully created validation_test_session: {session_result}")
+                        print(f"DEBUG: ✅ SUCCESS - created validation_test_session: {session_result}")
                     except Exception as session_error:
-                        print(f"ERROR: Failed to create validation_test_session: {session_error}")
+                        print(f"ERROR: ❌ FAILED to create validation_test_session: {session_error}")
                         print(f"ERROR: Session data was: {session_data}")
+                        print(f"ERROR: Exception type: {type(session_error)}")
                         raise session_error
                     
                     # Save individual question responses
@@ -639,12 +631,14 @@ class handler(BaseHTTPRequestHandler):
                                 'is_correct': comparison.get('is_match', False),
                                 'response_order': survey_data['questions'].index(question_data) + 1
                             }
+                            print(f"DEBUG: About to save survey_response for {question_id}")
                             try:
                                 survey_result = supabase._make_request('POST', 'survey_responses', response_data)
-                                print(f"DEBUG: Successfully saved survey_response: {survey_result}")
+                                print(f"DEBUG: ✅ SUCCESS - saved survey_response for {question_id}: {survey_result}")
                             except Exception as survey_error:
-                                print(f"ERROR: Failed to save survey_response: {survey_error}")
+                                print(f"ERROR: ❌ FAILED to save survey_response for {question_id}: {survey_error}")
                                 print(f"ERROR: Response data was: {response_data}")
+                                print(f"ERROR: Exception type: {type(survey_error)}")
                             
                             # Also save to ai_predictions table for AI analytics
                             prediction_data = {
@@ -681,12 +675,14 @@ class handler(BaseHTTPRequestHandler):
                             'test_type': 'digital_twin_validation'
                         }
                     }
+                    print(f"DEBUG: About to save validation_test_results")
                     try:
                         result_insert = supabase.insert_validation_result(test_results)
-                        print(f"DEBUG: Successfully saved validation_test_results: {result_insert}")
+                        print(f"DEBUG: ✅ SUCCESS - saved validation_test_results: {result_insert}")
                     except Exception as result_error:
-                        print(f"ERROR: Failed to save validation_test_results: {result_error}")
-                        print(f"ERROR: Test results data was: {test_results}")
+                        print(f"ERROR: ❌ FAILED to save validation_test_results: {result_error}")
+                        print(f"ERROR: Test results data keys: {list(test_results.keys())}")
+                        print(f"ERROR: Exception type: {type(result_error)}")
                         raise result_error
                     
                     # Update test history summary for this profile
@@ -747,6 +743,9 @@ class handler(BaseHTTPRequestHandler):
                     }
                     
                 except Exception as save_error:
+                    print(f"ERROR: ❌ CRITICAL - Supabase save operation failed: {save_error}")
+                    print(f"ERROR: Exception type: {type(save_error)}")
+                    print(f"ERROR: Full traceback: {save_error.__class__.__name__}: {str(save_error)}")
                     result = {
                         'status': 'partial_success',
                         'message': f'Results processed but save failed: {str(save_error)}',

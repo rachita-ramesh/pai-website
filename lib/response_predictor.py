@@ -63,14 +63,15 @@ Explain your prediction logic, citing specific elements from the profile. Includ
 - Why other options don't fit as well
 
 Step 4: PREDICTION
-State your predicted answer and confidence level (0-100%).
+Choose ONE best matching option from the provided choices. State your predicted answer and confidence level (0-100%).
+IMPORTANT: predicted_answer must be exactly one of the provided options as a string.
 
 Step 5: UNCERTAINTY FLAGS
 Note any aspects where the profile lacks information or contains contradictions that affect confidence.
 
 Format your response as JSON:
 {
-  "predicted_answer": "option text here",
+  "predicted_answer": "exact option text from the list - must be a single string",
   "confidence": 0.85,
   "reasoning": "Detailed explanation of why this person would choose this option...",
   "uncertainty_flags": ["list of factors that reduce confidence"],
@@ -111,10 +112,16 @@ Return ONLY the JSON response, no additional text."""
             # Parse the JSON
             prediction_data = json.loads(prediction_json)
             
+            # Handle predicted_answer being either string or list
+            predicted_answer = prediction_data["predicted_answer"]
+            if isinstance(predicted_answer, list):
+                # If Claude returned multiple answers, join them or take the first one
+                predicted_answer = ", ".join(predicted_answer) if len(predicted_answer) > 1 else predicted_answer[0]
+            
             # Create prediction result
             result = PredictionResult(
                 question_id=question.id,
-                predicted_answer=prediction_data["predicted_answer"],
+                predicted_answer=predicted_answer,
                 confidence=prediction_data["confidence"],
                 reasoning=prediction_data["reasoning"],
                 uncertainty_flags=prediction_data.get("uncertainty_flags", []),
