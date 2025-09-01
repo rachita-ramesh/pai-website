@@ -614,6 +614,8 @@ class handler(BaseHTTPRequestHandler):
                 
                 # Save to Supabase database
                 print(f"DEBUG: About to start Supabase operations")
+                print(f"DEBUG: Will save {len(comparisons)} survey responses and 1 test result")
+                print(f"DEBUG: Profile ID: {profile_id}, Survey: {survey_name}")
                 try:
                     from lib.supabase import SupabaseClient
                     print(f"DEBUG: ✅ Imported SupabaseClient")
@@ -772,6 +774,9 @@ class handler(BaseHTTPRequestHandler):
                     }
                     
                 except Exception as save_error:
+                    print(f"ERROR: ❌ CRITICAL - Supabase save operation failed: {save_error}")
+                    print(f"ERROR: Exception type: {type(save_error)}")
+                    print(f"ERROR: Full traceback: {save_error.__class__.__name__}: {str(save_error)}")
                     result = {
                         'status': 'partial_success',
                         'message': f'Results processed but save failed: {str(save_error)}',
