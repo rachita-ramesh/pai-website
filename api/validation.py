@@ -432,8 +432,11 @@ class handler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
             
+            print(f"DEBUG: POST received with keys: {list(data.keys())}")
+            
             # Check if this is a single question validation or results saving
             if 'question_id' in data and 'human_answer' in data:
+                print("DEBUG: Taking single question validation path")
                 # Single question validation using real ResponsePredictor
                 
                 question_id = data.get('question_id')
@@ -523,6 +526,7 @@ class handler(BaseHTTPRequestHandler):
                 
             else:
                 # Results saving - save comprehensive validation data
+                print("DEBUG: Entered results saving block")
                 test_session_id = data.get('test_session_id', f'test_{int(time.time())}')
                 profile_id = data.get('profile_id', 'rachita_v1')
                 comparisons = data.get('comparisons', [])
@@ -531,6 +535,9 @@ class handler(BaseHTTPRequestHandler):
                 total_questions = data.get('total_questions', 0)
                 correct_answers = data.get('correct_answers', 0)
                 model_version = data.get('model_version', 'claude-3-5-sonnet-20241022')
+                
+                print(f"DEBUG: Results saving payload - session_id: {test_session_id}, profile: {profile_id}")
+                print(f"DEBUG: Comparisons: {len(comparisons)}, accuracy: {accuracy_percentage}%")
                 
                 # Get survey info and determine counter
                 survey_data = get_validation_survey_data(survey_name)
@@ -610,12 +617,14 @@ class handler(BaseHTTPRequestHandler):
                         'started_at': 'NOW()',
                         'completed_at': 'NOW()'
                     }
+                    print(f"DEBUG: About to create validation_test_session with data: {session_data}")
                     try:
                         session_result = supabase.create_validation_test_session(session_data)
-                        print(f"DEBUG: Successfully created validation_test_session: {session_result}")
+                        print(f"DEBUG: ✅ SUCCESS - created validation_test_session: {session_result}")
                     except Exception as session_error:
-                        print(f"ERROR: Failed to create validation_test_session: {session_error}")
+                        print(f"ERROR: ❌ FAILED to create validation_test_session: {session_error}")
                         print(f"ERROR: Session data was: {session_data}")
+                        print(f"ERROR: Exception type: {type(session_error)}")
                         raise session_error
                     
                     # Save individual question responses
@@ -639,12 +648,14 @@ class handler(BaseHTTPRequestHandler):
                                 'is_correct': comparison.get('is_match', False),
                                 'response_order': survey_data['questions'].index(question_data) + 1
                             }
+                            print(f"DEBUG: About to save survey_response for {question_id}")
                             try:
                                 survey_result = supabase._make_request('POST', 'survey_responses', response_data)
-                                print(f"DEBUG: Successfully saved survey_response: {survey_result}")
+                                print(f"DEBUG: ✅ SUCCESS - saved survey_response for {question_id}: {survey_result}")
                             except Exception as survey_error:
-                                print(f"ERROR: Failed to save survey_response: {survey_error}")
+                                print(f"ERROR: ❌ FAILED to save survey_response for {question_id}: {survey_error}")
                                 print(f"ERROR: Response data was: {response_data}")
+                                print(f"ERROR: Exception type: {type(survey_error)}")
                             
                             # Also save to ai_predictions table for AI analytics
                             prediction_data = {
@@ -681,12 +692,14 @@ class handler(BaseHTTPRequestHandler):
                             'test_type': 'digital_twin_validation'
                         }
                     }
+                    print(f"DEBUG: About to save validation_test_results")
                     try:
                         result_insert = supabase.insert_validation_result(test_results)
-                        print(f"DEBUG: Successfully saved validation_test_results: {result_insert}")
+                        print(f"DEBUG: ✅ SUCCESS - saved validation_test_results: {result_insert}")
                     except Exception as result_error:
-                        print(f"ERROR: Failed to save validation_test_results: {result_error}")
-                        print(f"ERROR: Test results data was: {test_results}")
+                        print(f"ERROR: ❌ FAILED to save validation_test_results: {result_error}")
+                        print(f"ERROR: Test results data keys: {list(test_results.keys())}")
+                        print(f"ERROR: Exception type: {type(result_error)}")
                         raise result_error
                     
                     # Update test history summary for this profile
