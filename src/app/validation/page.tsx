@@ -182,21 +182,22 @@ export default function ValidationTest() {
     if (!survey) return
     
     const currentQuestion = survey.questions[currentQuestionIndex]
-    setHumanAnswers(prev => ({
-      ...prev,
+    const updatedAnswers = {
+      ...humanAnswers,
       [currentQuestion.id]: answer
-    }))
+    }
+    setHumanAnswers(updatedAnswers)
 
     // Move to next question or finish
     if (currentQuestionIndex < survey.questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1)
     } else {
-      // All questions answered, start comparison
-      compareAllResponses()
+      // All questions answered, start comparison with updated answers
+      compareAllResponses(updatedAnswers)
     }
   }
 
-  const compareAllResponses = async () => {
+  const compareAllResponses = async (answersToUse = humanAnswers) => {
     if (!survey) return
     
     setIsLoading(true)
@@ -204,10 +205,10 @@ export default function ValidationTest() {
 
     try {
       const comparisonsResults: Comparison[] = []
-      console.log('Starting comparison for', Object.keys(humanAnswers).length, 'responses')
+      console.log('Starting comparison for', Object.keys(answersToUse).length, 'responses')
 
       for (const question of survey.questions) {
-        const humanAnswer = humanAnswers[question.id]
+        const humanAnswer = answersToUse[question.id]
         console.log(`Processing question ${question.id}:`, humanAnswer || 'NO ANSWER')
         
         const response = await fetch('/api/validation', {
