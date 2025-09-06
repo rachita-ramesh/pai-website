@@ -311,6 +311,7 @@ class handler(BaseHTTPRequestHandler):
             
             print(f"DEBUG: AI response: {ai_response}")
             print(f"DEBUG: Session complete: {is_complete}, exchange count: {new_exchange_count}")
+            print(f"DEBUG: Target questions for this questionnaire: {getattr(session, 'target_questions', 'unknown')}")
             
         else:
             # Fallback to basic response if AI system unavailable
@@ -392,7 +393,9 @@ class handler(BaseHTTPRequestHandler):
                 }
                 
                 supabase.update_interview_session(session_id, session_updates)
-                print(f"DEBUG: Updated interview session with complete transcript")
+                print(f"DEBUG: Successfully updated session - is_complete: {is_complete}, exchange_count: {new_exchange_count}")
+                if is_complete:
+                    print(f"DEBUG: ✅ Session marked as COMPLETE and should trigger profile extraction on frontend")
                 
             except Exception as e:
                 print(f"DEBUG: Error updating interview session: {e}")

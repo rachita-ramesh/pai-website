@@ -524,7 +524,7 @@ CRITICAL: Always ask ONE focused question per response. Keep responses conversat
         
         # Check if interview should be completed based on questionnaire target
         target_questions = 15  # Increased for systematic coverage of all profile areas
-        if self.questionnaire_context and 'target_questions' in self.questionnaire_context:
+        if self.questionnaire_context:
             # Use a target that ensures all profile areas can be covered
             base_questions = len(self.questionnaire_context.get('questions', []))
             # For focused questionnaires (beauty, product-specific), use closer to base count
