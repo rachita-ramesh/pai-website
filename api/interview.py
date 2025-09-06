@@ -262,8 +262,8 @@ class handler(BaseHTTPRequestHandler):
             print(f"DEBUG: Error loading questionnaire context: {e}")
             questionnaire_context = None
         
-        # Use sequential question progression for now - disable AI interviewer
-        if False:  # Temporarily disable AI interviewer
+        # Use conversational AI interviewer for natural dialogue
+        if True:  # Enable conversational AI interviewer
             # Load or create interview session from pickle file
             import pickle
             session_file = f"/tmp/interview_session_{session_id}.pkl"
@@ -313,43 +313,11 @@ class handler(BaseHTTPRequestHandler):
             print(f"DEBUG: Session complete: {is_complete}, exchange count: {new_exchange_count}")
             
         else:
-            print(f"DEBUG: Using simple sequential question progression")
-            
-            # SIMPLE: Just get the next question from the questionnaire JSONB
-            ai_response = "Thank you for sharing that!"
-            
-            if questionnaire_context and 'questions' in questionnaire_context:
-                questions = questionnaire_context['questions']
-                
-                print(f"DEBUG: Available questions: {len(questions)}")
-                print(f"DEBUG: Current exchange_count: {exchange_count}")
-                
-                # Frontend already incremented exchange_count, so use it directly as question index
-                # exchange_count=1 after Q1 response → ask questions[1] (Q2)
-                # exchange_count=2 after Q2 response → ask questions[2] (Q3)  
-                # exchange_count=3 after Q3 response → ask questions[3] (Q4)
-                question_index = exchange_count
-                
-                if question_index < len(questions):
-                    next_question = questions[question_index]
-                    ai_response = next_question.get('text') or next_question.get('question_text', 'Tell me more')
-                    question_id = next_question.get('id', f'q{question_index + 1}')
-                    print(f"DEBUG: Exchange {exchange_count}, asking question {question_id} (index {question_index})")
-                    print(f"DEBUG: Question: {ai_response[:80]}...")
-                else:
-                    ai_response = "Thank you for sharing all of that! Is there anything else you'd like to tell me about this topic?"
-                    print(f"DEBUG: All questionnaire questions asked, using generic follow-up")
-            
-            # Frontend already incremented exchange_count, so don't increment again
+            # Fallback to basic response if AI system unavailable
+            print(f"DEBUG: AI system unavailable, using fallback response")
+            ai_response = "Thank you for sharing that. Could you tell me more about this topic?"
             new_exchange_count = exchange_count
-            
-            # Complete only when ALL questions have been asked  
-            if questionnaire_context and 'questions' in questionnaire_context:
-                total_questions = len(questionnaire_context['questions'])
-                is_complete = new_exchange_count >= total_questions
-                print(f"DEBUG: Completion check: {new_exchange_count}/{total_questions}, complete: {is_complete}")
-            else:
-                is_complete = new_exchange_count >= 8  # Fallback
+            is_complete = new_exchange_count >= 8
         
         # Store the conversation messages in Supabase
         try:
