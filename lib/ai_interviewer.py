@@ -527,8 +527,15 @@ CRITICAL: Always ask ONE focused question per response. Keep responses conversat
         if self.questionnaire_context and 'target_questions' in self.questionnaire_context:
             # Use a target that ensures all profile areas can be covered
             base_questions = len(self.questionnaire_context.get('questions', []))
-            # Need more exchanges than questions to allow for proper exploration
-            target_questions = max(10, min(base_questions + 5, 20))  # 10-20 questions for thorough coverage
+            # For focused questionnaires (beauty, product-specific), use closer to base count
+            # For comprehensive questionnaires (centrepiece), allow more exploration
+            questionnaire_id = self.questionnaire_context.get('questionnaire_id', '')
+            if questionnaire_id in ['beauty_v1', 'moisturizer_v1'] or 'product' in questionnaire_id.lower():
+                # Focused questionnaires: complete closer to base question count for efficiency
+                target_questions = max(8, min(base_questions - 1, 16))
+            else:
+                # Comprehensive questionnaires: allow more exploration
+                target_questions = max(12, min(base_questions + 5, 22))
         
         if session.exchange_count >= target_questions:
             session.is_complete = True
