@@ -852,19 +852,23 @@ class handler(BaseHTTPRequestHandler):
 
         system_prompt = f"""You are an expert psychological profiler and digital twin creator. Your task is to analyze interview transcripts and extract a comprehensive PAI personality profile with full traceability.
 
-CRITICAL: You must return a JSON object where each profile field includes the VALUE and METADATA about which question generated that data.
+CRITICAL: You MUST return ONLY a valid JSON object that follows the EXACT schema structure provided below. DO NOT add any explanatory text, markdown formatting, or additional fields.
 
-Return ONLY a valid JSON object with this exact structure:
+REQUIRED OUTPUT FORMAT - Copy this structure exactly and fill in the values:
 
 {schema_json_string}
 
-Important guidelines:
-- Include actual session_id from the sessions you're analyzing
-- Only include sections where you have data from the interviews
-- Use descriptive text for values, not just categories
-- Base everything on evidence from the interview transcript
-- If a section wasn't covered, omit it entirely
-- Focus on extracting rich, detailed insights rather than categorizing"""
+STRICT REQUIREMENTS:
+1. Return ONLY the JSON object - no markdown, no explanations, no additional text
+2. Use ONLY the sections and field names shown in the schema above
+3. Do NOT create new sections or field names - stick to the provided structure
+4. Replace "session_id_placeholder" with actual session IDs from the transcript headers
+5. Each "value" field must contain rich, descriptive insights based on the interview
+6. Each "source" field must reference the actual questionnaire_id and question_id that generated this data
+7. If a field wasn't covered in the interview, omit that field entirely from the JSON
+8. Use the exact section names: {list(dynamic_schema.get('profile_data', {}).keys())}
+
+BASE ALL EXTRACTIONS ON EVIDENCE FROM THE INTERVIEW TRANSCRIPT. Extract rich, detailed personality insights, not just surface-level categories."""
         
         try:
             response = client.messages.create(
@@ -885,24 +889,44 @@ Important guidelines:
             # Try to extract JSON from the response (sometimes Claude wraps it in markdown)
             try:
                 # First try direct JSON parsing
-                profile_data = json.loads(profile_text)
-            except json.JSONDecodeError:
+                profile_data = json.loads(profile_text.strip())
+                print(f"DEBUG: Direct JSON parsing successful")
+            except json.JSONDecodeError as e:
+                print(f"DEBUG: Direct JSON parsing failed: {e}")
                 # If that fails, try to extract JSON from markdown code blocks
                 import re
                 json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', profile_text, re.DOTALL)
                 if json_match:
                     json_content = json_match.group(1)
-                    print(f"DEBUG: Extracted JSON from markdown: {json_content}")
+                    print(f"DEBUG: Extracted JSON from markdown code block")
                     profile_data = json.loads(json_content)
                 else:
-                    # Try to find JSON object in the text
-                    json_match = re.search(r'(\{.*\})', profile_text, re.DOTALL)
+                    # Try to find JSON object in the text (more robust pattern)
+                    json_match = re.search(r'(\{[\s\S]*\})', profile_text)
                     if json_match:
-                        json_content = json_match.group(1)
-                        print(f"DEBUG: Extracted JSON from text: {json_content}")
+                        json_content = json_match.group(1).strip()
+                        print(f"DEBUG: Extracted JSON from text content")
                         profile_data = json.loads(json_content)
                     else:
+                        print(f"DEBUG: No JSON pattern found in AI response")
+                        print(f"DEBUG: Full response: {profile_text}")
                         raise ValueError("No valid JSON found in AI response")
+            
+            # Validate that the response follows our schema structure
+            if 'profile_data' not in profile_data:
+                print(f"DEBUG: WARNING - AI response missing 'profile_data' structure")
+                print(f"DEBUG: Response keys: {list(profile_data.keys())}")
+            else:
+                actual_sections = list(profile_data['profile_data'].keys())
+                expected_sections = list(dynamic_schema.get('profile_data', {}).keys())
+                print(f"DEBUG: Expected sections: {expected_sections}")
+                print(f"DEBUG: Actual sections: {actual_sections}")
+                
+                # Check for made-up sections
+                unexpected_sections = [s for s in actual_sections if s not in expected_sections]
+                if unexpected_sections:
+                    print(f"DEBUG: WARNING - AI created unexpected sections: {unexpected_sections}")
+                    print(f"DEBUG: These sections not in questionnaire tags and will cause extraction issues")
             
             print(f"DEBUG: Successfully extracted profile for {person_name}")
             return profile_data
