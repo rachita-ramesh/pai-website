@@ -522,37 +522,33 @@ CRITICAL: Always ask ONE focused question per response. Keep responses conversat
         # Update exchange count and completion status
         session.exchange_count += 1
         
-        # Check if interview should be completed based on questionnaire target
-        target_questions = 15  # Increased for systematic coverage of all profile areas
-        if self.questionnaire_context:
-            # Use a target that ensures all profile areas can be covered
-            base_questions = len(self.questionnaire_context.get('questions', []))
-            # For focused questionnaires (beauty, product-specific), use closer to base count
-            # For comprehensive questionnaires (centrepiece), allow more exploration
-            questionnaire_id = self.questionnaire_context.get('questionnaire_id', '')
-            if questionnaire_id in ['beauty_v1', 'moisturizer_v1'] or 'product' in questionnaire_id.lower():
-                # Focused questionnaires: complete closer to base question count for efficiency
-                target_questions = max(8, min(base_questions - 1, 16))
-            else:
-                # Comprehensive questionnaires: allow more exploration
-                target_questions = max(12, min(base_questions + 5, 22))
+        # Check if the AI has naturally signaled completion through its response content
+        completion_signals = [
+            "anything else about",
+            "anything else that feels important",
+            "this has been really insightful",
+            "is there anything else",
+            "anything important for me to understand",
+            "thanks for this great conversation",
+            "take care",
+            "thanks for sharing",
+            "it was great talking",
+            "great conversation"
+        ]
         
-        if session.exchange_count >= target_questions:
+        # Check if AI response contains completion signal
+        ai_response_lower = ai_response.lower()
+        ai_signaled_completion = any(signal in ai_response_lower for signal in completion_signals)
+        
+        if ai_signaled_completion:
             session.is_complete = True
-            # Add completion message if not already ending
-            if "anything else about" not in ai_response.lower():
-                # Determine topic based on questionnaire context
-                topic = "this topic"
-                if self.questionnaire_context:
-                    topic = self.questionnaire_context.get('category', 'this topic')
-                
-                completion_msg = InterviewMessage(
-                    id=str(len(session.messages) + 1),
-                    type="ai",
-                    content=f"This has been really insightful. Is there anything else about {topic} that feels important for me to understand?",
-                    timestamp=datetime.now()
-                )
-                session.messages.append(completion_msg)
+            print(f"DEBUG: AI signaled completion with response: {ai_response}")
+        
+        # Safety fallback: prevent interviews from going indefinitely (but allow natural completion first)
+        max_exchanges = 30  # High limit to allow natural conversation flow
+        if session.exchange_count >= max_exchanges and not session.is_complete:
+            session.is_complete = True
+            print(f"DEBUG: Interview reached maximum exchanges ({max_exchanges}), forcing completion")
         
         return session
     
