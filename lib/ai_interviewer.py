@@ -46,7 +46,12 @@ class AIInterviewer:
             # Extract conversational themes from questionnaire questions based on profile tags
             themes = self._extract_conversation_themes(questions, category)
             
-            return f"""You are a warm, curious researcher having a genuine conversation to understand this person's life and experiences around {category}. Your goal is to learn about their psychology, attitudes, and behaviors through natural dialogue.
+            # Get detailed field mappings for systematic coverage
+            detailed_coverage = self._get_detailed_field_coverage(questions)
+            
+            return f"""You are a warm, curious researcher having a genuine conversation to understand this person's life and experiences around {category}. Your goal is to learn about their psychology, attitudes, and behaviors through natural dialogue while SYSTEMATICALLY covering all profile areas.
+
+CRITICAL: You MUST cover ALL profile areas listed below during the interview for complete data extraction.
 
 CONVERSATION APPROACH:
 - This is a NATURAL CONVERSATION, not a survey or interview
@@ -55,16 +60,17 @@ CONVERSATION APPROACH:
 - Ask follow-up questions about interesting details they mention
 - Show you're actively listening and engaged
 
-KEY THEMES TO EXPLORE NATURALLY:
-{themes}
+PROFILE AREAS TO SYSTEMATICALLY COVER:
+{detailed_coverage}
 
-HOW TO USE THEMES:
-- These themes correspond to specific sections of their digital profile
-- Each theme represents important data that will be extracted for their persona
-- Weave them into conversation naturally, but ensure you cover ALL themes during the interview
-- If they mention something related to a theme, explore it deeper
-- Balance between following their natural responses and systematically covering all profile areas
-- Their answers will be categorized into specific profile sections based on these themes
+SYSTEMATIC COVERAGE REQUIREMENTS:
+- Each bullet point above represents a REQUIRED profile field for their digital twin
+- You MUST naturally explore each area during the conversation
+- These map directly to specific database tags used for profile extraction
+- If you skip an area, that data will be missing from their profile
+- Balance natural conversation with ensuring you cover ALL required areas
+- Track which areas you've explored vs. which still need coverage
+- Near the end, address any areas you haven't naturally covered yet
 
 CONVERSATIONAL STYLE:
 - Be warm, friendly, and genuinely curious
@@ -87,9 +93,14 @@ CONVERSATION FLOW:
 - When a topic feels explored, transition naturally: "That makes sense. What about..."
 - If they give rich answers, dig deeper before moving to new topics
 - If they give short answers, ask gentle follow-ups to understand more
-- SYSTEMATICALLY ensure you cover all themes - each maps to a crucial profile section
-- Track which themes you've covered vs. which still need exploration
-- Near the end, address any themes you haven't naturally covered yet
+- METHODICALLY work through ALL profile areas above
+- Don't rush - ensure each area is thoroughly explored
+- Keep mental track of which areas you've covered
+
+COMPLETION CRITERIA:
+- Only end when you've naturally explored ALL profile areas listed above
+- The interview is NOT complete until every bullet point has been addressed
+- If running out of exchanges, prioritize uncovered areas
 
 RESPONSE RULES:
 - ONE question maximum per response
@@ -97,11 +108,7 @@ RESPONSE RULES:
 - Sound like a real person having a conversation
 - Never sound robotic or like you're reading from a script
 
-END NATURALLY:
-When you've had a good conversation covering the key themes naturally, end with:
-"This has been really insightful. Is there anything else about {category} that feels important for me to understand?"
-
-Remember: You're having a real conversation with a real person. Be genuinely interested, follow what they're sharing, and let the conversation flow naturally while gently exploring the key themes."""
+Remember: This conversation will create their digital personality profile. Every area you skip means missing data in their digital twin. Be thorough while staying conversational."""
         
         else:
             # Default skincare prompt
@@ -177,6 +184,174 @@ Remember: This should feel like a fascinating conversation about their personal 
 
 CRITICAL: Always ask ONE focused question per response. Keep responses conversational and brief (1-2 sentences). Never overwhelm with multiple questions at once."""
     
+    def _get_detailed_field_coverage(self, questions):
+        """Generate detailed list of all profile fields that must be covered"""
+        if not questions:
+            return "- General background and experiences\n- Personal values and motivations\n- Current situation and lifestyle"
+            
+        # Group questions by their tag sections and fields
+        coverage_areas = []
+        sections_seen = set()
+        
+        for q in questions:
+            tags = q.get('tags', [])
+            if tags and len(tags) >= 2:
+                section = tags[0]  # e.g., 'lifestyle', 'personality'
+                field = tags[1]    # e.g., 'daily_life_work', 'self_description'
+                
+                # Convert technical field names to conversational descriptions
+                field_description = self._field_to_description(section, field)
+                # Use section.field as key to avoid duplicates even if descriptions are similar
+                field_key = f"{section}.{field}"
+                if field_description and field_key not in [area[1] if isinstance(area, tuple) else None for area in coverage_areas]:
+                    coverage_areas.append((field_description, field_key))
+                
+                sections_seen.add(section)
+        
+        if coverage_areas:
+            # Sort by section order for logical flow
+            section_order = ['lifestyle', 'media_and_culture', 'personality', 'values_and_beliefs', 
+                           'skin_and_hair_type', 'routine', 'facial_moisturizer_attitudes', 'moisturizer_usage']
+            
+            # Group areas by section for better organization
+            organized_areas = []
+            for section in section_order:
+                if section in sections_seen:
+                    section_areas = [area[0] for area in coverage_areas if area[1].startswith(f"{section}.")]
+                    organized_areas.extend(section_areas)
+            
+            # Add any remaining areas not in the standard sections
+            remaining_areas = [area[0] for area in coverage_areas if not any(area[1].startswith(f"{sec}.") for sec in section_order)]
+            organized_areas.extend(remaining_areas)
+            
+            return '\n'.join([f"- {area}" for area in organized_areas])
+        else:
+            return "- Their background and current situation\n- Personal interests and values\n- Daily life and experiences"
+    
+    def _field_to_description(self, section, field):
+        """Convert technical tag fields to conversational descriptions"""
+        # Lifestyle fields
+        if section == 'lifestyle':
+            if field == 'daily_life_work':
+                return "Their daily routine, work situation, and how they structure their day"
+            elif field == 'activity_wellness':
+                return "Their approach to fitness, wellness, and staying healthy"
+            elif field == 'interests_hobbies':
+                return "Their hobbies, interests, and what they do for fun"
+            elif field == 'weekend_life':
+                return "How they spend their weekends and free time"
+        
+        # Media and culture fields
+        elif section == 'media_and_culture':
+            if field == 'news_information':
+                return "How they stay informed and consume news"
+            elif field == 'social_media_use':
+                return "Their relationship with social media and online presence"
+            elif field == 'tv_movies_sports':
+                return "Their entertainment preferences - TV, movies, sports"
+            elif field == 'music':
+                return "Their music taste and listening habits"
+            elif field == 'celebrities_influences':
+                return "Public figures or influences they follow or admire"
+        
+        # Personality fields
+        elif section == 'personality':
+            if field == 'self_description':
+                return "How they would describe themselves to others"
+            elif field == 'misunderstood':
+                return "Aspects of themselves they feel are often misunderstood"
+            elif field == 'curiosity_openness':
+                return "Their curiosity level and openness to new experiences"
+            elif field == 'structure_vs_spontaneity':
+                return "Whether they prefer structure and planning vs. spontaneity"
+            elif field == 'social_energy':
+                return "How they recharge - through socializing or alone time"
+            elif field == 'stress_challenge':
+                return "How they handle stress and challenging situations"
+            elif field == 'signature_strengths':
+                return "Their key strengths and what they're naturally good at"
+        
+        # Values and beliefs fields
+        elif section == 'values_and_beliefs':
+            if field == 'core_values':
+                return "Their most important values and principles"
+            elif field == 'influence_advice':
+                return "Who they turn to for advice and guidance"
+            elif field == 'cultural_political_engagement':
+                return "Their views on cultural and political topics"
+            elif field == 'aspirations_worldview':
+                return "Their hopes, dreams, and how they see the world"
+            elif field == 'decision_priorities':
+                return "What factors matter most when making important decisions"
+        
+        # Beauty/skincare fields
+        elif section == 'skin_and_hair_type':
+            if field == 'skin_type':
+                return "Their skin type and characteristics"
+            elif field == 'skin_concerns':
+                return "Any skin concerns or issues they deal with"
+            elif field == 'hair_type':
+                return "Their hair type and characteristics"
+            elif field == 'hair_concerns':
+                return "Any hair concerns or styling preferences"
+        
+        elif section == 'routine':
+            if field == 'morning_routine':
+                return "Their morning beauty/skincare routine"
+            elif field == 'evening_routine':
+                return "Their evening beauty/skincare routine"
+            elif field == 'time_on_routine':
+                return "How much time they spend on beauty routines"
+            elif field == 'extra_products_in_routine':
+                return "Special products or steps in their routine"
+            elif field == 'changes_based_on_seasonality':
+                return "How their routine changes with seasons or circumstances"
+            elif field == 'hero_product':
+                return "Their favorite or most important beauty product"
+            elif field == 'beauty_routine_frustrations':
+                return "What frustrates them about beauty routines"
+            elif field == 'self_care_perception':
+                return "How they view self-care and beauty routines"
+            elif field == 'beauty_routine_motivation':
+                return "What motivates them to maintain beauty routines"
+            elif field == 'product_experimentation':
+                return "Their approach to trying new beauty products"
+            elif field == 'buyer_type':
+                return "How they approach purchasing beauty products"
+            elif field == 'engagement_with_beauty':
+                return "Their overall relationship with beauty and appearance"
+        
+        # Moisturizer fields
+        elif section == 'facial_moisturizer_attitudes':
+            if field == 'benefits_sought':
+                return "What benefits they look for in facial moisturizers"
+            elif field == 'sustainable_values':
+                return "How sustainability and values influence their moisturizer choices"
+        
+        elif section == 'moisturizer_usage':
+            if field == 'current_product_usage':
+                return "Their current moisturizer and usage patterns"
+        
+        # Generic fallback
+        return f"{section.replace('_', ' ').title()}: {field.replace('_', ' ')}"
+    
+    def _area_belongs_to_section(self, area, section):
+        """Check if a coverage area belongs to a specific section"""
+        section_keywords = {
+            'lifestyle': ['daily routine', 'work situation', 'fitness', 'wellness', 'hobbies', 'interests', 'weekend'],
+            'media_and_culture': ['news', 'information', 'social media', 'entertainment', 'TV', 'movies', 'music', 'celebrities'],
+            'personality': ['describe themselves', 'misunderstood', 'curiosity', 'structure', 'planning', 'social energy', 'stress', 'strengths'],
+            'values_and_beliefs': ['values', 'principles', 'advice', 'guidance', 'cultural', 'political', 'aspirations', 'dreams', 'decisions'],
+            'skin_and_hair_type': ['skin type', 'skin concerns', 'hair type', 'hair concerns'],
+            'routine': ['routine', 'beauty', 'skincare', 'products', 'self-care'],
+            'facial_moisturizer_attitudes': ['moisturizer', 'benefits', 'sustainable'],
+            'moisturizer_usage': ['moisturizer', 'usage', 'current product']
+        }
+        
+        if section in section_keywords:
+            return any(keyword in area.lower() for keyword in section_keywords[section])
+        return False
+
     def _extract_conversation_themes(self, questions, category):
         """Extract natural conversation themes based on profile tag sections"""
         if not questions:
@@ -348,11 +523,12 @@ CRITICAL: Always ask ONE focused question per response. Keep responses conversat
         session.exchange_count += 1
         
         # Check if interview should be completed based on questionnaire target
-        target_questions = 8  # Reduced default for better user experience
+        target_questions = 15  # Increased for systematic coverage of all profile areas
         if self.questionnaire_context and 'target_questions' in self.questionnaire_context:
-            # Use a more reasonable target based on questionnaire length
+            # Use a target that ensures all profile areas can be covered
             base_questions = len(self.questionnaire_context.get('questions', []))
-            target_questions = max(3, min(base_questions + 2, 8))  # 3-8 questions max
+            # Need more exchanges than questions to allow for proper exploration
+            target_questions = max(10, min(base_questions + 5, 20))  # 10-20 questions for thorough coverage
         
         if session.exchange_count >= target_questions:
             session.is_complete = True
