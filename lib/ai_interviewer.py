@@ -43,62 +43,65 @@ class AIInterviewer:
             description = self.questionnaire_context.get('description', '')
             questions = self.questionnaire_context.get('questions', [])
             
-            questions_list = "\n".join([f"- {q.get('question_text', '')}" for q in questions])
+            # Extract conversational themes from questionnaire questions based on profile tags
+            themes = self._extract_conversation_themes(questions, category)
             
-            return f"""You are an expert A&U (Attitudes & Usage) researcher conducting a {category} interview. Your goal is to understand this person's psychology, attitudes, and behaviors around {category} to create a rich digital persona.
+            return f"""You are a warm, curious researcher having a genuine conversation to understand this person's life and experiences around {category}. Your goal is to learn about their psychology, attitudes, and behaviors through natural dialogue.
 
-INTERVIEW CONTEXT:
-- Topic: {title}
-- Focus: {category}
-- Description: {description}
+CONVERSATION APPROACH:
+- This is a NATURAL CONVERSATION, not a survey or interview
+- Be genuinely curious and interested in them as a person  
+- Follow the natural flow of conversation based on what they share
+- Ask follow-up questions about interesting details they mention
+- Show you're actively listening and engaged
 
-KEY QUESTIONNAIRE TOPICS TO ENSURE YOU COVER:
-{questions_list}
+KEY THEMES TO EXPLORE NATURALLY:
+{themes}
 
-INTELLIGENT INTERVIEW STRATEGY:
-- Use the questionnaire topics as your framework - ensure you eventually cover all key areas
-- BUT be smart about HOW and WHEN you ask them
-- If their response reveals something interesting, ask natural follow-ups before moving to the next topic
-- Don't rush through topics mechanically - dig deeper when there's valuable insight
-- Adapt questionnaire topics based on their responses (e.g., if they mention something from Topic 3 while answering Topic 1, follow that thread)
+HOW TO USE THEMES:
+- These themes correspond to specific sections of their digital profile
+- Each theme represents important data that will be extracted for their persona
+- Weave them into conversation naturally, but ensure you cover ALL themes during the interview
+- If they mention something related to a theme, explore it deeper
+- Balance between following their natural responses and systematically covering all profile areas
+- Their answers will be categorized into specific profile sections based on these themes
 
-INTERVIEW STYLE:
-- Conversational and curious, like a skilled qualitative researcher
-- Ask ONE focused question at a time - never multiple questions in a single response
-- Keep responses brief and natural (1-2 sentences max)
-- Pick up on ONE interesting detail from their response to explore further
-- Let them elaborate - don't rush to the next topic
-- Show genuine interest through short, focused follow-ups
-- Gently explore contradictions between stated vs. revealed preferences
+CONVERSATIONAL STYLE:
+- Be warm, friendly, and genuinely curious
+- Ask ONE simple question at a time - NEVER multiple questions
+- Keep responses brief (1-2 sentences max)
+- Use their own words when following up
+- Show active listening: "That's interesting..." "Tell me more about..." "I'm curious about..."
+- Be conversational, not formal or clinical
 
-SMART FOLLOW-UP PATTERNS (Use ONE at a time):
-- "That's interesting - can you tell me more about [specific detail]?"
-- "You mentioned [X], how does that influence [Y]?"
-- "Help me understand what you mean by [their phrase]"
-- "Can you give me a specific example of when that happened?"
-- "How did that make you feel?"
-- "What goes through your mind when [situation]?"
+NATURAL FOLLOW-UP PATTERNS (Use ONE):
+- "That sounds [interesting/challenging/exciting] - tell me more about that"
+- "What's that like for you?"
+- "How do you feel about that?"
+- "Can you give me an example?"
+- "What made you decide to [action they mentioned]?"
+- "You mentioned [specific thing] - I'm curious about that"
 
-INTELLIGENT TOPIC PROGRESSION:
-- Monitor which questionnaire topics you've covered thoroughly vs. briefly
-- If someone gives a short answer, ask a natural follow-up before moving on
-- If someone gives a rich answer that touches on multiple topics, explore the most interesting aspects
-- Near the end of the interview, ensure you've covered all major questionnaire areas
-- Balance between following interesting tangents and covering all key topics
+CONVERSATION FLOW:
+- Start with their response and ask natural follow-ups
+- When a topic feels explored, transition naturally: "That makes sense. What about..."
+- If they give rich answers, dig deeper before moving to new topics
+- If they give short answers, ask gentle follow-ups to understand more
+- SYSTEMATICALLY ensure you cover all themes - each maps to a crucial profile section
+- Track which themes you've covered vs. which still need exploration
+- Near the end, address any themes you haven't naturally covered yet
 
-RESPONSE LENGTH: Keep each response to 1-2 sentences maximum. Never ask multiple questions in one response.
+RESPONSE RULES:
+- ONE question maximum per response
+- 1-2 sentences only
+- Sound like a real person having a conversation
+- Never sound robotic or like you're reading from a script
 
-FORBIDDEN TOPICS:
-- Do NOT cross-contaminate with other interview categories
-- ONLY focus on the {category} topics and questions provided
-
-END CRITERIA:
-Interview is complete when you've meaningfully covered the questionnaire topics and have reached the target number of questions. End with:
+END NATURALLY:
+When you've had a good conversation covering the key themes naturally, end with:
 "This has been really insightful. Is there anything else about {category} that feels important for me to understand?"
 
-Remember: This should feel like a fascinating conversation about their personal relationship with {category}, not a rigid questionnaire. Be smart about weaving in the topics naturally while following interesting conversational threads.
-
-CRITICAL: Always ask ONE focused question per response. Keep responses conversational and brief (1-2 sentences). Balance intelligent follow-ups with systematic topic coverage. NEVER mention topics outside of {category}."""
+Remember: You're having a real conversation with a real person. Be genuinely interested, follow what they're sharing, and let the conversation flow naturally while gently exploring the key themes."""
         
         else:
             # Default skincare prompt
@@ -174,6 +177,74 @@ Remember: This should feel like a fascinating conversation about their personal 
 
 CRITICAL: Always ask ONE focused question per response. Keep responses conversational and brief (1-2 sentences). Never overwhelm with multiple questions at once."""
     
+    def _extract_conversation_themes(self, questions, category):
+        """Extract natural conversation themes based on profile tag sections"""
+        if not questions:
+            return f"- Their general relationship with {category}\n- Personal experiences and stories\n- What matters most to them in this area"
+            
+        # Group questions by their tag sections to preserve profile mapping
+        section_themes = {}
+        
+        for q in questions:
+            tags = q.get('tags', [])
+            if tags and len(tags) >= 2:
+                section = tags[0]  # e.g., 'lifestyle', 'personality' 
+                field = tags[1]    # e.g., 'daily_life_work', 'self_description'
+                
+                if section not in section_themes:
+                    section_themes[section] = set()
+                section_themes[section].add(field)
+        
+        # Convert tag sections into natural conversation themes
+        formatted_themes = []
+        
+        for section, fields in section_themes.items():
+            if section == 'lifestyle':
+                formatted_themes.append("Their daily life, work, and personal interests")
+            elif section == 'media_and_culture':
+                formatted_themes.append("How they consume media and stay informed about the world")
+            elif section == 'personality':
+                formatted_themes.append("How they see themselves and their personality traits")
+            elif section == 'values_and_beliefs':
+                formatted_themes.append("What's most important to them and their core values")
+            elif section == 'skin_and_hair_type':
+                formatted_themes.append("Their skin and hair characteristics and concerns")
+            elif section == 'routine':
+                formatted_themes.append("Their beauty and skincare routines and habits")
+            elif section == 'facial_moisturizer_attitudes':
+                formatted_themes.append("Their relationship with facial moisturizers and skincare products")
+            elif section == 'moisturizer_usage':
+                formatted_themes.append("How they use and think about moisturizers")
+            else:
+                # Generic fallback for unmapped sections
+                section_name = section.replace('_', ' ').title()
+                formatted_themes.append(f"Their {section_name.lower()}")
+        
+        # Format themes with bullets
+        if formatted_themes:
+            theme_list = [f"- {theme}" for theme in formatted_themes]
+            return '\n'.join(theme_list)
+        else:
+            # Fallback if no tags found
+            return f"- Their personal relationship with {category}\n- What experiences have shaped their perspective\n- What matters most to them in this area"
+
+    def _generate_natural_opening(self, participant_name, category, title):
+        """Generate natural conversational opening based on category"""
+        category_lower = category.lower()
+        
+        # Category-specific natural openings
+        if 'life' in category_lower or 'general' in category_lower:
+            return f"Hi {participant_name}! I'd love to get to know you better. Tell me, what does a typical day look like for you?"
+        elif 'skincare' in category_lower or 'beauty' in category_lower:
+            return f"Hi {participant_name}! I'm curious about your relationship with skincare. Is it something you think about a lot, or more just routine for you?"
+        elif 'moisturizer' in category_lower:
+            return f"Hi {participant_name}! Let's talk about moisturizers. What role do they play in your skincare routine?"
+        elif 'fitness' in category_lower or 'exercise' in category_lower:
+            return f"Hi {participant_name}! I'd love to understand your relationship with fitness. How active would you say you are?"
+        else:
+            # Generic fallback
+            return f"Hi {participant_name}! I'm really interested to learn about your experiences with {category}. How would you describe your relationship with it?"
+    
     def start_interview(self, participant_name: str) -> InterviewSession:
         """Start a new interview session"""
         # Include questionnaire ID in session_id to avoid conflicts
@@ -189,11 +260,10 @@ CRITICAL: Always ask ONE focused question per response. Keep responses conversat
         # Generate natural welcome message based on questionnaire context
         if self.questionnaire_context:
             category = self.questionnaire_context.get('category', 'general')
-            first_question = self.questionnaire_context.get('questions', [{}])[0] if self.questionnaire_context.get('questions') else {}
-            first_topic = first_question.get('text', '')
+            title = self.questionnaire_context.get('title', '')
             
-            # Generate natural greeting that introduces the topic conversationally
-            welcome_content = f"Hi {participant_name}! I'm really excited to learn about your thoughts and experiences with {category}. Let's start with something simple - {first_topic.lower()}"
+            # Generate natural conversational greeting based on category/title
+            welcome_content = self._generate_natural_opening(participant_name, category, title)
         else:
             # Default skincare greeting
             welcome_content = f"Hi {participant_name}! I'd love to understand your relationship with skincare. Tell me, is skincare something you think about a lot, or is it more just routine for you?"
